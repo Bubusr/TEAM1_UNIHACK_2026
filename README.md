@@ -82,3 +82,55 @@ git push origin <tên-nhánh>
   - `docs:` Bổ sung tài liệu
   - `refactor:` Tối ưu / tái cấu trúc mã nguồn
 - **Dependencies & Môi trường:** Mỗi nhánh prototype cần có file cấu hình phụ thuộc riêng (như `package.json`, `requirements.txt`, ...) và file `README.md` riêng hướng dẫn cài đặt chạy thử cho prototype đó.
+
+## ▶️ Chạy PawVerse local (Slice 0)
+
+### Yêu cầu
+
+- Docker Desktop
+- Python 3.11+
+- Node.js 20+
+
+### Cài đặt
+
+Từ thư mục gốc repository:
+
+```powershell
+Copy-Item .env.example .env
+python -m pip install -e ".\apps\api[test]"
+npm install
+```
+
+### Khởi động dịch vụ local
+
+```powershell
+docker compose up -d
+```
+
+Docker Compose sẽ khởi động:
+
+- Postgres 16 + pgvector tại `localhost:5432`
+- Redis tại `localhost:6379`
+- MinIO tại `localhost:9000`
+- MinIO Console tại `localhost:9001`
+
+### Chạy và kiểm tra API
+
+```powershell
+python -m uvicorn app.main:app --app-dir .\apps\api --reload --port 8000
+```
+
+Trong terminal khác:
+
+```powershell
+Invoke-WebRequest http://localhost:8000/health
+python -m pytest .\apps\api\tests
+```
+
+### Chạy mobile app
+
+```powershell
+npm run dev:mobile
+```
+
+Slice 0 hiện cung cấp mobile app shell, API health endpoint, local infrastructure và database migration nền tảng. Camera capture và AI judge sẽ được triển khai ở Slice 1.

@@ -1,0 +1,17 @@
+{
+  "name": "pawverse",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:mobile": "npm run start --workspace @pawverse/mobile",
+    "dev:partner": "npm run dev --workspace @pawverse/partner-web",
+    "dev:sponsor": "npm run dev --workspace @pawverse/sponsor-web"
+  }
+}
+
