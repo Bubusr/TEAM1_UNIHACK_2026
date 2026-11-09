@@ -1146,6 +1146,36 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     SoundEngine.playBlessingChime();
   };
 
+  // Điều hướng nhân vật trong không gian 3D rừng tre khi người chơi chạm màn hình
+  const handlePreviewCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const cvs = previewCanvasRef.current;
+    if (!cvs) return;
+    const rect = cvs.getBoundingClientRect();
+    const clickX = ((e.clientX - rect.left) / rect.width) * cvs.width;
+    const clickY = ((e.clientY - rect.top) / rect.height) * cvs.height;
+
+    if (worldMode === '3d_world') {
+      const horizonY = 75;
+      const groundCenterY = 225;
+      const cameraDist = 280;
+
+      if (clickY >= horizonY) {
+        const depthRatio = (clickY - horizonY) / (groundCenterY - horizonY);
+        const z = depthRatio > 0 ? cameraDist / depthRatio - cameraDist : 0;
+        const clampedZ = Math.max(-25, Math.min(150, z));
+        const depthScale = cameraDist / (cameraDist + clampedZ);
+        const x = (clickX - cvs.width / 2) / depthScale;
+        const clampedX = Math.max(-110, Math.min(110, x));
+
+        char3DRef.current.targetX = clampedX;
+        char3DRef.current.targetZ = clampedZ;
+        SoundEngine.playBambooKnock();
+      }
+    } else {
+      SoundEngine.playBlessingChime();
+    }
+  };
+
   // =========================================================================
   // BƯỚC 5: ADD ANIMATION & THẾ GIỚI RỐI GIẤY 3D (TERI THE PAPER BEAR GUMBALL)
   // =========================================================================
@@ -1206,7 +1236,9 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           135,
           145,
           1,
-          turntableRotation
+          turntableRotation,
+          previewMotion,
+          tick
         );
 
         if (showSkeletonWireframe) {
@@ -1218,7 +1250,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
             h / 2 - 65,
             135,
             145,
-            turntableRotation
+            turntableRotation,
+            1
           );
         }
       } else {
@@ -1232,25 +1265,46 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
         const dz = char.targetZ - char.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
 
+        let effectiveMotion: CreatureAction = previewMotion || 'idle';
+
         if (dist > 4) {
-          const moveSpeed = char.action === 'run' ? 3.4 : 2.0;
+          const moveSpeed =
+            previewMotion === 'run' ? 3.6 : previewMotion === 'sneak' ? 1.4 : 2.2;
           char.x += (dx / dist) * Math.min(dist, moveSpeed);
           char.z += (dz / dist) * Math.min(dist, moveSpeed);
 
           // Xoay mặt và lật giấy 3D
-          if (dx > 3) {
+          if (dx > 2) {
             char.direction = 1;
             char.targetRotationY = 0;
-          } else if (dx < -3) {
+          } else if (dx < -2) {
             char.direction = -1;
             char.targetRotationY = 180;
           }
 
-          if (char.action !== 'run' && char.action !== 'dance') {
-            char.action = dist > 55 ? 'run' : 'walk';
+          effectiveMotion =
+            dist > 60 || previewMotion === 'run'
+              ? 'run'
+              : previewMotion === 'sneak'
+              ? 'sneak'
+              : 'walk';
+          char.action = effectiveMotion;
+        } else {
+          // Khi đứng tại chỗ (dist <= 4), THỰC HIỆN TRỌN VẸN HOẠT ẢNH PREVIEW ĐANG CHỌN!
+          effectiveMotion = previewMotion || 'idle';
+          char.action = effectiveMotion;
+
+          // Xử lý chuyển động & vật lý 3D cho các hoạt ảnh nhảy / xoay / ngủ
+          if (previewMotion === 'happy_jump' || previewMotion === 'hop') {
+            if (!char.isJumping && char.y <= 0 && tick % 45 === 0) {
+              char.isJumping = true;
+              char.vy = previewMotion === 'happy_jump' ? 7.6 : 5.4;
+              SoundEngine.playBambooKnock();
+            }
+          } else if (previewMotion === 'spin') {
+            // Xoay tròn 360 độ trong không gian 3D
+            char.targetRotationY = (char.targetRotationY + 6) % 360;
           }
-        } else if (!char.isJumping && char.action !== 'dance' && char.action !== 'wave' && char.action !== 'sad') {
-          char.action = 'idle';
         }
 
         // Vật lý nhảy giấy Teri (Paper Flutter Jump)
@@ -1369,8 +1423,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
         ctx.fill();
         ctx.restore();
 
-        // Động học uốn giấy
-        const pose = calculateRigPose(tick, char.action, 1);
+        // Động học uốn giấy theo FK Khung Xương
+        const pose = calculateRigPose(tick, effectiveMotion, 1);
         if (char.isJumping) {
           pose.bodyBend = Math.sin(tick * 0.25) * 0.12;
           pose.hopY = 0;
@@ -1379,7 +1433,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
         const charWidth = 120 * charScale;
         const charHeight = 132 * charScale;
 
-        // Vẽ Rối Giấy Teri 3D (Sticker Viền Trắng + Lật 3D)
+        // Vẽ Rối Giấy Teri 3D (Sticker Viền Trắng + Lật 3D + Đầy đủ hiệu ứng cảm xúc)
         drawPaperPuppet(
           ctx,
           loadedImgRef.current!,
@@ -1390,8 +1444,25 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           charWidth,
           charHeight,
           char.direction,
-          char.rotationY
+          char.rotationY,
+          effectiveMotion,
+          tick
         );
+
+        // HIỂN THỊ KHUNG XƯƠNG ĐỘNG (FK) TRONG THẾ GIỚI 3D RỪNG TRE!
+        if (showSkeletonWireframe) {
+          drawSkeletonWireframe(
+            ctx,
+            rigData,
+            pose,
+            charScreenX - charWidth / 2,
+            charScreenY - charHeight * 0.92,
+            charWidth,
+            charHeight,
+            char.rotationY,
+            char.direction
+          );
+        }
 
         // 7. Cây tre tiền cảnh (Z = -30)
         [
@@ -2080,11 +2151,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               width={260}
               height={260}
               className="relative z-10 w-full h-full cursor-pointer"
-              onClick={() => {
-                SoundEngine.playBlessingChime();
-                setPreviewMotion('wave');
-                setTimeout(() => setPreviewMotion('walk'), 2200);
-              }}
+              onClick={handlePreviewCanvasClick}
             />
           </div>
 

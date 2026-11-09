@@ -72,7 +72,7 @@ export default function S06HomeForest({
       const custom = e as CustomEvent<CreatureAction>;
       if (custom.detail) {
         creatureRef.current.action = custom.detail;
-        creatureRef.current.actionTimer = 150; // ~2.5s
+        creatureRef.current.actionTimer = 240; // ~4s để người chơi ngắm trọn vẹn hoạt ảnh
       }
     };
     window.addEventListener('mangnon_action', handleAction);
@@ -241,7 +241,9 @@ export default function S06HomeForest({
           c.y,
           90,
           96,
-          c.direction
+          c.direction,
+          c.action,
+          tick
         );
       }
 

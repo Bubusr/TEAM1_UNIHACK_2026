@@ -757,104 +757,117 @@ export function calculateRigPose(
 
     // === META JUMPING CATEGORY ===
     case 'happy_jump': {
-      const jumpCycle = Math.sin(t * 1.5);
+      const jumpCycle = Math.sin(t * 1.8);
       if (jumpCycle > 0) {
-        hopY = -jumpCycle * 22;
-        stretchY = 1.15;
-        squashX = 0.88;
-        armAngleL = -0.6;
-        armAngleR = 0.6;
-        mouthOpen = 0.8;
+        hopY = -jumpCycle * 26; // Bật nhảy vọt lên cao
+        stretchY = 1.22;
+        squashX = 0.82;
+        armAngleL = -0.85; // Giơ 2 tay lên cao reo vui
+        armAngleR = 0.85;
+        legOffsetL = 8;
+        legOffsetR = -8;
+        mouthOpen = 0.9;
       } else {
         hopY = 0;
-        stretchY = 0.86;
-        squashX = 1.14;
-        armAngleL = 0.2;
-        armAngleR = -0.2;
-        mouthOpen = 0.2;
+        stretchY = 0.82; // Chạm đất nhún người lấy đà
+        squashX = 1.2;
+        armAngleL = 0.25;
+        armAngleR = -0.25;
+        mouthOpen = 0.3;
       }
-      bodyBend = Math.sin(t * 1.5) * 0.06;
+      bodyBend = Math.sin(t * 1.8) * 0.08;
       break;
     }
 
     case 'paper_flutter': {
-      // Nhảy chao liệng lá tre / tờ giấy rơi lơ lửng
-      hopY = -12 + Math.sin(t * 0.9) * 8;
-      bodyBend = Math.sin(t * 1.8) * 0.18;
-      skewX = Math.cos(t * 1.8) * 0.15;
-      headTilt = Math.sin(t * 1.2) * 0.12;
-      armAngleL = Math.sin(t * 1.8) * 0.4;
-      armAngleR = -Math.sin(t * 1.8) * 0.4;
+      // Nhảy chao liệng lá tre / tờ giấy rơi lơ lửng bồng bềnh
+      hopY = -14 + Math.sin(t * 1.1) * 10;
+      bodyBend = Math.sin(t * 1.8) * 0.24;
+      skewX = Math.cos(t * 1.8) * 0.2;
+      headTilt = Math.sin(t * 1.2) * 0.16;
+      armAngleL = Math.sin(t * 1.8) * 0.5;
+      armAngleR = -Math.sin(t * 1.8) * 0.5;
+      legOffsetL = Math.sin(t * 1.8) * 6;
+      legOffsetR = -Math.sin(t * 1.8) * 6;
       break;
     }
 
     case 'hop':
-      hopY = -Math.abs(Math.sin(t * 1.8)) * 14;
-      bodyBend = Math.sin(t * 1.8) * 0.06;
-      armAngleL = Math.sin(t * 1.8) * 0.3;
-      armAngleR = Math.sin(t * 1.8) * 0.3;
-      legOffsetL = -4;
-      legOffsetR = 6;
+      hopY = -Math.abs(Math.sin(t * 1.8)) * 16;
+      bodyBend = Math.sin(t * 1.8) * 0.08;
+      armAngleL = Math.sin(t * 1.8) * 0.35;
+      armAngleR = Math.sin(t * 1.8) * 0.35;
+      legOffsetL = -6;
+      legOffsetR = 8;
       break;
 
     // === META DANCING CATEGORY ===
     case 'dance':
-      hopY = -Math.abs(Math.sin(t * 1.4)) * 5;
-      bodyBend = Math.sin(t * 1.4) * 0.2;
-      skewX = Math.cos(t * 1.4) * 0.16;
-      headTilt = -Math.sin(t * 1.4) * 0.15;
-      armAngleL = Math.cos(t * 1.4) * 0.55;
-      armAngleR = -Math.cos(t * 1.4) * 0.55;
-      mouthOpen = 0.6;
+      // Vũ điệu uốn lượn tờ giấy theo nhịp
+      hopY = -Math.abs(Math.sin(t * 1.8)) * 8;
+      bodyBend = Math.sin(t * 1.8) * 0.28;
+      skewX = Math.cos(t * 1.8) * 0.22;
+      headTilt = -Math.sin(t * 1.8) * 0.2;
+      armAngleL = Math.sin(t * 1.8) * 0.85;
+      armAngleR = -Math.sin(t * 1.8) * 0.85;
+      legOffsetL = Math.sin(t * 1.8) * 14;
+      legOffsetR = -Math.sin(t * 1.8) * 14;
+      mouthOpen = 0.7;
       break;
 
     case 'wave':
-      bodyBend = Math.sin(t * 0.8) * 0.05;
-      armAngleL = -0.7 + Math.sin(t * 3.5) * 0.35;
-      armAngleR = 0.1;
-      mouthOpen = 0.5;
-      headTilt = 0.08;
+      bodyBend = Math.sin(t * 0.8) * 0.06;
+      armAngleL = -0.85 + Math.sin(t * 3.8) * 0.45;
+      armAngleR = 0.15;
+      mouthOpen = 0.6;
+      headTilt = 0.1;
       break;
 
     case 'spin':
-      hopY = -Math.abs(Math.sin(t * 1.6)) * 4;
-      bodyBend = Math.sin(t * 2.0) * 0.12;
-      skewX = Math.sin(t * 2.0) * 0.2;
-      armAngleL = -0.4;
-      armAngleR = 0.4;
+      hopY = -Math.abs(Math.sin(t * 2.0)) * 6;
+      bodyBend = Math.sin(t * 2.2) * 0.15;
+      skewX = Math.sin(t * 2.2) * 0.24;
+      armAngleL = -0.55;
+      armAngleR = 0.55;
       break;
 
     // === META FUNNY CATEGORY ===
     case 'teri_panic':
       // Rung bần bật sợ hãi kiểu Gấu giấy Teri trong Thế Giới Kẹo Bông Gumball
-      hopY = Math.sin(t * 8.0) * 3;
-      bodyBend = Math.sin(t * 9.0) * 0.14;
-      skewX = Math.cos(t * 8.5) * 0.15;
-      squashX = 1 + Math.sin(t * 10.0) * 0.1;
-      stretchY = 1 - Math.sin(t * 10.0) * 0.1;
-      armAngleL = -0.7 + Math.sin(t * 9.0) * 0.4;
-      armAngleR = 0.7 - Math.sin(t * 9.0) * 0.4;
-      mouthOpen = 0.9;
+      hopY = Math.sin(t * 10.0) * 4;
+      bodyBend = Math.sin(t * 11.0) * 0.18;
+      skewX = Math.cos(t * 10.5) * 0.2;
+      squashX = 1 + Math.sin(t * 12.0) * 0.14;
+      stretchY = 1 - Math.sin(t * 12.0) * 0.14;
+      armAngleL = -0.85 + Math.sin(t * 12.0) * 0.5;
+      armAngleR = 0.85 - Math.sin(t * 12.0) * 0.5;
+      mouthOpen = 1;
       break;
 
     case 'sad':
-      hopY = 4;
-      stretchY = 0.92;
-      squashX = 1.06;
-      bodyBend = -0.15;
-      headTilt = -0.18;
-      armAngleL = 0.1;
-      armAngleR = -0.1;
+      // Ủ rũ: cúi gục đầu, vai thõng, lê bước chậm chạp
+      hopY = 5 + Math.sin(t * 0.4) * 2;
+      stretchY = 0.88;
+      squashX = 1.08;
+      bodyBend = 0.22; // Thân gập về trước
+      headTilt = 0.32; // Đầu cúi gằm xuống
+      armAngleL = 0.25; // Hai tay buông thõng
+      armAngleR = -0.25;
+      legOffsetL = Math.sin(t * 0.5) * 3;
+      legOffsetR = -Math.sin(t * 0.5) * 3;
+      mouthOpen = 0;
       break;
 
     case 'sleep':
-      hopY = 8;
-      stretchY = 0.85;
-      squashX = 1.12;
-      bodyBend = 0.22;
-      headTilt = 0.25;
-      armAngleL = 0.3;
-      armAngleR = -0.3;
+      // Ngủ / Gấp giấy: ép phẳng nằm sát đất, nhắm mắt, thở êm
+      hopY = 16 + Math.sin(t * 0.3) * 1.5;
+      stretchY = 0.64; // Thân phẳng bẹp nằm sát đất
+      squashX = 1.32; // Bè ngang thư thái
+      bodyBend = 0.36;
+      headTilt = 0.4;
+      armAngleL = 0.55;
+      armAngleR = -0.55;
+      mouthOpen = 0.05;
       break;
   }
 
@@ -889,7 +902,9 @@ export function drawPaperPuppet(
   targetWidth = 120,
   targetHeight = 120,
   direction: 1 | -1 = 1,
-  rotationY = 0 // Góc lật 3D quanh trục Y (-180°..+180°)
+  rotationY = 0, // Góc lật 3D quanh trục Y (-180°..+180°)
+  motion: CreatureAction = 'walk',
+  tick = 0
 ) {
   ctx.save();
 
@@ -920,14 +935,18 @@ export function drawPaperPuppet(
   // 5. Vẽ TOÀN BỘ BỨC VẼ GỐC NGUYÊN VẸN 100% (Không cắt nét!)
   ctx.drawImage(img, -w / 2, -h / 2, w, h);
 
-  // 6. Hiệu ứng sống động trên khuôn mặt (Nếu có nốt Mắt & Miệng)
+  // 6. Hiệu ứng sống động tuân theo khung xương (Mắt, Miệng, Nước mắt, zZz, Sao, Mồ hôi)
   if (rig && rig.joints) {
     const eyeL = rig.joints.find((j) => j.type === 'eye_l');
     const eyeR = rig.joints.find((j) => j.type === 'eye_r');
     const mouth = rig.joints.find((j) => j.type === 'mouth');
+    const headJ = rig.joints.find((j) => j.type === 'head');
+    const shLJ = rig.joints.find((j) => j.type === 'shoulder_l');
+    const shRJ = rig.joints.find((j) => j.type === 'shoulder_r');
 
-    // Chớp mắt tự nhiên
-    if (pose.eyeBlink > 0.5 && eyeL && eyeR) {
+    // Chớp mắt tự nhiên hoặc nhắm mắt khi ngủ
+    const shouldCloseEyes = pose.eyeBlink > 0.5 || motion === 'sleep';
+    if (shouldCloseEyes && eyeL && eyeR) {
       ctx.save();
       ctx.strokeStyle = '#1B2A2F';
       ctx.lineWidth = 2.5;
@@ -948,15 +967,70 @@ export function drawPaperPuppet(
       ctx.restore();
     }
 
-    // Nụ cười hé nở khi nói chuyện hoặc nhảy vui
-    if (pose.mouthOpen > 0.2 && mouth) {
+    // Hiệu ứng hé mở miệng theo động tác (reo vui, cười, hoảng sợ)
+    if (pose.mouthOpen > 0.15 && mouth && motion !== 'sad') {
       ctx.save();
       ctx.fillStyle = '#C8412F';
       const mx = -w / 2 + mouth.relX * w;
       const my = -h / 2 + mouth.relY * h;
       ctx.beginPath();
-      ctx.ellipse(mx, my + 1, 3.5, 2 * pose.mouthOpen, 0, 0, Math.PI * 2);
+      ctx.ellipse(mx, my + 1, 3.5, 2.5 * pose.mouthOpen, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+    }
+
+    // 1. Hiệu ứng 'sad' (Ủ rũ): giọt nước mắt lăn dài từ 2 mắt
+    if (motion === 'sad' && eyeL && eyeR) {
+      ctx.save();
+      ctx.fillStyle = '#4CC9F0';
+      const tearY1 = -h / 2 + eyeL.relY * h + 4 + ((tick * 1.2) % 18);
+      const tearY2 = -h / 2 + eyeR.relY * h + 4 + (((tick * 1.2) + 9) % 18);
+      const ex1 = -w / 2 + eyeL.relX * w;
+      const ex2 = -w / 2 + eyeR.relX * w;
+      ctx.beginPath();
+      ctx.arc(ex1, tearY1, 2.5, 0, Math.PI * 2);
+      ctx.arc(ex2, tearY2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 2. Hiệu ứng 'sleep' (Gấp giấy / Ngủ): chữ zZz bay lên từ đầu
+    if (motion === 'sleep') {
+      ctx.save();
+      const hX = -w / 2 + (headJ ? headJ.relX * w : w * 0.5);
+      const hY = -h / 2 + (headJ ? headJ.relY * h : h * 0.2);
+      const floatOffset = (tick * 0.7) % 36;
+      ctx.fillStyle = '#FFE18A';
+      ctx.font = 'bold 10px system-ui';
+      ctx.fillText('z', hX + 8, hY - 4 - floatOffset * 0.4);
+      ctx.font = 'bold 13px system-ui';
+      ctx.fillText('Z', hX + 15, hY - 12 - floatOffset * 0.6);
+      ctx.font = 'bold 16px system-ui';
+      ctx.fillText('Z', hX + 22, hY - 22 - floatOffset * 0.85);
+      ctx.restore();
+    }
+
+    // 3. Hiệu ứng 'dance' & 'happy_jump': sao lấp lánh và nốt nhạc quanh vai/tay
+    if (motion === 'dance' || motion === 'happy_jump') {
+      ctx.save();
+      ctx.font = '12px system-ui';
+      const nx = -w / 2 + (shLJ ? shLJ.relX * w : 0) - 8;
+      const ny = -h / 2 + (shLJ ? shLJ.relY * h : 0) - 10 + Math.sin(tick * 0.2) * 4;
+      ctx.fillText(motion === 'dance' ? '🎵' : '✨', nx, ny);
+      const nx2 = -w / 2 + (shRJ ? shRJ.relX * w : w) + 6;
+      const ny2 = -h / 2 + (shRJ ? shRJ.relY * h : 0) - 12 + Math.cos(tick * 0.2) * 4;
+      ctx.fillText(motion === 'dance' ? '🎶' : '🌟', nx2, ny2);
+      ctx.restore();
+    }
+
+    // 4. Hiệu ứng 'teri_panic': toát mồ hôi rung bần bật
+    if (motion === 'teri_panic') {
+      ctx.save();
+      ctx.font = '12px system-ui';
+      const px = -w / 2 + (headJ ? headJ.relX * w : w * 0.5);
+      const py = -h / 2 + (headJ ? headJ.relY * h : h * 0.2);
+      ctx.fillText('💧', px - 18, py - 4);
+      ctx.fillText('💧', px + 12, py - 6);
       ctx.restore();
     }
   }
@@ -972,10 +1046,25 @@ export const drawAnimatedFigure = (
   centerY: number,
   targetWidth = 100,
   targetHeight = 100,
-  direction: 1 | -1 = 1
+  direction: 1 | -1 = 1,
+  motion: CreatureAction = 'walk',
+  tick = 0
 ) => {
   const dummyRig = generateDefaultHumanoidRig();
-  drawPaperPuppet(ctx, img, pose, dummyRig, centerX, centerY, targetWidth, targetHeight, direction, 0);
+  drawPaperPuppet(
+    ctx,
+    img,
+    pose,
+    dummyRig,
+    centerX,
+    centerY,
+    targetWidth,
+    targetHeight,
+    direction,
+    0,
+    motion,
+    tick
+  );
 };
 
 /**
@@ -1196,7 +1285,348 @@ export function drawReferenceMannequin(
 }
 
 /**
- * Vẽ khung xương động phát sáng (Playback Wireframe)
+ * TÍNH TOÁN VỊ TRÍ ĐỘNG CỦA TỪNG KHỚP XƯƠNG THEO ĐỘNG HỌC THUẬN (Forward Kinematics - FK)
+ * Tuân theo tỷ lệ nhân vật tùy chỉnh của người dùng:
+ * - Hông trái / Hông phải (Pelvis & Hips) chuyển động theo nhịp bước và độ nhún
+ * - Xương sống (Spine) uốn cong theo dáng người
+ * - Cổ & Đầu (Neck & Head) gật gù, nghiêng theo cảm xúc
+ * - Ngũ quan (Mắt, Miệng, Mũi) gắn chặt và xoay chuyển đồng bộ theo đầu
+ * - Tay trái / Tay phải (Shoulders -> Elbows -> Hands) vung vẩy, gập khớp, múa lượn
+ * - Chân trái / Chân phải (Hips -> Knees -> Feet) sải bước, gập gối, tiếp đất
+ */
+export function computeAnimatedSkeletonJoints(
+  rig: SkeletonRig,
+  pose: RigPose,
+  boxX: number,
+  boxY: number,
+  boxW: number,
+  boxH: number,
+  direction: 1 | -1 = 1,
+  rotationY = 0
+): Map<string, { x: number; y: number }> {
+  const result = new Map<string, { x: number; y: number }>();
+  const centerX = boxX + boxW * 0.5;
+
+  const radY = (rotationY * Math.PI) / 180;
+  const pScaleX = Math.cos(radY) * direction;
+
+  // 1. Tọa độ nghỉ ban đầu (Rest coordinates)
+  const restPos = new Map<string, { x: number; y: number }>();
+  rig.joints.forEach((j) => {
+    restPos.set(j.id, {
+      x: boxX + j.relX * boxW,
+      y: boxY + j.relY * boxH,
+    });
+  });
+
+  const getRest = (type: string) => {
+    const j = rig.joints.find((node) => node.type === type);
+    return j ? restPos.get(j.id) : null;
+  };
+
+  // Mặc định ban đầu nếu có khớp phụ không nằm trong chuỗi FK chính
+  rig.joints.forEach((j) => {
+    const r = restPos.get(j.id)!;
+    const transformedX = centerX + (r.x - centerX) * pScaleX + Math.sin(pose.bodyBend) * 4 * direction;
+    const transformedY = r.y + pose.hopY + pose.breathY;
+    result.set(j.id, { x: transformedX, y: transformedY });
+  });
+
+  // =========================================================================
+  // 1. GỐC HÔNG VÀ KHUNG CHẬU (Pelvis & Hips FK)
+  // =========================================================================
+  const hipLRest = getRest('hip_l');
+  const hipRRest = getRest('hip_r');
+  const hipSingleRest = getRest('hip') || getRest('root');
+
+  let pelvisRestX = centerX;
+  let pelvisRestY = boxY + boxH * 0.68;
+  if (hipLRest && hipRRest) {
+    pelvisRestX = (hipLRest.x + hipRRest.x) / 2;
+    pelvisRestY = (hipLRest.y + hipRRest.y) / 2;
+  } else if (hipSingleRest) {
+    pelvisRestX = hipSingleRest.x;
+    pelvisRestY = hipSingleRest.y;
+  }
+
+  // Khung chậu di chuyển theo độ nảy (hop), nhịp thở (breath), và lắc hông khi bước đi
+  const animPelvisX = pelvisRestX + Math.sin(pose.bodyBend) * 6 * direction;
+  const animPelvisY = pelvisRestY + pose.hopY + pose.breathY;
+
+  // Độ nghiêng khung chậu (Pelvis tilt) khi chuyển trọng tâm chân
+  const pelvisTilt = ((pose.legOffsetL - pose.legOffsetR) / 50) * 0.09 * direction;
+
+  let animHipLX = animPelvisX - 10 * direction;
+  let animHipLY = animPelvisY;
+  let animHipRX = animPelvisX + 10 * direction;
+  let animHipRY = animPelvisY;
+
+  if (hipLRest) {
+    const dx = hipLRest.x - pelvisRestX;
+    const dy = hipLRest.y - pelvisRestY;
+    animHipLX = animPelvisX + (dx * Math.cos(pelvisTilt) - dy * Math.sin(pelvisTilt));
+    animHipLY = animPelvisY + (dx * Math.sin(pelvisTilt) + dy * Math.cos(pelvisTilt));
+    const j = rig.joints.find((n) => n.type === 'hip_l');
+    if (j) result.set(j.id, { x: centerX + (animHipLX - centerX) * pScaleX, y: animHipLY });
+  }
+
+  if (hipRRest) {
+    const dx = hipRRest.x - pelvisRestX;
+    const dy = hipRRest.y - pelvisRestY;
+    animHipRX = animPelvisX + (dx * Math.cos(pelvisTilt) - dy * Math.sin(pelvisTilt));
+    animHipRY = animPelvisY + (dx * Math.sin(pelvisTilt) + dy * Math.cos(pelvisTilt));
+    const j = rig.joints.find((n) => n.type === 'hip_r');
+    if (j) result.set(j.id, { x: centerX + (animHipRX - centerX) * pScaleX, y: animHipRY });
+  }
+
+  // =========================================================================
+  // 2. CHÂN TRÁI & CHÂN PHẢI (Legs & Feet FK)
+  // =========================================================================
+  // Chân trái
+  const kneeLRest = getRest('knee_l');
+  const footLRest = getRest('foot_l');
+  if (kneeLRest) {
+    const thighRefX = hipLRest ? hipLRest.x : animPelvisX - 10;
+    const thighRefY = hipLRest ? hipLRest.y : animPelvisY;
+    const thighDx = kneeLRest.x - thighRefX;
+    const thighDy = kneeLRest.y - thighRefY;
+    const thighLen = Math.hypot(thighDx, thighDy) || boxH * 0.16;
+    const thighRestAngle = Math.atan2(thighDy, thighDx);
+
+    const thighSwing = (pose.legOffsetL / 36) * 0.7 * direction;
+    const thighAngle = thighRestAngle + thighSwing;
+    const animKneeLX = animHipLX + Math.cos(thighAngle) * thighLen;
+    const animKneeLY = animHipLY + Math.sin(thighAngle) * thighLen;
+
+    const jKnee = rig.joints.find((n) => n.type === 'knee_l');
+    if (jKnee) result.set(jKnee.id, { x: centerX + (animKneeLX - centerX) * pScaleX, y: animKneeLY });
+
+    if (footLRest) {
+      const calfDx = footLRest.x - kneeLRest.x;
+      const calfDy = footLRest.y - kneeLRest.y;
+      const calfLen = Math.hypot(calfDx, calfDy) || boxH * 0.16;
+      const calfRestAngle = Math.atan2(calfDy, calfDx);
+
+      let kneeFlex = Math.max(0, -pose.legOffsetL * 0.025) * direction;
+      if (pose.hopY < -8) kneeFlex += 0.25; // Gập nhẹ đầu gối khi bật nhảy
+      const calfAngle = calfRestAngle + thighSwing + kneeFlex;
+      const animFootLX = animKneeLX + Math.cos(calfAngle) * calfLen;
+      const animFootLY = animKneeLY + Math.sin(calfAngle) * calfLen;
+
+      const jFoot = rig.joints.find((n) => n.type === 'foot_l');
+      if (jFoot) result.set(jFoot.id, { x: centerX + (animFootLX - centerX) * pScaleX, y: animFootLY });
+    }
+  }
+
+  // Chân phải
+  const kneeRRest = getRest('knee_r');
+  const footRRest = getRest('foot_r');
+  if (kneeRRest) {
+    const thighRefX = hipRRest ? hipRRest.x : animPelvisX + 10;
+    const thighRefY = hipRRest ? hipRRest.y : animPelvisY;
+    const thighDx = kneeRRest.x - thighRefX;
+    const thighDy = kneeRRest.y - thighRefY;
+    const thighLen = Math.hypot(thighDx, thighDy) || boxH * 0.16;
+    const thighRestAngle = Math.atan2(thighDy, thighDx);
+
+    const thighSwing = (pose.legOffsetR / 36) * 0.7 * direction;
+    const thighAngle = thighRestAngle + thighSwing;
+    const animKneeRX = animHipRX + Math.cos(thighAngle) * thighLen;
+    const animKneeRY = animHipRY + Math.sin(thighAngle) * thighLen;
+
+    const jKnee = rig.joints.find((n) => n.type === 'knee_r');
+    if (jKnee) result.set(jKnee.id, { x: centerX + (animKneeRX - centerX) * pScaleX, y: animKneeRY });
+
+    if (footRRest) {
+      const calfDx = footRRest.x - kneeRRest.x;
+      const calfDy = footRRest.y - kneeRRest.y;
+      const calfLen = Math.hypot(calfDx, calfDy) || boxH * 0.16;
+      const calfRestAngle = Math.atan2(calfDy, calfDx);
+
+      let kneeFlex = Math.max(0, -pose.legOffsetR * 0.025) * direction;
+      if (pose.hopY < -8) kneeFlex += 0.25;
+      const calfAngle = calfRestAngle + thighSwing + kneeFlex;
+      const animFootRX = animKneeRX + Math.cos(calfAngle) * calfLen;
+      const animFootRY = animKneeRY + Math.sin(calfAngle) * calfLen;
+
+      const jFoot = rig.joints.find((n) => n.type === 'foot_r');
+      if (jFoot) result.set(jFoot.id, { x: centerX + (animFootRX - centerX) * pScaleX, y: animFootRY });
+    }
+  }
+
+  // =========================================================================
+  // 3. XƯƠNG SỐNG & LỒNG NGỰC / CỔ (Spine & Neck FK)
+  // =========================================================================
+  const spineRest = getRest('spine');
+  const neckRest = getRest('neck');
+
+  let animSpineX = animPelvisX;
+  let animSpineY = animPelvisY - boxH * 0.18;
+  const spineBend = pose.bodyBend * 0.85 * direction;
+
+  if (spineRest) {
+    const sDx = spineRest.x - pelvisRestX;
+    const sDy = spineRest.y - pelvisRestY;
+    const sLen = Math.hypot(sDx, sDy) || boxH * 0.18;
+    const sRestAngle = Math.atan2(sDy, sDx);
+    animSpineX = animPelvisX + Math.cos(sRestAngle + spineBend) * sLen * pose.stretchY;
+    animSpineY = animPelvisY + Math.sin(sRestAngle + spineBend) * sLen * pose.stretchY;
+
+    const jSpine = rig.joints.find((n) => n.type === 'spine');
+    if (jSpine) result.set(jSpine.id, { x: centerX + (animSpineX - centerX) * pScaleX, y: animSpineY });
+  }
+
+  let animNeckX = animSpineX;
+  let animNeckY = animSpineY - boxH * 0.14;
+  const neckBend = pose.bodyBend * 1.15 * direction;
+
+  if (neckRest) {
+    const baseRefX = spineRest ? spineRest.x : pelvisRestX;
+    const baseRefY = spineRest ? spineRest.y : pelvisRestY;
+    const nDx = neckRest.x - baseRefX;
+    const nDy = neckRest.y - baseRefY;
+    const nLen = Math.hypot(nDx, nDy) || boxH * 0.14;
+    const nRestAngle = Math.atan2(nDy, nDx);
+    animNeckX = animSpineX + Math.cos(nRestAngle + neckBend) * nLen * pose.stretchY;
+    animNeckY = animSpineY + Math.sin(nRestAngle + neckBend) * nLen * pose.stretchY;
+
+    const jNeck = rig.joints.find((n) => n.type === 'neck');
+    if (jNeck) result.set(jNeck.id, { x: centerX + (animNeckX - centerX) * pScaleX, y: animNeckY });
+  }
+
+  // =========================================================================
+  // 4. ĐẦU VÀ NGŨ QUAN (Head, Eyes, Nose, Mouth FK)
+  // =========================================================================
+  const headRest = getRest('head');
+  let animHeadX = animNeckX;
+  let animHeadY = animNeckY - boxH * 0.16;
+  const headAngleOffset = (pose.headTilt + pose.bodyBend * 0.5) * direction;
+
+  if (headRest) {
+    const baseRefX = neckRest ? neckRest.x : animSpineX;
+    const baseRefY = neckRest ? neckRest.y : animSpineY;
+    const hDx = headRest.x - baseRefX;
+    const hDy = headRest.y - baseRefY;
+    const hLen = Math.hypot(hDx, hDy) || boxH * 0.16;
+    const hRestAngle = Math.atan2(hDy, hDx);
+    animHeadX = animNeckX + Math.cos(hRestAngle + headAngleOffset) * hLen;
+    animHeadY = animNeckY + Math.sin(hRestAngle + headAngleOffset) * hLen;
+
+    const jHead = rig.joints.find((n) => n.type === 'head');
+    if (jHead) result.set(jHead.id, { x: centerX + (animHeadX - centerX) * pScaleX, y: animHeadY });
+  }
+
+  // Ngũ quan xoay chuyển đồng bộ theo đầu (Mắt, Mũi, Miệng)
+  ['eye_l', 'eye_r', 'nose', 'mouth'].forEach((faceType) => {
+    const fRest = getRest(faceType);
+    if (fRest && headRest) {
+      const relDx = fRest.x - headRest.x;
+      const relDy = fRest.y - headRest.y;
+      const rotRelX = relDx * Math.cos(headAngleOffset) - relDy * Math.sin(headAngleOffset);
+      const rotRelY = relDx * Math.sin(headAngleOffset) + relDy * Math.cos(headAngleOffset);
+      const fX = animHeadX + rotRelX;
+      const fY = animHeadY + rotRelY;
+
+      const jFace = rig.joints.find((n) => n.type === faceType);
+      if (jFace) result.set(jFace.id, { x: centerX + (fX - centerX) * pScaleX, y: fY });
+    }
+  });
+
+  // =========================================================================
+  // 5. TAY TRÁI & TAY PHẢI (Arms & Hands FK)
+  // =========================================================================
+  // Tay trái
+  const shoulderLRest = getRest('shoulder_l');
+  const elbowLRest = getRest('elbow_l');
+  const handLRest = getRest('hand_l');
+  if (shoulderLRest) {
+    const nRefX = neckRest ? neckRest.x : centerX;
+    const nRefY = neckRest ? neckRest.y : boxY + boxH * 0.4;
+    const shDx = shoulderLRest.x - nRefX;
+    const shDy = shoulderLRest.y - nRefY;
+    const animShoulderLX = animNeckX + shDx + Math.sin(pose.bodyBend) * 3 * direction;
+    const animShoulderLY = animNeckY + shDy;
+
+    const jSh = rig.joints.find((n) => n.type === 'shoulder_l');
+    if (jSh) result.set(jSh.id, { x: centerX + (animShoulderLX - centerX) * pScaleX, y: animShoulderLY });
+
+    if (elbowLRest) {
+      const armDx = elbowLRest.x - shoulderLRest.x;
+      const armDy = elbowLRest.y - shoulderLRest.y;
+      const armLen = Math.hypot(armDx, armDy) || boxH * 0.13;
+      const armRestAngle = Math.atan2(armDy, armDx);
+      const armAngleL = armRestAngle + pose.armAngleL * direction;
+      const animElbowLX = animShoulderLX + Math.cos(armAngleL) * armLen;
+      const animElbowLY = animShoulderLY + Math.sin(armAngleL) * armLen;
+
+      const jElbow = rig.joints.find((n) => n.type === 'elbow_l');
+      if (jElbow) result.set(jElbow.id, { x: centerX + (animElbowLX - centerX) * pScaleX, y: animElbowLY });
+
+      if (handLRest) {
+        const foreDx = handLRest.x - elbowLRest.x;
+        const foreDy = handLRest.y - elbowLRest.y;
+        const foreLen = Math.hypot(foreDx, foreDy) || boxH * 0.12;
+        const foreRestAngle = Math.atan2(foreDy, foreDx);
+        const elbowFlex = pose.armAngleL * 0.45 * direction;
+        const forearmAngle = foreRestAngle + pose.armAngleL * direction + elbowFlex;
+        const animHandLX = animElbowLX + Math.cos(forearmAngle) * foreLen;
+        const animHandLY = animElbowLY + Math.sin(forearmAngle) * foreLen;
+
+        const jHand = rig.joints.find((n) => n.type === 'hand_l');
+        if (jHand) result.set(jHand.id, { x: centerX + (animHandLX - centerX) * pScaleX, y: animHandLY });
+      }
+    }
+  }
+
+  // Tay phải
+  const shoulderRRest = getRest('shoulder_r');
+  const elbowRRest = getRest('elbow_r');
+  const handRRest = getRest('hand_r');
+  if (shoulderRRest) {
+    const nRefX = neckRest ? neckRest.x : centerX;
+    const nRefY = neckRest ? neckRest.y : boxY + boxH * 0.4;
+    const shDx = shoulderRRest.x - nRefX;
+    const shDy = shoulderRRest.y - nRefY;
+    const animShoulderRX = animNeckX + shDx + Math.sin(pose.bodyBend) * 3 * direction;
+    const animShoulderRY = animNeckY + shDy;
+
+    const jSh = rig.joints.find((n) => n.type === 'shoulder_r');
+    if (jSh) result.set(jSh.id, { x: centerX + (animShoulderRX - centerX) * pScaleX, y: animShoulderRY });
+
+    if (elbowRRest) {
+      const armDx = elbowRRest.x - shoulderRRest.x;
+      const armDy = elbowRRest.y - shoulderRRest.y;
+      const armLen = Math.hypot(armDx, armDy) || boxH * 0.13;
+      const armRestAngle = Math.atan2(armDy, armDx);
+      const armAngleR = armRestAngle + pose.armAngleR * direction;
+      const animElbowRX = animShoulderRX + Math.cos(armAngleR) * armLen;
+      const animElbowRY = animShoulderRY + Math.sin(armAngleR) * armLen;
+
+      const jElbow = rig.joints.find((n) => n.type === 'elbow_r');
+      if (jElbow) result.set(jElbow.id, { x: centerX + (animElbowRX - centerX) * pScaleX, y: animElbowRY });
+
+      if (handRRest) {
+        const foreDx = handRRest.x - elbowRRest.x;
+        const foreDy = handRRest.y - elbowRRest.y;
+        const foreLen = Math.hypot(foreDx, foreDy) || boxH * 0.12;
+        const foreRestAngle = Math.atan2(foreDy, foreDx);
+        const elbowFlex = pose.armAngleR * 0.45 * direction;
+        const forearmAngle = foreRestAngle + pose.armAngleR * direction + elbowFlex;
+        const animHandRX = animElbowRX + Math.cos(forearmAngle) * foreLen;
+        const animHandRY = animElbowRY + Math.sin(forearmAngle) * foreLen;
+
+        const jHand = rig.joints.find((n) => n.type === 'hand_r');
+        if (jHand) result.set(jHand.id, { x: centerX + (animHandRX - centerX) * pScaleX, y: animHandRY });
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Vẽ khung xương động phát sáng (Playback Wireframe) với ĐỘNG HỌC THUẬN (FK) CHUẨN META DEMO LAB
+ * Khớp xương gập khúc, sải bước, vung tay và nghiêng đầu mượt mà chân thực!
  */
 export function drawSkeletonWireframe(
   ctx: CanvasRenderingContext2D,
@@ -1206,29 +1636,26 @@ export function drawSkeletonWireframe(
   boxY: number,
   boxW: number,
   boxH: number,
-  rotationY = 0
+  rotationY = 0,
+  direction: 1 | -1 = 1
 ) {
   ctx.save();
-  const radY = (rotationY * Math.PI) / 180;
-  const pScaleX = Math.cos(radY);
 
-  ctx.translate(boxX + boxW / 2, boxY + boxH / 2 + pose.hopY);
-  ctx.scale(pose.squashX * pScaleX, pose.stretchY);
-  ctx.transform(1, 0, pose.skewX, 1, 0, 0);
-  ctx.rotate(pose.headTilt * 0.4 + pose.bodyBend * 0.5);
-  ctx.translate(-(boxX + boxW / 2), -(boxY + boxH / 2));
+  // 1. Tính toán vị trí động học thuận (Forward Kinematics) của toàn bộ các khớp
+  const jointPos = computeAnimatedSkeletonJoints(
+    rig,
+    pose,
+    boxX,
+    boxY,
+    boxW,
+    boxH,
+    direction,
+    rotationY
+  );
 
-  const jointPos = new Map<string, { x: number; y: number }>();
-  rig.joints.forEach((j) => {
-    jointPos.set(j.id, {
-      x: boxX + j.relX * boxW,
-      y: boxY + j.relY * boxH,
-    });
-  });
-
-  // Vẽ xương
+  // 2. Vẽ các khúc xương nối giữa các khớp (Bones với hiệu ứng nét đứt vàng ánh kim)
   ctx.strokeStyle = '#F4A259';
-  ctx.lineWidth = 2.2;
+  ctx.lineWidth = 2.4;
   ctx.setLineDash([4, 3]);
 
   rig.bones.forEach(([idA, idB]) => {
@@ -1242,21 +1669,36 @@ export function drawSkeletonWireframe(
     }
   });
 
-  // Vẽ nốt khớp
+  // 3. Vẽ từng nốt chốt khớp phát sáng (Joint Pins với màu sắc phân loại Meta Demo Lab)
   ctx.setLineDash([]);
   rig.joints.forEach((j) => {
     const pos = jointPos.get(j.id);
     if (!pos) return;
 
-    ctx.fillStyle = 'rgba(255, 209, 102, 0.4)';
+    const isLeft = j.type.endsWith('_l');
+    const isRight = j.type.endsWith('_r');
+    const isFace = ['eye_l', 'eye_r', 'nose', 'mouth'].includes(j.type);
+
+    let pinColor = '#FFD166'; // Trục giữa (Vàng ấm)
+    if (isFace) pinColor = '#EF476F';       // Ngũ quan (Hồng san hô)
+    else if (isLeft) pinColor = '#06D6A0';  // Chi trái (Xanh ngọc)
+    else if (isRight) pinColor = '#118AB2'; // Chi phải (Xanh lam)
+
+    // Hào quang tỏa sáng của chốt ghim
+    ctx.fillStyle = `${pinColor}55`;
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+    ctx.arc(pos.x, pos.y, isFace ? 5 : 7, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#FFE18A';
+    // Lõi chốt ghim
+    ctx.fillStyle = pinColor;
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
+    ctx.arc(pos.x, pos.y, isFace ? 2.5 : 3.8, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
   });
 
   ctx.restore();
