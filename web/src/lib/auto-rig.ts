@@ -33,6 +33,8 @@ export interface JointNode {
     | 'hand_r'
     | 'spine'
     | 'hip'
+    | 'hip_l'
+    | 'hip_r'
     | 'knee_l'
     | 'knee_r'
     | 'foot_l'
@@ -132,9 +134,10 @@ export function generateDefaultHumanoidRig(): SkeletonRig {
     { id: 'elbow_r', name: 'Khuỷu tay phải', relX: 0.78, relY: 0.5, type: 'elbow_r' },
     { id: 'hand_r', name: 'Bàn tay phải', relX: 0.86, relY: 0.62, type: 'hand_r' },
 
-    // Trục thân & áo
+    // Trục thân & áo & 2 bên hông (Khung chậu chuẩn Meta Demo Lab)
     { id: 'spine', name: 'Thân & Áo', relX: 0.5, relY: 0.54, type: 'spine' },
-    { id: 'hip', name: 'Hông', relX: 0.5, relY: 0.7, type: 'hip' },
+    { id: 'hip_l', name: 'Hông trái', relX: 0.42, relY: 0.7, type: 'hip_l' },
+    { id: 'hip_r', name: 'Hông phải', relX: 0.58, relY: 0.7, type: 'hip_r' },
 
     // Chân trái
     { id: 'knee_l', name: 'Đầu gối trái', relX: 0.38, relY: 0.82, type: 'knee_l' },
@@ -146,10 +149,12 @@ export function generateDefaultHumanoidRig(): SkeletonRig {
   ];
 
   const bones: [string, string][] = [
-    // Trục chính
+    // Trục chính & Khung xương chậu
     ['head', 'neck'],
     ['neck', 'spine'],
-    ['spine', 'hip'],
+    ['spine', 'hip_l'],
+    ['spine', 'hip_r'],
+    ['hip_l', 'hip_r'],
     // Khớp khuôn mặt
     ['head', 'eye_l'],
     ['head', 'eye_r'],
@@ -165,11 +170,11 @@ export function generateDefaultHumanoidRig(): SkeletonRig {
     ['neck', 'shoulder_r'],
     ['shoulder_r', 'elbow_r'],
     ['elbow_r', 'hand_r'],
-    // Chân trái
-    ['hip', 'knee_l'],
+    // Chân trái (Nối từ Hông trái)
+    ['hip_l', 'knee_l'],
     ['knee_l', 'foot_l'],
-    // Chân phải
-    ['hip', 'knee_r'],
+    // Chân phải (Nối từ Hông phải)
+    ['hip_r', 'knee_r'],
     ['knee_r', 'foot_r'],
   ];
 
@@ -189,7 +194,8 @@ export function generateArmlessChibiRig(): SkeletonRig {
     { id: 'mouth', name: 'Miệng', relX: 0.5, relY: 0.38, type: 'mouth' },
     { id: 'neck', name: 'Khớp cổ', relX: 0.5, relY: 0.44, type: 'neck' },
     { id: 'spine', name: 'Thân măng', relX: 0.5, relY: 0.6, type: 'spine' },
-    { id: 'hip', name: 'Hông', relX: 0.5, relY: 0.75, type: 'hip' },
+    { id: 'hip_l', name: 'Hông trái', relX: 0.44, relY: 0.74, type: 'hip_l' },
+    { id: 'hip_r', name: 'Hông phải', relX: 0.56, relY: 0.74, type: 'hip_r' },
     { id: 'knee_l', name: 'Đầu gối trái', relX: 0.4, relY: 0.86, type: 'knee_l' },
     { id: 'foot_l', name: 'Bàn chân trái', relX: 0.37, relY: 0.96, type: 'foot_l' },
     { id: 'knee_r', name: 'Đầu gối phải', relX: 0.6, relY: 0.86, type: 'knee_r' },
@@ -199,16 +205,18 @@ export function generateArmlessChibiRig(): SkeletonRig {
   const bones: [string, string][] = [
     ['head', 'neck'],
     ['neck', 'spine'],
-    ['spine', 'hip'],
+    ['spine', 'hip_l'],
+    ['spine', 'hip_r'],
+    ['hip_l', 'hip_r'],
     ['head', 'eye_l'],
     ['head', 'eye_r'],
     ['eye_l', 'nose'],
     ['eye_r', 'nose'],
     ['nose', 'mouth'],
     ['mouth', 'neck'],
-    ['hip', 'knee_l'],
+    ['hip_l', 'knee_l'],
     ['knee_l', 'foot_l'],
-    ['hip', 'knee_r'],
+    ['hip_r', 'knee_r'],
     ['knee_r', 'foot_r'],
   ];
 
@@ -227,7 +235,8 @@ export function generateQuadrupedRig(): SkeletonRig {
     { id: 'mouth', name: 'Miệng thú', relX: 0.16, relY: 0.34, type: 'mouth' },
     { id: 'neck', name: 'Cổ thú', relX: 0.35, relY: 0.36, type: 'neck' },
     { id: 'spine', name: 'Sống lưng', relX: 0.54, relY: 0.42, type: 'spine' },
-    { id: 'hip', name: 'Hông thú', relX: 0.74, relY: 0.45, type: 'hip' },
+    { id: 'hip_l', name: 'Hông sau trái', relX: 0.70, relY: 0.45, type: 'hip_l' },
+    { id: 'hip_r', name: 'Hông sau phải', relX: 0.78, relY: 0.45, type: 'hip_r' },
     // 2 chân trước
     { id: 'shoulder_l', name: 'Vai trước trái', relX: 0.38, relY: 0.52, type: 'shoulder_l' },
     { id: 'elbow_l', name: 'Gối trước trái', relX: 0.36, relY: 0.72, type: 'elbow_l' },
@@ -245,7 +254,9 @@ export function generateQuadrupedRig(): SkeletonRig {
   const bones: [string, string][] = [
     ['head', 'neck'],
     ['neck', 'spine'],
-    ['spine', 'hip'],
+    ['spine', 'hip_l'],
+    ['spine', 'hip_r'],
+    ['hip_l', 'hip_r'],
     ['head', 'eye_l'],
     ['head', 'eye_r'],
     ['eye_l', 'nose'],
@@ -258,9 +269,9 @@ export function generateQuadrupedRig(): SkeletonRig {
     ['neck', 'shoulder_r'],
     ['shoulder_r', 'elbow_r'],
     ['elbow_r', 'hand_r'],
-    ['hip', 'knee_l'],
+    ['hip_l', 'knee_l'],
     ['knee_l', 'foot_l'],
-    ['hip', 'knee_r'],
+    ['hip_r', 'knee_r'],
     ['knee_r', 'foot_r'],
   ];
 
@@ -424,7 +435,8 @@ export function detectHumanoidRigFromCanvas(
 
   const spineX = torsoCount > 0 ? torsoSumX / torsoCount : centerX;
   const spineY = (neckY + torsoEndY) / 2;
-  const hipX = spineX;
+  const hipLX = Math.max(minX, spineX - boxW * 0.14);
+  const hipRX = Math.min(maxX, spineX + boxW * 0.14);
   const hipY = torsoEndY;
 
   // Căn chỉnh 2 vai theo chiều ngang thân
@@ -470,9 +482,9 @@ export function detectHumanoidRigFromCanvas(
     if (leftFootFound && rightFootFound) break;
   }
 
-  const kneeLX = (shoulderLX + footLeftX) / 2;
+  const kneeLX = (hipLX + footLeftX) / 2;
   const kneeLY = (hipY + footLeftY) / 2;
-  const kneeRX = (shoulderRX + footRightX) / 2;
+  const kneeRX = (hipRX + footRightX) / 2;
   const kneeRY = (hipY + footRightY) / 2;
 
   // Chuyển đổi toàn bộ tọa độ sang tỷ lệ tương đối chuẩn hóa (0.04..0.96)
@@ -490,7 +502,8 @@ export function detectHumanoidRigFromCanvas(
       { id: 'mouth', name: 'Miệng', ...toRel(mouthX, mouthY), type: 'mouth' },
       { id: 'neck', name: 'Khớp cổ', ...toRel(neckX, neckY), type: 'neck' },
       { id: 'spine', name: 'Thân măng', ...toRel(spineX, spineY), type: 'spine' },
-      { id: 'hip', name: 'Hông', ...toRel(hipX, hipY), type: 'hip' },
+      { id: 'hip_l', name: 'Hông trái', ...toRel(hipLX, hipY), type: 'hip_l' },
+      { id: 'hip_r', name: 'Hông phải', ...toRel(hipRX, hipY), type: 'hip_r' },
       { id: 'knee_l', name: 'Đầu gối trái', ...toRel(kneeLX, kneeLY), type: 'knee_l' },
       { id: 'foot_l', name: 'Bàn chân trái', ...toRel(footLeftX, footLeftY), type: 'foot_l' },
       { id: 'knee_r', name: 'Đầu gối phải', ...toRel(kneeRX, kneeRY), type: 'knee_r' },
@@ -501,16 +514,18 @@ export function detectHumanoidRigFromCanvas(
       bones: [
         ['head', 'neck'],
         ['neck', 'spine'],
-        ['spine', 'hip'],
+        ['spine', 'hip_l'],
+        ['spine', 'hip_r'],
+        ['hip_l', 'hip_r'],
         ['head', 'eye_l'],
         ['head', 'eye_r'],
         ['eye_l', 'nose'],
         ['eye_r', 'nose'],
         ['nose', 'mouth'],
         ['mouth', 'neck'],
-        ['hip', 'knee_l'],
+        ['hip_l', 'knee_l'],
         ['knee_l', 'foot_l'],
-        ['hip', 'knee_r'],
+        ['hip_r', 'knee_r'],
         ['knee_r', 'foot_r'],
       ],
     };
@@ -533,7 +548,8 @@ export function detectHumanoidRigFromCanvas(
     { id: 'hand_r', name: 'Bàn tay phải', ...toRel(handRX, handRY), type: 'hand_r' },
 
     { id: 'spine', name: 'Thân & Áo', ...toRel(spineX, spineY), type: 'spine' },
-    { id: 'hip', name: 'Hông', ...toRel(hipX, hipY), type: 'hip' },
+    { id: 'hip_l', name: 'Hông trái', ...toRel(hipLX, hipY), type: 'hip_l' },
+    { id: 'hip_r', name: 'Hông phải', ...toRel(hipRX, hipY), type: 'hip_r' },
 
     { id: 'knee_l', name: 'Đầu gối trái', ...toRel(kneeLX, kneeLY), type: 'knee_l' },
     { id: 'foot_l', name: 'Bàn chân trái', ...toRel(footLeftX, footLeftY), type: 'foot_l' },
@@ -545,7 +561,9 @@ export function detectHumanoidRigFromCanvas(
   const bones: [string, string][] = [
     ['head', 'neck'],
     ['neck', 'spine'],
-    ['spine', 'hip'],
+    ['spine', 'hip_l'],
+    ['spine', 'hip_r'],
+    ['hip_l', 'hip_r'],
     ['head', 'eye_l'],
     ['head', 'eye_r'],
     ['eye_l', 'nose'],
@@ -558,9 +576,9 @@ export function detectHumanoidRigFromCanvas(
     ['neck', 'shoulder_r'],
     ['shoulder_r', 'elbow_r'],
     ['elbow_r', 'hand_r'],
-    ['hip', 'knee_l'],
+    ['hip_l', 'knee_l'],
     ['knee_l', 'foot_l'],
-    ['hip', 'knee_r'],
+    ['hip_r', 'knee_r'],
     ['knee_r', 'foot_r'],
   ];
 
