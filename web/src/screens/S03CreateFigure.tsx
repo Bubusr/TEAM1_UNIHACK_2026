@@ -543,7 +543,32 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     saveHistoryState();
   };
 
-  // Bước 1 -> Bước 2: Chuyển sang Căn chỉnh khung Bounding Box (Resize the Box)
+  // Vẽ tự do xong -> Đi thẳng sang Gắn Khung Xương (Không cần tách nền vì nét vẽ số đã sạch 100%)
+  const handleProceedDirectToRigging = () => {
+    const cvs = drawCanvasRef.current;
+    if (!cvs) return;
+
+    // 1. Quét định vị khớp từ nét vẽ thực tế
+    const detected = detectHumanoidRigFromCanvas(cvs, skeletonType);
+    setRigData(detected);
+
+    // 2. Tách viền sticker giấy trắng nổi 3D (phong cách Gấu giấy Teri trong Gumball)
+    const cutoutCanvas = extractPaperCutoutWithStickerBorder(cvs, 6);
+    const cutoutUri = cutoutCanvas.toDataURL('image/png');
+    setRawImageUri(cutoutUri);
+    setCurrentImageUri(cutoutUri);
+    setImageSource('draw');
+
+    const img = new Image();
+    img.src = cutoutUri;
+    img.onload = () => {
+      loadedImgRef.current = img;
+      setStep(4); // Nhảy thẳng sang Bước 4 (Gắn khung xương & Mannequin)
+      SoundEngine.playBlessingChime();
+    };
+  };
+
+  // Bước 1 -> Bước 2: Chuyển sang Căn chỉnh khung Bounding Box (Resize the Box - dành cho ảnh chụp tải lên)
   const handleProceedToStep2Resize = () => {
     const cvs = drawCanvasRef.current;
     if (!cvs) return;
@@ -596,15 +621,16 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
 
   const handleSelectSampleAndProceed = (sample: (typeof SAMPLE_HUMANOID_FIGURES)[0]) => {
     setRawImageUri(sample.svgUri);
+    setCurrentImageUri(sample.svgUri);
     setImageSource('sample');
-    setBoundingBox({ x: 20, y: 15, w: 280, h: 290 });
+    setRigData(generateRigByType(skeletonType));
     SoundEngine.playBambooKnock();
 
     const img = new Image();
     img.src = sample.svgUri;
     img.onload = () => {
       loadedImgRef.current = img;
-      setStep(2);
+      setStep(4);
     };
   };
 
@@ -838,15 +864,28 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     const ctx = cvs.getContext('2d');
     if (!ctx) return;
 
-    // Khởi tạo mặt nạ tự động phủ lên vùng nét vẽ
+    // Khởi tạo mặt nạ: CHỈ phủ màu ngọc bích lên phần nét vẽ, TUYỆT ĐỐI KHÔNG PHỦ FULL NỀN TRẮNG!
     ctx.clearRect(0, 0, cvs.width, cvs.height);
     ctx.drawImage(loadedImgRef.current, 0, 0, cvs.width, cvs.height);
 
-    // Lớp phủ màu xanh ngọc bán trong suốt chuẩn Meta
-    ctx.save();
-    ctx.fillStyle = 'rgba(6, 214, 160, 0.42)';
-    ctx.fillRect(0, 0, cvs.width, cvs.height);
-    ctx.restore();
+    const imgData = ctx.getImageData(0, 0, cvs.width, cvs.height);
+    const data = imgData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+
+      // Pixel là nét vẽ (không phải nền trắng thuần và có độ mờ)
+      if (a > 30 && (r < 235 || g < 235 || b < 235)) {
+        // Phủ màu ngọc bích (#06D6A0) bán trong suốt lên nét vẽ
+        data[i] = Math.round(r * 0.35 + 6 * 0.65);
+        data[i + 1] = Math.round(g * 0.35 + 214 * 0.65);
+        data[i + 2] = Math.round(b * 0.35 + 160 * 0.65);
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
   }, [step]);
 
   const handleMaskDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1311,19 +1350,31 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
 
   return (
     <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-y-auto select-none p-3.5">
-      {/* Studio Header: 5 Bước Chuẩn Meta Demo Lab */}
+      {/* Studio Header */}
       <div className="pt-6 px-2 flex items-center justify-between border-b border-bamboo-mid/25 pb-2.5">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-extrabold text-warm-glow">
-            {step === 1 && '1. Tải ảnh / Vẽ trên giấy trắng'}
+            {step === 1 && '1. Vẽ trên giấy trắng / Tải ảnh'}
             {step === 2 && '2. Resize Box (Định vị nhân vật)'}
             {step === 3 && '3. Separate (Tách nền & Mặt nạ)'}
-            {step === 4 && '4. Finding Joints (Gắn khung xương & Mannequin)'}
-            {step === 5 && '5. Add Animation (Thổi hồn & Sân chơi 3D)'}
+            {step === 4 &&
+              (imageSource === 'upload'
+                ? '4. Gắn Khung Xương (3 Loại Khung & Mannequin)'
+                : '2. Gắn Khung Xương (3 Loại Khung & Mannequin)')}
+            {step === 5 &&
+              (imageSource === 'upload'
+                ? '5. Thổi Hồn Hoạt Ảnh & Sân Chơi 3D'
+                : '3. Thổi Hồn Hoạt Ảnh & Sân Chơi 3D')}
           </span>
         </div>
         <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-forest-darker border border-warm-amber/40 text-warm-amber font-semibold font-mono">
-          Bước {step}/5
+          {imageSource === 'upload'
+            ? `Bước ${step}/5`
+            : step === 1
+            ? 'Bước 1/3'
+            : step === 4
+            ? 'Bước 2/3'
+            : 'Bước 3/3'}
         </span>
       </div>
 
@@ -1553,12 +1604,12 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                   ))}
                 </div>
 
-                {/* Nút Tiếp tục: Bước 2 Resize Box */}
+                {/* Nút Tiếp tục: Đi thẳng sang Gắn Khung Xương (Nét vẽ kỹ thuật số đã có nền trắng sạch, không cần tách) */}
                 <button
-                  onClick={handleProceedToStep2Resize}
+                  onClick={handleProceedDirectToRigging}
                   className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
                 >
-                  <span>Tiếp tục: Định vị nhân vật (Bước 2: Resize Box)</span>
+                  <span>Xong nét vẽ → Gắn Khung Xương</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -1865,17 +1916,21 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           {/* Navigation */}
           <div className="flex gap-2.5 mt-2 w-[330px]">
             <button
-              onClick={() => setStep(3)}
+              onClick={() => setStep(imageSource === 'upload' ? 3 : 1)}
               className="flex-1 py-2.5 rounded-2xl bg-forest-deep border border-bamboo-soft/40 text-dongho-paper/80 font-medium text-xs hover:border-warm-amber transition flex items-center justify-center gap-1.5"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Tách lại nét</span>
+              <span>{imageSource === 'upload' ? 'Tách lại nét' : 'Vẽ lại'}</span>
             </button>
             <button
               onClick={handleProceedToStep5Animation}
               className="flex-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-1.5"
             >
-              <span>Khớp chuẩn → Thổi hồn hoạt ảnh (Bước 5)</span>
+              <span>
+                {imageSource === 'upload'
+                  ? 'Khớp chuẩn → Thổi hồn hoạt ảnh (Bước 5)'
+                  : 'Khớp chuẩn → Thổi hồn hoạt ảnh (Bước 3)'}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
