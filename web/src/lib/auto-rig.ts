@@ -62,6 +62,33 @@ export interface RigPose {
   breathY: number;
 }
 
+/**
+ * Biểu cảm mặt tự chọn — độc lập với animation body.
+ * Người dùng tự chọn hình dáng mắt + miệng bất kể đang chạy animation nào.
+ */
+export type EyeShape =
+  | 'normal'        // Mắt tròn bình thường
+  | 'happy'         // Mắt cười ^ ^
+  | 'sad'           // Mắt buồn ︵
+  | 'sleepy'        // Mắt lim dim nửa nhắm
+  | 'wide'          // Mắt tròn to hoảng hốt
+  | 'wink';         // Nháy mắt (trái nhắm, phải mở)
+
+export type MouthShape =
+  | 'smile'         // Mỉm cười nhẹ
+  | 'big_smile'     // Miệng há to vui vẻ
+  | 'sad'           // Miệng buồn cụp xuống
+  | 'neutral'       // Miệng thẳng bình thường
+  | 'open'          // Miệng há tròn (ngạc nhiên)
+  | 'tongue';       // Thè lưỡi tinh nghịch
+
+export interface FaceExpression {
+  isAuto?: boolean;               // Nếu true: tự động đổi theo hoạt ảnh
+  eye?: EyeShape;                // 'normal' | 'happy' | 'sad' | 'sleepy' | 'wide' | 'wink'
+  mouth?: MouthShape;            // 'smile' | 'big_smile' | 'sad' | 'neutral' | 'open' | 'tongue'
+  customFaceCanvas?: HTMLCanvasElement | null; // Nét mặt do người chơi tự vẽ tay
+}
+
 export type CreatureAction =
   | 'idle'          // Đứng thở êm dịu
   // Meta Walking
@@ -707,7 +734,7 @@ export function calculateRigPose(
 
   // Hiệu ứng chớp mắt tự nhiên ngẫu nhiên
   const blinkCycle = tick % 140;
-  const eyeBlink = blinkCycle >= 134 && blinkCycle <= 138 ? 1 : 0;
+  let eyeBlink = blinkCycle >= 134 && blinkCycle <= 138 ? 1 : 0;
 
   switch (action) {
     case 'idle':
@@ -793,12 +820,15 @@ export function calculateRigPose(
     }
 
     case 'hop':
+      // Lò cò — 1 chân co lên, 2 tay dang ra cân bằng (không phải cùng 1 chiều)
       hopY = -Math.abs(Math.sin(t * 1.8)) * 16;
       bodyBend = Math.sin(t * 1.8) * 0.08;
-      armAngleL = Math.sin(t * 1.8) * 0.35;
-      armAngleR = Math.sin(t * 1.8) * 0.35;
-      legOffsetL = -6;
-      legOffsetR = 8;
+      armAngleL = -Math.sin(t * 1.8) * 0.4; // Tay trái đưa lên khi nhảy
+      armAngleR = Math.sin(t * 1.8) * 0.3;  // Tay phải đối pha
+      legOffsetL = -Math.abs(Math.sin(t * 1.8)) * 14; // Chân trái co lên
+      legOffsetR = 4; // Chân phải trụ nhẹ
+      squashX = 1 - Math.abs(Math.sin(t * 1.8)) * 0.1;
+      stretchY = 1 + Math.abs(Math.sin(t * 1.8)) * 0.15;
       break;
 
     // === META DANCING CATEGORY ===
@@ -816,19 +846,28 @@ export function calculateRigPose(
       break;
 
     case 'wave':
+      // Vẫy tay chào — tay TRÁI giơ cao vẫy, tay phải thả tự nhiên, có lắc người nhẹ
+      hopY = breathY;
       bodyBend = Math.sin(t * 0.8) * 0.06;
-      armAngleL = -0.85 + Math.sin(t * 3.8) * 0.45;
-      armAngleR = 0.15;
+      headTilt = Math.sin(t * 0.8) * 0.06; // Nghiêng đầu thân thiện
+      armAngleL = -0.9 + Math.sin(t * 3.8) * 0.5; // Tay TRÁI vẫy mạnh
+      armAngleR = 0.12 + Math.sin(t * 0.6) * 0.06; // Tay phải buông tự nhiên
+      legOffsetL = Math.sin(t * 0.8) * 4;
+      legOffsetR = -Math.sin(t * 0.8) * 4;
       mouthOpen = 0.6;
-      headTilt = 0.1;
       break;
 
     case 'spin':
-      hopY = -Math.abs(Math.sin(t * 2.0)) * 6;
-      bodyBend = Math.sin(t * 2.2) * 0.15;
-      skewX = Math.sin(t * 2.2) * 0.24;
-      armAngleL = -0.55;
-      armAngleR = 0.55;
+      // Xoay tròn — 2 tay giang ngang, người ngả người, nhón chân
+      hopY = -Math.abs(Math.sin(t * 2.0)) * 5;
+      bodyBend = Math.sin(t * 2.2) * 0.12;
+      skewX = Math.sin(t * 2.2) * 0.28;
+      headTilt = -Math.sin(t * 1.1) * 0.18; // Đầu xoay ngược pha thân
+      armAngleL = -0.65 + Math.sin(t * 1.1) * 0.15; // 2 tay giang ngang (không đối xứng hoàn toàn)
+      armAngleR = 0.65 - Math.sin(t * 1.1) * 0.15;
+      legOffsetL = Math.sin(t * 2.2) * 8;
+      legOffsetR = -Math.sin(t * 2.2) * 8;
+      squashX = 1 + Math.abs(Math.sin(t * 2.2)) * 0.06;
       break;
 
     // === META FUNNY CATEGORY ===
@@ -845,29 +884,32 @@ export function calculateRigPose(
       break;
 
     case 'sad':
-      // Ủ rũ: cúi gục đầu, vai thõng, lê bước chậm chạp
-      hopY = 5 + Math.sin(t * 0.4) * 2;
-      stretchY = 0.88;
-      squashX = 1.08;
-      bodyBend = 0.22; // Thân gập về trước
-      headTilt = 0.32; // Đầu cúi gằm xuống
-      armAngleL = 0.25; // Hai tay buông thõng
-      armAngleR = -0.25;
-      legOffsetL = Math.sin(t * 0.5) * 3;
-      legOffsetR = -Math.sin(t * 0.5) * 3;
+      // Ủ rũ: cúi gục đầu, vai thõng, lê bước chậm chạp lảo đảo
+      hopY = 4 + Math.sin(t * 0.3) * 1.5; // Người sụp xuống nặng nề
+      stretchY = 0.9;
+      squashX = 1.06;
+      bodyBend = 0.2 + Math.sin(t * 0.3) * 0.03; // Thân gập về trước buồn bã
+      headTilt = 0.28 + Math.sin(t * 0.3) * 0.04; // Đầu cúi gằm
+      armAngleL = 0.3 + Math.sin(t * 0.4) * 0.04; // Hai tay buông thõng lơ lửng
+      armAngleR = -0.3 - Math.sin(t * 0.4) * 0.04;
+      legOffsetL = Math.sin(t * 0.4) * 4; // Bước chân lảo đảo chậm chạp
+      legOffsetR = -Math.sin(t * 0.4) * 4;
       mouthOpen = 0;
       break;
 
     case 'sleep':
-      // Ngủ / Gấp giấy: ép phẳng nằm sát đất, nhắm mắt, thở êm
-      hopY = 16 + Math.sin(t * 0.3) * 1.5;
-      stretchY = 0.64; // Thân phẳng bẹp nằm sát đất
-      squashX = 1.32; // Bè ngang thư thái
-      bodyBend = 0.36;
-      headTilt = 0.4;
-      armAngleL = 0.55;
-      armAngleR = -0.55;
-      mouthOpen = 0.05;
+      // Ngủ: nghiêng người ngả sang bên, không phải ép phẳng sát đất
+      hopY = 8 + Math.sin(t * 0.25) * 2; // Nhấp nhô thở nhẹ nhàng
+      stretchY = 0.82;
+      squashX = 1.18;
+      bodyBend = 0.28; // Thân hơi gập mềm
+      headTilt = 0.36; // Đầu gục sang bên
+      armAngleL = 0.5 + Math.sin(t * 0.25) * 0.04; // Tay buông xuôi
+      armAngleR = -0.5 - Math.sin(t * 0.25) * 0.04;
+      legOffsetL = 2;
+      legOffsetR = -2;
+      mouthOpen = 0.08; // Miệng hé nhẹ ngáy
+      eyeBlink = 1; // Luôn nhắm mắt
       break;
   }
 
@@ -1279,7 +1321,8 @@ export function drawPaperPuppet(
   motion: CreatureAction = 'walk',
   tick = 0,
   touchSpring?: PaperTouchSpring,
-  showCreasePattern = true
+  showCreasePattern = true,
+  faceExpr?: FaceExpression // Biểu cảm mặt tự chọn — override motion mặc định
 ) {
   // =========================================================================
   // MESH DEFORMATION RENDERER — "Thước Dẻo Cao Su" Paper Puppet
@@ -1598,101 +1641,174 @@ export function drawPaperPuppet(
       }
     }
 
-    // --- Biểu cảm mặt: Pull-Tab Mechanism (trượt mesh zone mặt) ---
-    // Vẽ nét mặt thủ công ngay trên vùng mesh (không dùng widget ngoài)
-    if (eyeL && eyeR) {
-      const isBlinking = pose.eyeBlink > 0.5;
-      const ex1 = toLocalX(eyeL.relX);
-      const ey1 = toLocalY(eyeL.relY);
-      const ex2 = toLocalX(eyeR.relX);
-      const ey2 = toLocalY(eyeR.relY);
-      const er  = w * 0.045; // bán kính mắt tương đối với kích thước nhân vật
+    // --- Biểu cảm mặt: Pull-Tab Mechanism ---
+    // 1. Trường hợp người chơi tự vẽ nét mặt riêng (Custom Face Canvas):
+    if (faceExpr && faceExpr.customFaceCanvas && !faceExpr.isAuto) {
+      const faceCX = eyeL && eyeR ? (toLocalX(eyeL.relX) + toLocalX(eyeR.relX)) / 2 : toLocalX(0.5);
+      const faceCY = eyeL && eyeR && mouth ? (toLocalY(eyeL.relY) + toLocalY(mouth.relY)) / 2 : toLocalY(0.26);
+      const faceW = w * 0.44;
+      const faceH = h * 0.34;
+      ctx.drawImage(faceExpr.customFaceCanvas, faceCX - faceW / 2, faceCY - faceH / 2, faceW, faceH);
+    } else {
+      // 2. Vẽ nét mực Đông Hồ: Tự chọn hình dáng mắt & miệng hoặc tự động theo motion
+      if (eyeL && eyeR) {
+        const isBlinking = pose.eyeBlink > 0.5;
+        const ex1 = toLocalX(eyeL.relX);
+        const ey1 = toLocalY(eyeL.relY);
+        const ex2 = toLocalX(eyeR.relX);
+        const ey2 = toLocalY(eyeR.relY);
+        const er  = w * 0.045;
 
-      ctx.save();
-      ctx.strokeStyle = '#1B2A2F';
-      ctx.fillStyle   = '#1B2A2F';
-      ctx.lineWidth   = Math.max(1, er * 0.4);
-      ctx.lineCap     = 'round';
+        // Xác định hình dáng mắt: faceExpr ưu tiên (nếu không auto) > motion fallback
+        const resolvedEye: EyeShape = (!faceExpr?.isAuto && faceExpr?.eye) ? faceExpr.eye : (
+          motion === 'happy_jump' || motion === 'dance' ? 'happy' :
+          motion === 'sad' ? 'sad' :
+          motion === 'sleep' ? 'sleepy' :
+          motion === 'teri_panic' ? 'wide' :
+          'normal'
+        );
 
-      const drawEye = (ex: number, ey: number, isLeft: boolean) => {
-        if (isBlinking || motion === 'sleep') {
-          // Nhắm mắt — cung đơn giản
-          ctx.beginPath();
-          ctx.arc(ex, ey + er * 0.15, er * 0.65, 0.05 * Math.PI, 0.95 * Math.PI, false);
-          ctx.stroke();
-        } else if (motion === 'happy_jump' || motion === 'dance') {
-          // Mắt cười ^ ^
-          ctx.beginPath();
-          ctx.arc(ex, ey + er * 0.5, er * 0.7, 1.1 * Math.PI, 1.9 * Math.PI, false);
-          ctx.stroke();
-        } else if (motion === 'sad') {
-          // Mắt buồn ︵
-          ctx.beginPath();
-          ctx.arc(ex, ey + er * 0.7, er * 0.65, 1.15 * Math.PI, 1.85 * Math.PI, false);
-          ctx.stroke();
-        } else if (motion === 'teri_panic') {
-          // Mắt tròn hoảng hốt
-          ctx.beginPath();
-          ctx.arc(ex, ey, er * 0.6, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#FFF';
-          ctx.beginPath();
-          ctx.arc(ex - er * 0.2, ey - er * 0.2, er * 0.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#1B2A2F';
-        } else {
-          // Mắt bình thường: con ngươi mực
-          ctx.beginPath();
-          ctx.arc(ex + (isLeft ? er * 0.15 : -er * 0.15), ey, er * 0.5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#FFF';
-          ctx.beginPath();
-          ctx.arc(ex + (isLeft ? -er * 0.1 : -er * 0.3), ey - er * 0.2, er * 0.18, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#1B2A2F';
-        }
-      };
+        ctx.save();
+        ctx.strokeStyle = '#1B2A2F';
+        ctx.fillStyle   = '#1B2A2F';
+        ctx.lineWidth   = Math.max(1, er * 0.4);
+        ctx.lineCap     = 'round';
 
-      drawEye(ex1, ey1, true);
-      drawEye(ex2, ey2, false);
-      ctx.restore();
-    }
+        const drawEye = (ex: number, ey: number, isLeft: boolean) => {
+          const shape = (resolvedEye === 'wink' && !isLeft) ? 'normal' : resolvedEye;
+          switch (shape) {
+            case 'sleepy':
+              // Mắt lim dim — cung nhắm nửa
+              ctx.beginPath();
+              ctx.arc(ex, ey + er * 0.15, er * 0.65, 0.05 * Math.PI, 0.95 * Math.PI, false);
+              ctx.stroke();
+              break;
+            case 'wink': // Mắt trái nháy (nhắm), được xử lý ở trên nếu isLeft
+              ctx.beginPath();
+              ctx.arc(ex, ey + er * 0.15, er * 0.55, 0.05 * Math.PI, 0.95 * Math.PI, false);
+              ctx.stroke();
+              break;
+            case 'happy':
+              // Mắt cười ^ ^
+              ctx.beginPath();
+              ctx.arc(ex, ey + er * 0.5, er * 0.7, 1.1 * Math.PI, 1.9 * Math.PI, false);
+              ctx.stroke();
+              break;
+            case 'sad':
+              // Mắt buồn ︵
+              ctx.beginPath();
+              ctx.arc(ex, ey + er * 0.7, er * 0.65, 1.15 * Math.PI, 1.85 * Math.PI, false);
+              ctx.stroke();
+              break;
+            case 'wide':
+              // Mắt tròn to hoảng hốt
+              ctx.beginPath();
+              ctx.arc(ex, ey, er * 0.6, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#FFF';
+              ctx.beginPath();
+              ctx.arc(ex - er * 0.2, ey - er * 0.2, er * 0.2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#1B2A2F';
+              break;
+            case 'normal':
+            default:
+              // Chớp mắt tự nhiên override hình dáng
+              if (isBlinking) {
+                ctx.beginPath();
+                ctx.arc(ex, ey + er * 0.1, er * 0.5, 0.05 * Math.PI, 0.95 * Math.PI, false);
+                ctx.stroke();
+              } else {
+                ctx.beginPath();
+                ctx.arc(ex + (isLeft ? er * 0.15 : -er * 0.15), ey, er * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.arc(ex + (isLeft ? -er * 0.1 : -er * 0.3), ey - er * 0.2, er * 0.18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1B2A2F';
+              }
+              break;
+          }
+        };
 
-    if (mouth) {
-      const mx  = toLocalX(mouth.relX);
-      const my  = toLocalY(mouth.relY);
-      const mr  = w * 0.055;
-
-      ctx.save();
-      ctx.strokeStyle = '#C8412F';
-      ctx.fillStyle   = '#C8412F';
-      ctx.lineWidth   = Math.max(1, mr * 0.35);
-      ctx.lineCap     = 'round';
-
-      if (motion === 'happy_jump' || motion === 'dance') {
-        ctx.beginPath();
-        ctx.ellipse(mx, my + mr * 0.2, mr * 0.75, mr * 0.6 + pose.mouthOpen * mr, 0, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (motion === 'sad') {
-        ctx.beginPath();
-        ctx.arc(mx, my + mr * 0.6, mr * 0.65, 1.1 * Math.PI, 1.9 * Math.PI, false);
-        ctx.stroke();
-      } else if (motion === 'sleep') {
-        ctx.beginPath();
-        ctx.arc(mx, my, mr * 0.35, 0, Math.PI * 2);
-        ctx.stroke();
-      } else if (motion === 'teri_panic') {
-        ctx.beginPath();
-        const pts = [-mr * 0.8, 0, -mr * 0.4, mr * 0.5, 0, 0, mr * 0.4, mr * 0.5, mr * 0.8, 0];
-        ctx.moveTo(mx + pts[0], my + pts[1]);
-        for (let i = 2; i < pts.length; i += 2) ctx.lineTo(mx + pts[i], my + pts[i + 1]);
-        ctx.stroke();
-      } else {
-        ctx.beginPath();
-        ctx.arc(mx, my - mr * 0.1, mr * 0.65, 0.12 * Math.PI, 0.88 * Math.PI, false);
-        ctx.stroke();
+        drawEye(ex1, ey1, true);
+        drawEye(ex2, ey2, false);
+        ctx.restore();
       }
-      ctx.restore();
+
+      if (mouth) {
+        const mx  = toLocalX(mouth.relX);
+        const my  = toLocalY(mouth.relY);
+        const mr  = w * 0.055;
+
+        // Xác định hình dáng miệng: faceExpr ưu tiên (nếu không auto) > motion fallback
+        const resolvedMouth: MouthShape = (!faceExpr?.isAuto && faceExpr?.mouth) ? faceExpr.mouth : (
+          motion === 'happy_jump' || motion === 'dance' ? 'big_smile' :
+          motion === 'sad' ? 'sad' :
+          motion === 'sleep' ? 'neutral' :
+          motion === 'teri_panic' ? 'open' :
+          motion === 'wave' ? 'smile' :
+          'smile'
+        );
+
+        ctx.save();
+        ctx.strokeStyle = '#C8412F';
+        ctx.fillStyle   = '#C8412F';
+        ctx.lineWidth   = Math.max(1, mr * 0.35);
+        ctx.lineCap     = 'round';
+
+        switch (resolvedMouth) {
+          case 'big_smile':
+            // Miệng há to vui vẻ — ellipse đậm
+            ctx.beginPath();
+            ctx.ellipse(mx, my + mr * 0.2, mr * 0.75, mr * 0.6 + pose.mouthOpen * mr * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Lưỡi hồng bên trong
+            ctx.fillStyle = '#FF8FA3';
+            ctx.beginPath();
+            ctx.ellipse(mx, my + mr * 0.5, mr * 0.45, mr * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          case 'smile':
+            // Mỉm cười nhẹ — cung cong lên
+            ctx.beginPath();
+            ctx.arc(mx, my - mr * 0.1, mr * 0.65, 0.12 * Math.PI, 0.88 * Math.PI, false);
+            ctx.stroke();
+            break;
+          case 'sad':
+            // Miệng buồn cụp xuống — cung cong xuống
+            ctx.beginPath();
+            ctx.arc(mx, my + mr * 0.6, mr * 0.65, 1.1 * Math.PI, 1.9 * Math.PI, false);
+            ctx.stroke();
+            break;
+          case 'neutral':
+            // Miệng thẳng bình thường — đường thẳng ngắn
+            ctx.beginPath();
+            ctx.moveTo(mx - mr * 0.5, my);
+            ctx.lineTo(mx + mr * 0.5, my);
+            ctx.stroke();
+            break;
+          case 'open':
+            // Miệng há tròn ngạc nhiên — O tròn
+            ctx.beginPath();
+            ctx.arc(mx, my + mr * 0.1, mr * 0.42, 0, Math.PI * 2);
+            ctx.stroke();
+            break;
+          case 'tongue':
+            // Thè lưỡi tinh nghịch — cười + lưỡi thè
+            ctx.beginPath();
+            ctx.arc(mx, my - mr * 0.05, mr * 0.6, 0.1 * Math.PI, 0.9 * Math.PI, false);
+            ctx.stroke();
+            // Lưỡi hồng
+            ctx.fillStyle = '#FF8FA3';
+            ctx.beginPath();
+            ctx.ellipse(mx, my + mr * 0.35, mr * 0.3, mr * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        }
+        ctx.restore();
+      }
     }
 
     // --- Hiệu ứng cảm xúc nổi phía trên tờ giấy ---
@@ -1764,7 +1880,8 @@ export const drawAnimatedFigure = (
   targetHeight = 100,
   direction: 1 | -1 = 1,
   motion: CreatureAction = 'walk',
-  tick = 0
+  tick = 0,
+  faceExpr?: FaceExpression
 ) => {
   const dummyRig = generateDefaultHumanoidRig();
   drawPaperPuppet(
@@ -1779,7 +1896,10 @@ export const drawAnimatedFigure = (
     direction,
     0,
     motion,
-    tick
+    tick,
+    undefined,
+    false,
+    faceExpr
   );
 };
 

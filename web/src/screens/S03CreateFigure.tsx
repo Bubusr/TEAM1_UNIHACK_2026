@@ -20,6 +20,9 @@ import {
   SkeletonType,
   SKELETON_TYPE_OPTIONS,
   CreatureAction,
+  FaceExpression,
+  EyeShape,
+  MouthShape,
 } from '@/lib/auto-rig';
 import {
   RotateCcw,
@@ -332,9 +335,85 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     springTick: 0,
   });
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const turntableRotationRef = useRef<number>(0);
   const [turntableRotation, setTurntableRotation] = useState<number>(0);
   const [isAutoSpin, setIsAutoSpin] = useState<boolean>(false);
   const loadedImgRef = useRef<HTMLImageElement | null>(null);
+
+  // STEP 5: Quản lý Tab & Biểu cảm nét mặt tự chọn (Pull-tab & Nét vẽ Đông Hồ)
+  const [step5Tab, setStep5Tab] = useState<'motion' | 'expression'>('motion');
+  const [faceExpr, setFaceExpr] = useState<FaceExpression>({
+    isAuto: true,
+    eye: 'normal',
+    mouth: 'smile',
+    customFaceCanvas: null,
+  });
+  const [faceCustomMode, setFaceCustomMode] = useState<'preset' | 'draw'>('preset');
+  const faceCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isFaceDrawingRef = useRef<boolean>(false);
+
+  // Xử lý vẽ nét mặt thủ công trên mini-canvas
+  const handleFacePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = faceCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    isFaceDrawingRef.current = true;
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleFacePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isFaceDrawingRef.current) return;
+    const canvas = faceCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const handleFacePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isFaceDrawingRef.current) return;
+    isFaceDrawingRef.current = false;
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    const canvas = faceCanvasRef.current;
+    if (canvas) {
+      setFaceExpr((prev) => ({
+        ...prev,
+        isAuto: false,
+        customFaceCanvas: canvas,
+      }));
+    }
+  };
+
+  const handleClearCustomFace = () => {
+    const canvas = faceCanvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    setFaceExpr((prev) => ({
+      ...prev,
+      customFaceCanvas: null,
+    }));
+    SoundEngine.playBambooKnock();
+  };
 
   // Tọa độ nhân vật giấy 3D trong rừng tre (X, Y jump, Z depth)
   const char3DRef = useRef({
@@ -1292,7 +1371,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           previewMotion,
           tick,
           touchSpringRef.current,
-          showCreasePattern
+          showCreasePattern,
+          faceExpr
         );
 
         if (showSkeletonWireframe) {
@@ -1502,7 +1582,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           effectiveMotion,
           tick,
           touchSpringRef.current,
-          showCreasePattern
+          showCreasePattern,
+          faceExpr
         );
 
         // HIỂN THỊ KHUNG XƯƠNG ĐỘNG (FK) TRONG THẾ GIỚI 3D RỪNG TRE!
@@ -1555,7 +1636,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [step, currentImageUri, worldMode, turntableRotation, isAutoSpin, previewMotion, showSkeletonWireframe, showCreasePattern, rigData]);
+  }, [step, currentImageUri, worldMode, turntableRotation, isAutoSpin, previewMotion, showSkeletonWireframe, showCreasePattern, rigData, faceExpr]);
 
   return (
     <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-y-auto select-none p-3.5">
@@ -2309,212 +2390,446 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               </div>
             )}
 
-            {/* 4 DANH MỤC CHUYỂN ĐỘNG CHUẨN META DEMO LAB */}
-            <div className="w-full">
-              {/* Category Tabs: Walking, Jumping, Dancing, Funny */}
-              <div className="grid grid-cols-4 gap-1 mb-1.5">
-                {[
-                  { id: 'walking', name: 'Đi lại' },
-                  { id: 'jumping', name: 'Bật nhảy' },
-                  { id: 'dancing', name: 'Nhảy múa' },
-                  { id: 'funny', name: 'Hài hước' },
-                ].map((cat) => (
+            {/* TÙY CHỌN: HOẠT ẢNH (12) VS BIỂU CẢM MẶT (MẮT & MIỆNG) */}
+            <div className="w-full flex items-center p-1 bg-forest-darker/90 rounded-2xl border border-bamboo-mid/40 mb-1">
+              <button
+                onClick={() => {
+                  setStep5Tab('motion');
+                  SoundEngine.playBambooKnock();
+                }}
+                className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 ${
+                  step5Tab === 'motion'
+                    ? 'bg-warm-amber text-forest-abyss shadow-md'
+                    : 'text-dongho-paper/60 hover:text-dongho-paper'
+                }`}
+              >
+                <span>🏃 12 Hoạt ảnh</span>
+              </button>
+              <button
+                onClick={() => {
+                  setStep5Tab('expression');
+                  SoundEngine.playBlessingChime();
+                }}
+                className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 ${
+                  step5Tab === 'expression'
+                    ? 'bg-warm-amber text-forest-abyss shadow-md'
+                    : 'text-dongho-paper/60 hover:text-dongho-paper'
+                }`}
+              >
+                <span>🎭 Biểu cảm khuôn mặt</span>
+                {!faceExpr.isAuto && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-dongho-red animate-ping" />
+                )}
+              </button>
+            </div>
+
+            {/* NỘI DUNG TAB 1: 4 DANH MỤC CHUYỂN ĐỘNG CHUẨN META DEMO LAB */}
+            {step5Tab === 'motion' && (
+              <div className="w-full">
+                {/* Category Tabs: Walking, Jumping, Dancing, Funny */}
+                <div className="grid grid-cols-4 gap-1 mb-1.5">
+                  {[
+                    { id: 'walking', name: 'Đi lại' },
+                    { id: 'jumping', name: 'Bật nhảy' },
+                    { id: 'dancing', name: 'Nhảy múa' },
+                    { id: 'funny', name: 'Hài hước' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setAnimationCategory(cat.id as any);
+                        SoundEngine.playBambooKnock();
+                      }}
+                      className={`py-1 text-[10px] rounded-xl font-bold transition ${
+                        animationCategory === cat.id
+                          ? 'bg-forest-deep text-warm-amber border border-warm-amber/50 shadow'
+                          : 'bg-forest-darker/60 text-dongho-paper/60'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Danh sách Action theo danh mục */}
+                <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                  {animationCategory === 'walking' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('walk');
+                          SoundEngine.playBambooKnock();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'walk'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        🚶 Walk (Đi bộ)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('run');
+                          SoundEngine.playBambooKnock();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'run'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        🏃 Run (Chạy)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('sneak');
+                          SoundEngine.playBambooKnock();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'sneak'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        🤫 Sneak (Rón rén)
+                      </button>
+                    </>
+                  )}
+
+                  {animationCategory === 'jumping' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('happy_jump');
+                          SoundEngine.playBlessingChime();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'happy_jump'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        🎉 Happy Jump
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('paper_flutter');
+                          SoundEngine.playWindChime();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'paper_flutter'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        🍃 Bay lơ lửng
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('hop');
+                          SoundEngine.playBambooKnock();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'hop'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        🦘 Hop (Lò cò)
+                      </button>
+                    </>
+                  )}
+
+                  {animationCategory === 'dancing' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('dance');
+                          SoundEngine.playWindChime();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'dance'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        💃 Dance (Múa)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('wave');
+                          SoundEngine.playBambooKnock();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'wave'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        👋 Wave (Vẫy tay)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('spin');
+                          SoundEngine.playBlessingChime();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'spin'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        💫 Spin (Xoay tròn)
+                      </button>
+                    </>
+                  )}
+
+                  {animationCategory === 'funny' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('teri_panic');
+                          SoundEngine.playWaterSplash();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'teri_panic'
+                            ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        😱 Teri Panic (Gumball)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('sad');
+                          SoundEngine.playBambooKnock();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'sad'
+                            ? 'bg-dongho-red/40 text-dongho-paper border-dongho-red font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        😔 Sad (Ủ rũ)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPreviewMotion('sleep');
+                          SoundEngine.playBambooKnock();
+                        }}
+                        className={`py-1.5 rounded-xl border transition ${
+                          previewMotion === 'sleep'
+                            ? 'bg-forest-mist text-warm-glow border-warm-amber font-bold'
+                            : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
+                        }`}
+                      >
+                        😴 Sleep (Gấp giấy)
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* NỘI DUNG TAB 2: BIỂU CẢM KHUÔN MẶT TỰ CHỌN (MẮT & MIỆNG) */}
+            {step5Tab === 'expression' && (
+              <div className="w-full bg-forest-darker/95 p-2 rounded-2xl border border-bamboo-mid/40 space-y-2">
+                {/* Header: Chế độ Tự động theo cử động vs Cố định nét mặt */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-warm-glow">🎭 Cơ chế nét mặt:</span>
+                    <span className="text-[9.5px] text-dongho-paper/60">
+                      {faceExpr.isAuto ? '(Đổi theo cử động)' : '(Tự chọn)'}
+                    </span>
+                  </div>
                   <button
-                    key={cat.id}
                     onClick={() => {
-                      setAnimationCategory(cat.id as any);
-                      SoundEngine.playBambooKnock();
+                      setFaceExpr((prev) => ({
+                        ...prev,
+                        isAuto: !prev.isAuto,
+                      }));
+                      SoundEngine.playBlessingChime();
                     }}
-                    className={`py-1 text-[10px] rounded-xl font-bold transition ${
-                      animationCategory === cat.id
-                        ? 'bg-forest-deep text-warm-amber border border-warm-amber/50 shadow'
-                        : 'bg-forest-darker/60 text-dongho-paper/60'
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 border ${
+                      faceExpr.isAuto
+                        ? 'bg-warm-amber text-forest-abyss border-warm-amber'
+                        : 'bg-forest-deep border-bamboo-mid/40 text-dongho-paper/70'
                     }`}
                   >
-                    {cat.name}
+                    <span>✨ Tự động theo cử động</span>
                   </button>
-                ))}
-              </div>
+                </div>
 
-              {/* Danh sách Action theo danh mục */}
-              <div className="grid grid-cols-3 gap-1.5 text-[11px]">
-                {animationCategory === 'walking' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('walk');
-                        SoundEngine.playBambooKnock();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'walk'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      🚶 Walk (Đi bộ)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('run');
-                        SoundEngine.playBambooKnock();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'run'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      🏃 Run (Chạy)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('sneak');
-                        SoundEngine.playBambooKnock();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'sneak'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      🤫 Sneak (Rón rén)
-                    </button>
-                  </>
+                {/* Sub-modes: Mẫu có sẵn vs Tự vẽ nét mặt */}
+                <div className="flex items-center gap-1 bg-forest-deep/80 p-0.5 rounded-xl border border-bamboo-mid/20 text-[10px]">
+                  <button
+                    onClick={() => setFaceCustomMode('preset')}
+                    className={`flex-1 py-1 rounded-lg font-bold transition ${
+                      faceCustomMode === 'preset'
+                        ? 'bg-warm-amber text-forest-abyss'
+                        : 'text-dongho-paper/60'
+                    }`}
+                  >
+                    🎨 Mẫu nét vẽ có sẵn
+                  </button>
+                  <button
+                    onClick={() => setFaceCustomMode('draw')}
+                    className={`flex-1 py-1 rounded-lg font-bold transition ${
+                      faceCustomMode === 'draw'
+                        ? 'bg-warm-amber text-forest-abyss'
+                        : 'text-dongho-paper/60'
+                    }`}
+                  >
+                    ✏️ Tự vẽ nét mặt tay
+                  </button>
+                </div>
+
+                {/* 1. MẪU NÉT VẼ CÓ SẴN (PRESETS) */}
+                {faceCustomMode === 'preset' && (
+                  <div className="space-y-2 text-[10px]">
+                    {/* CHỌN MẮT (EYE SHAPES) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-warm-amber flex items-center gap-1">
+                          <span>👀 Kiểu mắt:</span>
+                        </span>
+                        {!faceExpr.isAuto && (
+                          <span className="text-[9px] text-dongho-paper/50 capitalize">
+                            {faceExpr.eye}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        {[
+                          { id: 'normal', label: '👀 Bình thường', desc: 'Mắt tròn mực' },
+                          { id: 'wide', label: '😲 Mắt to xoe', desc: 'Ngạc nhiên' },
+                          { id: 'happy', label: '😸 Cười híp', desc: '^ ^ reo vui' },
+                          { id: 'sad', label: '🥺 Cụp buồn', desc: '︵ ︵ ủ rũ' },
+                          { id: 'sleepy', label: '😴 Lim dim', desc: 'Nửa nhắm' },
+                          { id: 'wink', label: '😉 Nháy mắt', desc: 'Tinh nghịch' },
+                        ].map((eyeItem) => {
+                          const isSelected = !faceExpr.isAuto && faceExpr.eye === eyeItem.id && !faceExpr.customFaceCanvas;
+                          return (
+                            <button
+                              key={eyeItem.id}
+                              onClick={() => {
+                                setFaceExpr((prev) => ({
+                                  ...prev,
+                                  isAuto: false,
+                                  eye: eyeItem.id as EyeShape,
+                                  customFaceCanvas: null,
+                                }));
+                                SoundEngine.playBambooKnock();
+                              }}
+                              className={`py-1 px-1.5 rounded-lg border text-left transition flex flex-col ${
+                                isSelected
+                                  ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold shadow'
+                                  : 'bg-forest-deep/90 border-bamboo-mid/30 text-dongho-paper/80 hover:border-warm-amber/50'
+                              }`}
+                            >
+                              <span className="font-bold truncate">{eyeItem.label}</span>
+                              <span className={`text-[8.5px] truncate ${isSelected ? 'text-forest-abyss/80' : 'text-dongho-paper/50'}`}>
+                                {eyeItem.desc}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* CHỌN MIỆNG (MOUTH SHAPES) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-warm-amber flex items-center gap-1">
+                          <span>👄 Kiểu miệng:</span>
+                        </span>
+                        {!faceExpr.isAuto && (
+                          <span className="text-[9px] text-dongho-paper/50 capitalize">
+                            {faceExpr.mouth}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        {[
+                          { id: 'big_smile', label: '😃 Miệng to', desc: 'Há to reo vui' },
+                          { id: 'smile', label: '😊 Mỉm cười', desc: 'Nhẹ nhàng' },
+                          { id: 'sad', label: '😔 Miệng buồn', desc: 'Cụp mếu máo' },
+                          { id: 'neutral', label: '😐 Ngậm bthg', desc: 'Nét thẳng' },
+                          { id: 'open', label: '😮 Tròn chữ O', desc: 'Ngạc nhiên' },
+                          { id: 'tongue', label: '😛 Thè lưỡi', desc: 'Tinh nghịch' },
+                        ].map((mouthItem) => {
+                          const isSelected = !faceExpr.isAuto && faceExpr.mouth === mouthItem.id && !faceExpr.customFaceCanvas;
+                          return (
+                            <button
+                              key={mouthItem.id}
+                              onClick={() => {
+                                setFaceExpr((prev) => ({
+                                  ...prev,
+                                  isAuto: false,
+                                  mouth: mouthItem.id as MouthShape,
+                                  customFaceCanvas: null,
+                                }));
+                                SoundEngine.playBambooKnock();
+                              }}
+                              className={`py-1 px-1.5 rounded-lg border text-left transition flex flex-col ${
+                                isSelected
+                                  ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold shadow'
+                                  : 'bg-forest-deep/90 border-bamboo-mid/30 text-dongho-paper/80 hover:border-warm-amber/50'
+                              }`}
+                            >
+                              <span className="font-bold truncate">{mouthItem.label}</span>
+                              <span className={`text-[8.5px] truncate ${isSelected ? 'text-forest-abyss/80' : 'text-dongho-paper/50'}`}>
+                                {mouthItem.desc}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 )}
 
-                {animationCategory === 'jumping' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('happy_jump');
-                        SoundEngine.playBlessingChime();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'happy_jump'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      🎉 Happy Jump
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('paper_flutter');
-                        SoundEngine.playWindChime();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'paper_flutter'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      🍃 Bay lơ lửng
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('hop');
-                        SoundEngine.playBambooKnock();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'hop'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      🦘 Hop (Lò cò)
-                    </button>
-                  </>
-                )}
-
-                {animationCategory === 'dancing' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('dance');
-                        SoundEngine.playWindChime();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'dance'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      💃 Dance (Múa)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('wave');
-                        SoundEngine.playBambooKnock();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'wave'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      👋 Wave (Vẫy tay)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('spin');
-                        SoundEngine.playBlessingChime();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'spin'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      💫 Spin (Xoay tròn)
-                    </button>
-                  </>
-                )}
-
-                {animationCategory === 'funny' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('teri_panic');
-                        SoundEngine.playWaterSplash();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'teri_panic'
-                          ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      😱 Teri Panic (Gumball)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('sad');
-                        SoundEngine.playBambooKnock();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'sad'
-                          ? 'bg-dongho-red/40 text-dongho-paper border-dongho-red font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      😔 Sad (Ủ rũ)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPreviewMotion('sleep');
-                        SoundEngine.playBambooKnock();
-                      }}
-                      className={`py-1.5 rounded-xl border transition ${
-                        previewMotion === 'sleep'
-                          ? 'bg-forest-mist text-warm-glow border-warm-amber font-bold'
-                          : 'bg-forest-darker border-bamboo-soft/30 text-dongho-paper/70'
-                      }`}
-                    >
-                      😴 Sleep (Gấp giấy)
-                    </button>
-                  </>
+                {/* 2. TỰ VẼ NÉT MẶT TAY (CUSTOM DRAW CANVAS) */}
+                {faceCustomMode === 'draw' && (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <p className="text-[9px] text-dongho-paper/70 text-center">
+                      ✍️ Vẽ trực tiếp mắt, mũi, miệng vào ô dưới đây (nét mực sẽ tự uốn lượn theo khuôn mặt):
+                    </p>
+                    <div className="relative w-36 h-28 bg-[#FAF7F0] rounded-xl border-2 border-dashed border-warm-amber/70 shadow-inner overflow-hidden flex items-center justify-center">
+                      <canvas
+                        ref={faceCanvasRef}
+                        width={144}
+                        height={112}
+                        className="w-full h-full cursor-crosshair touch-none"
+                        onPointerDown={handleFacePointerDown}
+                        onPointerMove={handleFacePointerMove}
+                        onPointerUp={handleFacePointerUp}
+                        onPointerCancel={handleFacePointerUp}
+                      />
+                      {!faceExpr.customFaceCanvas && (
+                        <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-[#1B2A2F]/30 text-[10px]">
+                          <span>Vẽ mắt & miệng ở đây</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleClearCustomFace}
+                        className="px-2.5 py-1 rounded-lg bg-forest-deep border border-bamboo-mid/40 text-[10px] text-dongho-paper/80 hover:text-dongho-paper transition"
+                      >
+                        🗑️ Xóa nét vẽ
+                      </button>
+                      {faceExpr.customFaceCanvas && (
+                        <span className="text-[9.5px] text-[#06D6A0] font-semibold flex items-center gap-1">
+                          <span>✓ Đang áp dụng nét vẽ</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Action Final Buttons */}
