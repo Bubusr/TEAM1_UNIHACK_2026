@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 248, 250, 252;
+  --background-start-rgb: 2, 6, 23;
+  --background-end-rgb: 5, 46, 22;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: radial-gradient(ellipse at top, #064e3b, #022c22, #020617);
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* Bamboo forest custom animations */
+@keyframes bambooWind {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(1.5deg) skewX(1deg); }
+}
+
+.animate-bamboo-wind {
+  animation: bambooWind 6s ease-in-out infinite;
+}

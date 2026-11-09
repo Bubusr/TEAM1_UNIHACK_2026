@@ -1,0 +1,17 @@
+{
+  "name": "mangnon-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Mang Non - UniHack 2026 on Avalanche",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy:fuji": "npx hardhat run scripts/deploy.js --network fuji"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.15"
+  }
+}
