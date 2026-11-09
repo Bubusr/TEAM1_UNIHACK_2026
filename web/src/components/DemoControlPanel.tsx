@@ -290,19 +290,25 @@ export default function DemoControlPanel({
                 </div>
               </div>
 
-              {/* Động tác sinh vật hình người */}
+              {/* Động tác sinh vật hình người chuẩn Meta Demo Lab & Teri Gumball */}
               <div>
                 <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
-                  Động tác sinh vật hình người (Demo):
+                  Động tác Meta Demo Lab &amp; Gấu giấy Teri (Gumball):
                 </label>
                 <div className="grid grid-cols-3 gap-1.5 text-[10px]">
                   {[
                     { label: '🚶 Đi bộ', action: 'walk' },
                     { label: '🏃 Chạy bộ', action: 'run' },
+                    { label: '🤫 Rón rén', action: 'sneak' },
                     { label: '🎉 Nhảy vui', action: 'happy_jump' },
+                    { label: '🍃 Bay lơ lửng', action: 'paper_flutter' },
+                    { label: '🦘 Lò cò', action: 'hop' },
                     { label: '💃 Múa lượn', action: 'dance' },
                     { label: '👋 Vẫy tay', action: 'wave' },
+                    { label: '💫 Xoay tròn', action: 'spin' },
+                    { label: '😱 Gấu Teri', action: 'teri_panic' },
                     { label: '😔 Ủ rũ', action: 'sad' },
+                    { label: '😴 Gấp giấy', action: 'sleep' },
                   ].map((act) => (
                     <button
                       key={act.action}
@@ -314,7 +320,7 @@ export default function DemoControlPanel({
                           );
                         }
                       }}
-                      className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-bamboo-mid/30 text-dongho-paper font-medium transition active:scale-95"
+                      className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-bamboo-mid/30 text-dongho-paper font-medium transition active:scale-95 text-center"
                     >
                       {act.label}
                     </button>
