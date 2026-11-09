@@ -340,6 +340,14 @@ export function detectHumanoidRigFromCanvas(
   const data = imgData.data;
 
   // 1. Quét tìm tất cả các pixel có nét vẽ (không phải nền trắng thuần hay trong suốt)
+  let hasTransparent = false;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 30) {
+      hasTransparent = true;
+      break;
+    }
+  }
+
   let minX = width;
   let maxX = 0;
   let minY = height;
@@ -356,8 +364,11 @@ export function detectHumanoidRigFromCanvas(
       const b = data[idx + 2];
       const a = data[idx + 3];
 
-      // Pixel được tính là nét vẽ khi có độ mờ > 35 và không phải là màu trắng nền
-      const isStroke = a > 35 && (r < 235 || g < 235 || b < 235);
+      // Nếu đã tách nền (có pixel trong suốt): mọi pixel có a > 35 đều thuộc cơ thể nhân vật (kể cả màu trắng)
+      // Nếu nền trắng đặc: lọc pixel có độ mờ > 35 và không phải là màu trắng nền
+      const isStroke = hasTransparent
+        ? a > 35
+        : (a > 35 && (r < 235 || g < 235 || b < 235));
       if (isStroke) {
         drawn[rowOffset + x] = 1;
         totalDrawn++;
@@ -638,6 +649,15 @@ export function extractPaperCutoutWithStickerBorder(
   const srcData = srcCtx.getImageData(0, 0, w, h);
   const data = srcData.data;
 
+  // Kiểm tra xem sourceCanvas đã có nền trong suốt hay chưa
+  let hasTransparentBackground = false;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 30) {
+      hasTransparentBackground = true;
+      break;
+    }
+  }
+
   // 1. Tạo mặt nạ nhị phân tách nền giấy trắng
   const mask = new Uint8Array(w * h);
   for (let i = 0; i < data.length; i += 4) {
@@ -646,9 +666,16 @@ export function extractPaperCutoutWithStickerBorder(
     const b = data[i + 2];
     const a = data[i + 3];
 
-    // Không phải nền trắng thuần và có độ mờ
-    if (a > 30 && (r < 240 || g < 240 || b < 240)) {
-      mask[i / 4] = 1;
+    if (hasTransparentBackground) {
+      // Đã tách nền: Mọi pixel có alpha đều thuộc nhân vật (kể cả vùng màu trắng của giấy/mắt)
+      if (a > 30) {
+        mask[i / 4] = 1;
+      }
+    } else {
+      // Nền trắng đặc: Lọc pixel nét vẽ (không phải màu trắng nền)
+      if (a > 30 && (r < 240 || g < 240 || b < 240)) {
+        mask[i / 4] = 1;
+      }
     }
   }
 
@@ -700,7 +727,23 @@ export function extractPaperCutoutWithStickerBorder(
   }
 
   // 5. Vẽ đè nét vẽ gốc nguyên bản lên trên lớp giấy trắng
-  outCtx.drawImage(sourceCanvas, 0, 0);
+  if (hasTransparentBackground) {
+    outCtx.drawImage(sourceCanvas, 0, 0);
+  } else {
+    // Xóa nền trắng ngoài nhân vật trước khi đè lên lớp viền sticker
+    const charImgData = srcCtx.getImageData(0, 0, w, h);
+    const cData = charImgData.data;
+    for (let i = 0; i < mask.length; i++) {
+      if (!mask[i]) {
+        cData[i * 4 + 3] = 0;
+      }
+    }
+    const tempCharCanvas = document.createElement('canvas');
+    tempCharCanvas.width = w;
+    tempCharCanvas.height = h;
+    tempCharCanvas.getContext('2d')?.putImageData(charImgData, 0, 0);
+    outCtx.drawImage(tempCharCanvas, 0, 0);
+  }
 
   return outCanvas;
 }
@@ -1532,17 +1575,10 @@ export function drawPaperPuppet(
     const x1d = p1.dstX, y1d = p1.dstY;
     const x2d = p2.dstX, y2d = p2.dstY;
 
-    const detS = (x0s * (y1s - y2s) + x1s * (y2s - y0s) + x2s * (y0s - y1s));
-    if (Math.abs(detS) < 1e-6) return; // tam giác suy biến
-
-    const a = ((x0d * (y1s - y2s) + x1d * (y2s - y0s) + x2d * (y0s - y1s)) / detS);
-    const b = ((y0d * (y1s - y2s) + y1d * (y2s - y0s) + y2d * (y0s - y1s)) / detS);
-    const c = ((x0s * (x2s * y1d - x1s * y2d) + x1s * (-x2s * y0d + x0s * y2d) + x2s * (x1s * y0d - x0s * y1d))
-               / (detS * (x0s * (x2s - x1s) + x1s * (x0s - x2s) + x2s * (x1s - x0s)) || 1));
     // Phương trình affine 2D: dstX = a*srcX + c*srcY + e, dstY = b*srcX + d*srcY + f
-    // Dùng công thức chuẩn Cramer
+    // Dùng công thức chuẩn định thức Cramer
     const denom = (x1s - x0s) * (y2s - y0s) - (x2s - x0s) * (y1s - y0s);
-    if (Math.abs(denom) < 1e-6) return;
+    if (Math.abs(denom) < 1e-6) return; // tam giác suy biến
     const aa = ((x1d - x0d) * (y2s - y0s) - (x2d - x0d) * (y1s - y0s)) / denom;
     const bb = ((x2d - x0d) * (x1s - x0s) - (x1d - x0d) * (x2s - x0s)) / denom;
     const cc = ((y1d - y0d) * (y2s - y0s) - (y2d - y0d) * (y1s - y0s)) / denom;

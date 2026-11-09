@@ -340,6 +340,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   const [isAutoSpin, setIsAutoSpin] = useState<boolean>(false);
   const loadedImgRef = useRef<HTMLImageElement | null>(null);
   const step2BaseImgRef = useRef<HTMLImageElement | null>(null);
+  const step3CleanCropImgRef = useRef<HTMLImageElement | null>(null);
 
   // STEP 5: Quản lý Tab & Biểu cảm nét mặt tự chọn (Pull-tab & Nét vẽ Đông Hồ)
   const [step5Tab, setStep5Tab] = useState<'motion' | 'expression'>('motion');
@@ -990,6 +991,13 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
       nw = Math.max(60, initBox.w + dx);
     }
 
+    nx = Math.max(0, nx);
+    ny = Math.max(0, ny);
+    if (cvs) {
+      if (nx + nw > cvs.width) nw = cvs.width - nx;
+      if (ny + nh > cvs.height) nh = cvs.height - ny;
+    }
+
     setBoundingBox({ x: nx, y: ny, w: nw, h: nh });
   };
 
@@ -1117,6 +1125,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     const croppedImg = new Image();
     croppedImg.src = croppedUri;
     croppedImg.onload = () => {
+      step3CleanCropImgRef.current = croppedImg;
       loadedImgRef.current = croppedImg;
       setAiCutoutUri(null);
       setStep(3);
@@ -1162,17 +1171,77 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   };
 
   // Bước 3 -> Bước 4: Tạo Sticker Viền Trắng Die-Cut & Chuyển Sang Gắn Khung Xương
+  // ĐẢM BẢO: Giữ 100% màu sắc và nét vẽ nguyên bản, KHÔNG bị dính màu xanh ngọc bích của mặt nạ Step 3!
   const handleProceedToStep4Joints = () => {
-    const cvs = maskCanvasRef.current;
-    if (!cvs) return;
+    const maskCvs = maskCanvasRef.current;
+    if (!maskCvs) return;
 
+    const w = maskCvs.width;
+    const h = maskCvs.height;
+
+    // Trường hợp 1: Có ảnh AI Cutout sạch từ server và người dùng không sửa tay
+    if (aiCutoutUri && !userEditedMaskRef.current) {
+      const aiImg = new Image();
+      aiImg.onload = () => {
+        const cleanCutoutCanvas = document.createElement('canvas');
+        cleanCutoutCanvas.width = w;
+        cleanCutoutCanvas.height = h;
+        const cleanCtx = cleanCutoutCanvas.getContext('2d');
+        if (cleanCtx) {
+          cleanCtx.drawImage(aiImg, 0, 0, w, h);
+          finalizeCutoutAndProceed(cleanCutoutCanvas);
+        }
+      };
+      aiImg.src = aiCutoutUri;
+      return;
+    }
+
+    // Trường hợp 2: Người dùng có sửa nét hoặc dùng fallback local scan
+    // Áp dụng mặt nạ lên ảnh GỐC SẠCH (step3CleanCropImgRef) để không dính màu xanh ngọc
+    const cleanImg = step3CleanCropImgRef.current || loadedImgRef.current;
+    const cleanCutoutCanvas = document.createElement('canvas');
+    cleanCutoutCanvas.width = w;
+    cleanCutoutCanvas.height = h;
+    const cleanCtx = cleanCutoutCanvas.getContext('2d');
+    if (!cleanCtx) return;
+
+    if (cleanImg) {
+      cleanCtx.drawImage(cleanImg, 0, 0, w, h);
+    }
+    const cleanImgData = cleanCtx.getImageData(0, 0, w, h);
+    const cData = cleanImgData.data;
+
+    const maskCtx = maskCvs.getContext('2d');
+    if (maskCtx) {
+      const maskImgData = maskCtx.getImageData(0, 0, w, h);
+      const mData = maskImgData.data;
+
+      for (let i = 0; i < mData.length; i += 4) {
+        const ma = mData[i + 3];
+        const mr = mData[i];
+        const mg = mData[i + 1];
+        const mb = mData[i + 2];
+
+        // Điểm ảnh được giữ lại: có độ mờ và không phải nền trắng thuần
+        const isMasked = ma > 30 && (mr < 240 || mg < 240 || mb < 240);
+        if (!isMasked) {
+          cData[i + 3] = 0; // Xóa nền trong suốt
+        }
+      }
+      cleanCtx.putImageData(cleanImgData, 0, 0);
+    }
+
+    finalizeCutoutAndProceed(cleanCutoutCanvas);
+  };
+
+  const finalizeCutoutAndProceed = (cutoutSourceCanvas: HTMLCanvasElement) => {
     // Tạo sticker viền trắng die-cut giấy thủ công chuẩn Teri the Paper Bear
-    const cutoutCanvas = extractPaperCutoutWithStickerBorder(cvs, 6);
+    const cutoutCanvas = extractPaperCutoutWithStickerBorder(cutoutSourceCanvas, 6);
     const cutoutUri = cutoutCanvas.toDataURL('image/png');
     setCurrentImageUri(cutoutUri);
 
     // Tự động quét pixel nét vẽ trên Canvas để căn chỉnh 16 khớp xương chuẩn Meta
-    const detected = detectHumanoidRigFromCanvas(cvs, skeletonType);
+    const detected = detectHumanoidRigFromCanvas(cutoutSourceCanvas, skeletonType);
     setRigData(detected);
 
     const img = new Image();
