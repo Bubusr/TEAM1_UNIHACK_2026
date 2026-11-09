@@ -888,9 +888,617 @@ export function calculateRigPose(
   };
 }
 
+export interface ArticulatedPuppetSegments {
+  head: HTMLCanvasElement;
+  torso: HTMLCanvasElement;
+  armLUpper: HTMLCanvasElement | null;
+  armLLower: HTMLCanvasElement | null;
+  armRUpper: HTMLCanvasElement | null;
+  armRLower: HTMLCanvasElement | null;
+  legLUpper: HTMLCanvasElement | null;
+  legLLower: HTMLCanvasElement | null;
+  legRUpper: HTMLCanvasElement | null;
+  legRLower: HTMLCanvasElement | null;
+  tail: HTMLCanvasElement | null;
+  width: number;
+  height: number;
+}
+
+const puppetSegmentCache = new Map<string, ArticulatedPuppetSegments>();
+
+function distToSeg(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const l2 = dx * dx + dy * dy;
+  if (l2 < 1) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * dx + (py - y1) * dy) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function getPuppetCacheKey(img: HTMLCanvasElement | HTMLImageElement, rig: SkeletonRig): string {
+  let imgKey = '';
+  if ('src' in img && typeof img.src === 'string' && img.src.length > 0) {
+    imgKey = img.src.slice(0, 80) + img.src.length;
+  } else {
+    if (!(img as any).__puppetCacheId) {
+      (img as any).__puppetCacheId = 'cvs_' + Math.random().toString(36).slice(2, 9);
+    }
+    imgKey = (img as any).__puppetCacheId;
+  }
+  const rigKey = rig.joints.map((j) => `${j.id}:${j.relX.toFixed(2)},${j.relY.toFixed(2)}`).join('|');
+  return `${imgKey}#${rigKey}`;
+}
+
 /**
- * VẼ CON RỐI GIẤY 2D LIỀN MẠCH (Continuous Paper Cutout Renderer)
- * Kết hợp độ cong mềm mại, biến dạng tờ giấy, và lật 3D quanh trục Y (Turntable)
+ * PHÂN TÁCH BỨC VẼ THÀNH CÁC MẢNH GIẤY RỐI KHỚP NỐI (Paper Puppet Articulation Segmentation)
+ * Dựa trên Khung Xương (Skeleton Framework) làm bản đồ định vị:
+ * - Đầu (Head)
+ * - Thân (Torso)
+ * - Tay trái / Tay phải (Hai khúc: Bắp tay + Cẳng tay)
+ * - Chân trái / Chân phải (Hai khúc: Đùi + Cẳng chân)
+ * Tự động tạo nẹp giấy chồng lên nhau (6px overlap) để khi uốn cong gập khớp không bị hở.
+ */
+export function createArticulatedPuppetSegments(
+  sourceImg: HTMLCanvasElement | HTMLImageElement,
+  rig: SkeletonRig
+): ArticulatedPuppetSegments | null {
+  const w = sourceImg.width || 260;
+  const h = sourceImg.height || 260;
+  if (w <= 0 || h <= 0) return null;
+
+  // 1. Vẽ ảnh gốc vào canvas phụ để lấy ma trận điểm ảnh (ImageData)
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = w;
+  srcCanvas.height = h;
+  const sCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+  if (!sCtx) return null;
+  sCtx.drawImage(sourceImg, 0, 0, w, h);
+  const srcImgData = sCtx.getImageData(0, 0, w, h);
+  const data = srcImgData.data;
+
+  // 2. Tìm tọa độ thực tế của từng khớp xương theo kích thước ảnh
+  const jMap = new Map<string, { x: number; y: number }>();
+  rig.joints.forEach((j) => {
+    jMap.set(j.type, { x: j.relX * w, y: j.relY * h });
+  });
+
+  const head = jMap.get('head');
+  const neck = jMap.get('neck') || (head ? { x: head.x, y: head.y + h * 0.12 } : { x: w * 0.5, y: h * 0.35 });
+  const spine = jMap.get('spine') || { x: w * 0.5, y: h * 0.52 };
+  const hipL = jMap.get('hip_l') || jMap.get('hip') || { x: w * 0.42, y: h * 0.7 };
+  const hipR = jMap.get('hip_r') || jMap.get('hip') || { x: w * 0.58, y: h * 0.7 };
+  const pelvis = { x: (hipL.x + hipR.x) / 2, y: (hipL.y + hipR.y) / 2 };
+
+  const shoulderL = jMap.get('shoulder_l');
+  const elbowL = jMap.get('elbow_l');
+  const handL = jMap.get('hand_l');
+
+  const shoulderR = jMap.get('shoulder_r');
+  const elbowR = jMap.get('elbow_r');
+  const handR = jMap.get('hand_r');
+
+  const kneeL = jMap.get('knee_l');
+  const footL = jMap.get('foot_l');
+
+  const kneeR = jMap.get('knee_r');
+  const footR = jMap.get('foot_r');
+
+  // Khởi tạo các canvas con và ImageData tương ứng
+  const createSubPiece = () => {
+    const cvs = document.createElement('canvas');
+    cvs.width = w;
+    cvs.height = h;
+    const ctx = cvs.getContext('2d');
+    const imgData = ctx ? ctx.createImageData(w, h) : null;
+    return { cvs, ctx, imgData };
+  };
+
+  const pHead = createSubPiece();
+  const pTorso = createSubPiece();
+  const pArmLU = shoulderL ? createSubPiece() : null;
+  const pArmLL = elbowL ? createSubPiece() : null;
+  const pArmRU = shoulderR ? createSubPiece() : null;
+  const pArmRL = elbowR ? createSubPiece() : null;
+  const pLegLU = kneeL ? createSubPiece() : null;
+  const pLegLL = footL ? createSubPiece() : null;
+  const pLegRU = kneeR ? createSubPiece() : null;
+  const pLegRL = footR ? createSubPiece() : null;
+
+  // Khớp chồng gập (Overlap) để các mảnh giấy nối khít khao khi chuyển động
+  const jointsWithOverlap = [
+    { pt: neck, parts: [pHead, pTorso] },
+    { pt: shoulderL, parts: [pTorso, pArmLU] },
+    { pt: elbowL, parts: [pArmLU, pArmLL] },
+    { pt: shoulderR, parts: [pTorso, pArmRU] },
+    { pt: elbowR, parts: [pArmRU, pArmRL] },
+    { pt: hipL, parts: [pTorso, pLegLU] },
+    { pt: kneeL, parts: [pLegLU, pLegLL] },
+    { pt: hipR, parts: [pTorso, pLegRU] },
+    { pt: kneeR, parts: [pLegRU, pLegRL] },
+  ].filter((j) => j.pt && j.parts[0] && j.parts[1]);
+
+  const copyPixel = (target: { imgData: ImageData | null } | null, idx: number) => {
+    if (!target || !target.imgData) return;
+    const tData = target.imgData.data;
+    tData[idx] = data[idx];
+    tData[idx + 1] = data[idx + 1];
+    tData[idx + 2] = data[idx + 2];
+    tData[idx + 3] = data[idx + 3];
+  };
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const alpha = data[idx + 3];
+      if (alpha <= 20) continue;
+
+      let minDist = 999999;
+      let bestPart = pTorso;
+
+      // 1. Khoảng cách tới Đầu
+      if (head) {
+        let dHead = distToSeg(x, y, neck.x, neck.y, head.x, head.y);
+        if (y < neck.y) dHead -= 20; // Ưu tiên điểm ảnh trên cổ cho đầu
+        if (dHead < minDist) {
+          minDist = dHead;
+          bestPart = pHead;
+        }
+      }
+
+      // 2. Khoảng cách tới Thân
+      const dTorso = Math.min(
+        distToSeg(x, y, neck.x, neck.y, spine.x, spine.y),
+        distToSeg(x, y, spine.x, spine.y, pelvis.x, pelvis.y)
+      );
+      if (dTorso < minDist) {
+        minDist = dTorso;
+        bestPart = pTorso;
+      }
+
+      // 3. Khoảng cách tới Tay Trái
+      if (shoulderL && elbowL && pArmLU) {
+        const dArmLU = distToSeg(x, y, shoulderL.x, shoulderL.y, elbowL.x, elbowL.y);
+        if (dArmLU < minDist) {
+          minDist = dArmLU;
+          bestPart = pArmLU;
+        }
+        if (handL && pArmLL) {
+          const dArmLL = distToSeg(x, y, elbowL.x, elbowL.y, handL.x, handL.y);
+          if (dArmLL < minDist) {
+            minDist = dArmLL;
+            bestPart = pArmLL;
+          }
+        }
+      } else if (shoulderL && handL && pArmLU) {
+        const dArmL = distToSeg(x, y, shoulderL.x, shoulderL.y, handL.x, handL.y);
+        if (dArmL < minDist) {
+          minDist = dArmL;
+          bestPart = pArmLU;
+        }
+      }
+
+      // 4. Khoảng cách tới Tay Phải
+      if (shoulderR && elbowR && pArmRU) {
+        const dArmRU = distToSeg(x, y, shoulderR.x, shoulderR.y, elbowR.x, elbowR.y);
+        if (dArmRU < minDist) {
+          minDist = dArmRU;
+          bestPart = pArmRU;
+        }
+        if (handR && pArmRL) {
+          const dArmRL = distToSeg(x, y, elbowR.x, elbowR.y, handR.x, handR.y);
+          if (dArmRL < minDist) {
+            minDist = dArmRL;
+            bestPart = pArmRL;
+          }
+        }
+      } else if (shoulderR && handR && pArmRU) {
+        const dArmR = distToSeg(x, y, shoulderR.x, shoulderR.y, handR.x, handR.y);
+        if (dArmR < minDist) {
+          minDist = dArmR;
+          bestPart = pArmRU;
+        }
+      }
+
+      // 5. Khoảng cách tới Chân Trái
+      if (hipL && kneeL && pLegLU) {
+        const dLegLU = distToSeg(x, y, hipL.x, hipL.y, kneeL.x, kneeL.y);
+        if (dLegLU < minDist) {
+          minDist = dLegLU;
+          bestPart = pLegLU;
+        }
+        if (footL && pLegLL) {
+          const dLegLL = distToSeg(x, y, kneeL.x, kneeL.y, footL.x, footL.y);
+          if (dLegLL < minDist) {
+            minDist = dLegLL;
+            bestPart = pLegLL;
+          }
+        }
+      }
+
+      // 6. Khoảng cách tới Chân Phải
+      if (hipR && kneeR && pLegRU) {
+        const dLegRU = distToSeg(x, y, hipR.x, hipR.y, kneeR.x, kneeR.y);
+        if (dLegRU < minDist) {
+          minDist = dLegRU;
+          bestPart = pLegRU;
+        }
+        if (footR && pLegRL) {
+          const dLegRL = distToSeg(x, y, kneeR.x, kneeR.y, footR.x, footR.y);
+          if (dLegRL < minDist) {
+            minDist = dLegRL;
+            bestPart = pLegRL;
+          }
+        }
+      }
+
+      // Sao chép điểm ảnh vào bộ phận phù hợp
+      copyPixel(bestPart, idx);
+
+      // Thêm nẹp giấy nối (overlap 6px) tại các khớp để gập không bị đứt đoạn
+      for (let k = 0; k < jointsWithOverlap.length; k++) {
+        const j = jointsWithOverlap[k];
+        const dist = Math.hypot(x - j.pt!.x, y - j.pt!.y);
+        if (dist <= 7) {
+          copyPixel(j.parts[0], idx);
+          copyPixel(j.parts[1], idx);
+        }
+      }
+    }
+  }
+
+  // 4. Lưu ImageData vào Canvas
+  const commitCanvas = (piece: { cvs: HTMLCanvasElement; ctx: CanvasRenderingContext2D | null; imgData: ImageData | null } | null) => {
+    if (!piece || !piece.ctx || !piece.imgData) return null;
+    piece.ctx.putImageData(piece.imgData, 0, 0);
+    return piece.cvs;
+  };
+
+  return {
+    head: commitCanvas(pHead)!,
+    torso: commitCanvas(pTorso)!,
+    armLUpper: commitCanvas(pArmLU),
+    armLLower: commitCanvas(pArmLL),
+    armRUpper: commitCanvas(pArmRU),
+    armRLower: commitCanvas(pArmRL),
+    legLUpper: commitCanvas(pLegLU),
+    legLLower: commitCanvas(pLegLL),
+    legRUpper: commitCanvas(pLegRU),
+    legRLower: commitCanvas(pLegRL),
+    tail: null,
+    width: w,
+    height: h,
+  };
+}
+
+function getOrCreateArticulatedPuppet(
+  sourceImg: HTMLCanvasElement | HTMLImageElement,
+  rig: SkeletonRig
+): ArticulatedPuppetSegments | null {
+  const cacheKey = getPuppetCacheKey(sourceImg, rig);
+  if (puppetSegmentCache.has(cacheKey)) {
+    return puppetSegmentCache.get(cacheKey)!;
+  }
+  const segments = createArticulatedPuppetSegments(sourceImg, rig);
+  if (segments) {
+    puppetSegmentCache.set(cacheKey, segments);
+  }
+  return segments;
+}
+
+/**
+ * Chốt ghim đồng mini (Brass Fastener Pins) tạo cảm giác mô hình rối giấy thủ công
+ */
+function drawFastenerPin(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(244, 162, 89, 0.85)';
+  ctx.beginPath();
+  ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#1B2A2F';
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+
+  ctx.fillStyle = '#FFE18A';
+  ctx.beginPath();
+  ctx.arc(x - 0.7, y - 0.7, 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/**
+ * Nếp gấp giấy xếp quạt (Accordion Folds) và lò xo giấy (Paper Springs)
+ */
+function drawPaperAccordionCreases(
+  ctx: CanvasRenderingContext2D,
+  spine: { x: number; y: number },
+  pelvis: { x: number; y: number },
+  w: number,
+  h: number,
+  motion: CreatureAction,
+  tick: number
+) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
+
+  const midY = (spine.y + pelvis.y) / 2;
+  const torsoW = w * 0.22;
+
+  if (motion === 'happy_jump' || motion === 'hop') {
+    // Lò xo giấy nảy tưng bừng (Paper Spring)
+    const springAmp = Math.sin(tick * 0.3) * 3;
+    ctx.beginPath();
+    for (let i = -2; i <= 2; i++) {
+      const cy = midY + i * 7 + springAmp;
+      ctx.moveTo(spine.x - torsoW * 0.6, cy);
+      ctx.lineTo(spine.x, cy - 3);
+      ctx.lineTo(spine.x + torsoW * 0.6, cy);
+    }
+    ctx.stroke();
+  } else if (motion === 'sleep') {
+    // Nếp gấp giấy gập lại nằm yên (Origami Fold Creases)
+    ctx.strokeStyle = 'rgba(17, 30, 34, 0.45)';
+    ctx.beginPath();
+    ctx.moveTo(spine.x - torsoW * 0.8, midY - 6);
+    ctx.lineTo(spine.x + torsoW * 0.8, midY - 6);
+    ctx.moveTo(spine.x - torsoW * 0.7, midY + 4);
+    ctx.lineTo(spine.x + torsoW * 0.7, midY + 4);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/**
+ * BIỂU CẢM ĐỘNG THEO CƠ CHẾ GIẤY (Paper Expression Slider & Rotating Emotion Wheel)
+ * Tự động gắn khớp chính xác theo vị trí mắt, miệng trên khung xương (Skeleton Framework)
+ */
+function drawDynamicPaperExpressions(
+  ctx: CanvasRenderingContext2D,
+  rig: SkeletonRig,
+  motion: CreatureAction,
+  tick: number,
+  w: number,
+  h: number
+) {
+  if (!rig || !rig.joints) return;
+
+  const eyeL = rig.joints.find((j) => j.type === 'eye_l');
+  const eyeR = rig.joints.find((j) => j.type === 'eye_r');
+  const mouth = rig.joints.find((j) => j.type === 'mouth');
+  const head = rig.joints.find((j) => j.type === 'head');
+
+  if (!eyeL || !eyeR) return;
+
+  const ex1 = eyeL.relX * w;
+  const ey1 = eyeL.relY * h;
+  const ex2 = eyeR.relX * w;
+  const ey2 = eyeR.relY * h;
+  const mx = mouth ? mouth.relX * w : (ex1 + ex2) / 2;
+  const my = mouth ? mouth.relY * h : (ey1 + ey2) / 2 + 14;
+
+  const eyeDist = Math.hypot(ex2 - ex1, ey2 - ey1) || 24;
+  const eyeRSize = Math.max(3, eyeDist * 0.16);
+
+  ctx.save();
+
+  // 1. THANH TRƯỢT BIỂU CẢM: SAD (Ủ rũ, tuôn rơi dải nước mắt giấy)
+  if (motion === 'sad') {
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(ex1, ey1 + 2, eyeRSize, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.arc(ex2, ey2 + 2, eyeRSize, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.stroke();
+
+    const tearFlow1 = (tick * 1.4) % 24;
+    const tearFlow2 = (tick * 1.4 + 12) % 24;
+    ctx.fillStyle = '#4CC9F0';
+    ctx.strokeStyle = '#118AB2';
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.arc(ex1, ey1 + 5 + tearFlow1, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(ex2, ey2 + 5 + tearFlow2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Miệng mếu máo gợn sóng
+    ctx.strokeStyle = '#C8412F';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(mx, my + 4, 5, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+  }
+
+  // 2. THANH TRƯỢT BIỂU CẢM: SLEEP (Cửa sập mắt giấy đóng lại, zZz giấy bay)
+  else if (motion === 'sleep') {
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(ex1, ey1 - 1, eyeRSize, Math.PI * 0.1, Math.PI * 0.9);
+    ctx.arc(ex2, ey2 - 1, eyeRSize, Math.PI * 0.1, Math.PI * 0.9);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#E76F51';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(mx - 3, my);
+    ctx.lineTo(mx, my + 2);
+    ctx.lineTo(mx + 3, my);
+    ctx.stroke();
+
+    const zFlow = (tick * 0.8) % 36;
+    const hx = head ? head.relX * w : (ex1 + ex2) / 2;
+    const hy = head ? head.relY * h : ey1 - 18;
+
+    ctx.save();
+    ctx.fillStyle = '#FFE18A';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 4;
+    ctx.font = 'bold 11px system-ui';
+    ctx.fillText('z', hx + 10, hy - zFlow * 0.4);
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText('Z', hx + 18, hy - 8 - zFlow * 0.65);
+    ctx.font = 'bold 17px system-ui';
+    ctx.fillText('Z', hx + 26, hy - 18 - zFlow * 0.9);
+    ctx.restore();
+  }
+
+  // 3. BÁNH XE XOAY CẢM XÚC: HAPPY JUMP (Mắt cười tít ^ ^, Miệng há to reo vui)
+  else if (motion === 'happy_jump') {
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(ex1 - eyeRSize, ey1 + 2);
+    ctx.lineTo(ex1, ey1 - eyeRSize + 1);
+    ctx.lineTo(ex1 + eyeRSize, ey1 + 2);
+    ctx.moveTo(ex2 - eyeRSize, ey2 + 2);
+    ctx.lineTo(ex2, ey2 - eyeRSize + 1);
+    ctx.lineTo(ex2 + eyeRSize, ey2 + 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#C8412F';
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(mx, my, 6.5, 0, Math.PI);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#FF8FA3';
+    ctx.beginPath();
+    ctx.arc(mx, my + 3.5, 3.5, 0, Math.PI);
+    ctx.fill();
+
+    ctx.save();
+    ctx.font = '14px system-ui';
+    const starHop = Math.sin(tick * 0.3) * 4;
+    ctx.fillText('✦', ex1 - 18, ey1 - 10 + starHop);
+    ctx.fillText('★', ex2 + 10, ey2 - 14 - starHop);
+    ctx.restore();
+  }
+
+  // 4. BÁNH XE XOAY CẢM XÚC: DANCE (Mắt nháy tinh nghịch ^ ~, Miệng ca hát)
+  else if (motion === 'dance') {
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(ex1 - eyeRSize, ey1 + 1);
+    ctx.lineTo(ex1, ey1 - eyeRSize + 1);
+    ctx.lineTo(ex1 + eyeRSize, ey1 + 1);
+    ctx.stroke();
+
+    ctx.fillStyle = '#1B2A2F';
+    ctx.beginPath();
+    ctx.arc(ex2, ey2, eyeRSize * 0.85, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(ex2 - 1.2, ey2 - 1.2, eyeRSize * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#E76F51';
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(mx, my + 1, 5, 0, Math.PI);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.save();
+    ctx.font = '13px system-ui';
+    const noteBob = Math.sin(tick * 0.25) * 5;
+    ctx.fillText('♪', ex1 - 16, ey1 - 12 + noteBob);
+    ctx.fillText('♫', ex2 + 12, ey2 - 10 - noteBob);
+    ctx.restore();
+  }
+
+  // 5. THANH TRƯỢT BIỂU CẢM: TERI PANIC (Gấu Teri hoảng loạn kiểu Gumball)
+  else if (motion === 'teri_panic') {
+    const jitterX = Math.sin(tick * 1.8) * 1.8;
+    const jitterY = Math.cos(tick * 1.8) * 1.8;
+
+    ctx.fillStyle = '#1B2A2F';
+    ctx.beginPath();
+    ctx.arc(ex1 + jitterX, ey1 + jitterY, 2.2, 0, Math.PI * 2);
+    ctx.arc(ex2 + jitterX, ey2 + jitterY, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#C8412F';
+    ctx.strokeStyle = '#1B2A2F';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(mx + jitterX, my + 3, 5, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.save();
+    ctx.font = '13px system-ui';
+    ctx.fillText('💧', ex1 - 18, ey1 - 4);
+    ctx.fillText('💧', ex2 + 10, ey2 - 6);
+    ctx.restore();
+  }
+
+  // 6. THANH TRƯỢT BIỂU CẢM: WAVE (Vẫy tay chào)
+  else if (motion === 'wave') {
+    ctx.fillStyle = '#1B2A2F';
+    ctx.beginPath();
+    ctx.arc(ex1, ey1, eyeRSize * 0.8, 0, Math.PI * 2);
+    ctx.arc(ex2, ey2, eyeRSize * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(ex1 - 1, ey1 - 1, eyeRSize * 0.35, 0, Math.PI * 2);
+    ctx.arc(ex2 - 1, ey2 - 1, eyeRSize * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#C8412F';
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(mx, my - 1, 5, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+  }
+
+  // 7. MẶC ĐỊNH (Walk, Run, Sneak, Idle): Chớp mắt tự nhiên
+  else {
+    const isBlinking = (tick % 110) < 6;
+    if (isBlinking) {
+      ctx.strokeStyle = '#1B2A2F';
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(ex1 - eyeRSize, ey1);
+      ctx.lineTo(ex1 + eyeRSize, ey1);
+      ctx.moveTo(ex2 - eyeRSize, ey2);
+      ctx.lineTo(ex2 + eyeRSize, ey2);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * VẼ CON RỐI GIẤY KHỚP NỐI CƠ HỌC (Physical Articulated Paper Puppet)
+ * Phong cách Gấu Giấy Teri trong Gumball:
+ * - Đầu, tay, chân, thân phân tách thành các mảnh giấy khớp nối theo Khung Xương
+ * - Tay vẫy chào thực tế, chân sải bước, đầu gối gập khớp
+ * - Thân gập xếp quạt (Accordion Fold) & nảy lò xo (Paper Spring)
+ * - Biểu cảm thay đổi linh hoạt qua thanh trượt giấy / bánh xe cảm xúc
  */
 export function drawPaperPuppet(
   ctx: CanvasRenderingContext2D,
@@ -902,29 +1510,28 @@ export function drawPaperPuppet(
   targetWidth = 120,
   targetHeight = 120,
   direction: 1 | -1 = 1,
-  rotationY = 0, // Góc lật 3D quanh trục Y (-180°..+180°)
+  rotationY = 0,
   motion: CreatureAction = 'walk',
   tick = 0
 ) {
+  const segments = getOrCreateArticulatedPuppet(img, rig);
+
   ctx.save();
 
-  // 1. Dịch chuyển đến tâm nhân vật & điều chỉnh trục nhảy (Hop)
+  // 1. Dịch chuyển đến vị trí và độ nhún tổng thể
   ctx.translate(centerX, centerY + pose.hopY);
 
-  // 2. Chế độ Xoay 2.5D Turntable (Xoay tờ giấy quanh trục thẳng đứng Y)
   const radY = (rotationY * Math.PI) / 180;
-  const perspectiveScaleX = Math.cos(radY); // Co hẹp chiều ngang tạo cảm giác 3D xoay
+  const perspectiveScaleX = Math.cos(radY);
 
   ctx.scale(direction * pose.squashX * perspectiveScaleX, pose.stretchY);
-
-  // 3. Biến dạng uốn lượn của tờ giấy (Paper Skew & Angle)
   ctx.transform(1, 0, pose.skewX, 1, 0, 0);
-  ctx.rotate(pose.headTilt * 0.4 + pose.bodyBend * 0.5);
+  ctx.rotate(pose.headTilt * 0.25 + pose.bodyBend * 0.35);
 
   const w = targetWidth;
   const h = targetHeight;
 
-  // 4. Vẽ bóng đổ mờ mềm mại dưới chân
+  // 2. Bóng đổ mềm mại dưới chân
   ctx.save();
   ctx.fillStyle = 'rgba(10, 17, 19, 0.35)';
   ctx.beginPath();
@@ -932,107 +1539,181 @@ export function drawPaperPuppet(
   ctx.fill();
   ctx.restore();
 
-  // 5. Vẽ TOÀN BỘ BỨC VẼ GỐC NGUYÊN VẸN 100% (Không cắt nét!)
-  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  // 3. Fallback an toàn nếu không phân tách được
+  if (!segments) {
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    ctx.restore();
+    return;
+  }
 
-  // 6. Hiệu ứng sống động tuân theo khung xương (Mắt, Miệng, Nước mắt, zZz, Sao, Mồ hôi)
-  if (rig && rig.joints) {
-    const eyeL = rig.joints.find((j) => j.type === 'eye_l');
-    const eyeR = rig.joints.find((j) => j.type === 'eye_r');
-    const mouth = rig.joints.find((j) => j.type === 'mouth');
-    const headJ = rig.joints.find((j) => j.type === 'head');
-    const shLJ = rig.joints.find((j) => j.type === 'shoulder_l');
-    const shRJ = rig.joints.find((j) => j.type === 'shoulder_r');
+  // 4. CHUYỂN HỆ TỌA ĐỘ VỀ KHÔNG GIAN BẢN VẼ [0..sw] x [0..sh]
+  const sw = segments.width;
+  const sh = segments.height;
+  const scaleRatioX = w / sw;
+  const scaleRatioY = h / sh;
 
-    // Chớp mắt tự nhiên hoặc nhắm mắt khi ngủ
-    const shouldCloseEyes = pose.eyeBlink > 0.5 || motion === 'sleep';
-    if (shouldCloseEyes && eyeL && eyeR) {
+  ctx.scale(scaleRatioX, scaleRatioY);
+  ctx.translate(-sw / 2, -sh / 2);
+
+  // Lấy các điểm chốt khớp quan trọng
+  const jMap = new Map<string, { x: number; y: number }>();
+  rig.joints.forEach((j) => {
+    jMap.set(j.type, { x: j.relX * sw, y: j.relY * sh });
+  });
+
+  const head = jMap.get('head');
+  const neck = jMap.get('neck') || (head ? { x: head.x, y: head.y + sh * 0.12 } : { x: sw * 0.5, y: sh * 0.35 });
+  const spine = jMap.get('spine') || { x: sw * 0.5, y: sh * 0.52 };
+  const hipL = jMap.get('hip_l') || jMap.get('hip') || { x: sw * 0.42, y: sh * 0.7 };
+  const hipR = jMap.get('hip_r') || jMap.get('hip') || { x: sw * 0.58, y: sh * 0.7 };
+  const pelvis = { x: (hipL.x + hipR.x) / 2, y: (hipL.y + hipR.y) / 2 };
+
+  const shoulderL = jMap.get('shoulder_l');
+  const elbowL = jMap.get('elbow_l');
+
+  const shoulderR = jMap.get('shoulder_r');
+  const elbowR = jMap.get('elbow_r');
+
+  const kneeL = jMap.get('knee_l');
+  const kneeR = jMap.get('knee_r');
+
+  // =========================================================================
+  // LỚP 1: CHI BÊN PHẢI (NẰM LỚP SAU THÂN KHI QUAY SANG PHẢI)
+  // =========================================================================
+  if (segments.legRUpper && hipR) {
+    const thighAngleR = ((pose.legOffsetR / 36) * 0.75) * direction;
+    ctx.save();
+    ctx.translate(hipR.x, hipR.y);
+    ctx.rotate(thighAngleR);
+    ctx.translate(-hipR.x, -hipR.y);
+    ctx.drawImage(segments.legRUpper, 0, 0);
+
+    if (segments.legRLower && kneeR) {
+      let kneeFlexR = Math.max(0, -pose.legOffsetR * 0.025) * direction;
+      if (pose.hopY < -8) kneeFlexR += 0.28;
       ctx.save();
-      ctx.strokeStyle = '#1B2A2F';
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-
-      const x1 = -w / 2 + eyeL.relX * w;
-      const y1 = -h / 2 + eyeL.relY * h;
-      const x2 = -w / 2 + eyeR.relX * w;
-      const y2 = -h / 2 + eyeR.relY * h;
-
-      // Nét mí mắt nhắm
-      ctx.beginPath();
-      ctx.moveTo(x1 - 4, y1);
-      ctx.lineTo(x1 + 4, y1);
-      ctx.moveTo(x2 - 4, y2);
-      ctx.lineTo(x2 + 4, y2);
-      ctx.stroke();
+      ctx.translate(kneeR.x, kneeR.y);
+      ctx.rotate(kneeFlexR);
+      ctx.translate(-kneeR.x, -kneeR.y);
+      ctx.drawImage(segments.legRLower, 0, 0);
+      drawFastenerPin(ctx, kneeR.x, kneeR.y);
       ctx.restore();
     }
+    drawFastenerPin(ctx, hipR.x, hipR.y);
+    ctx.restore();
+  }
 
-    // Hiệu ứng hé mở miệng theo động tác (reo vui, cười, hoảng sợ)
-    if (pose.mouthOpen > 0.15 && mouth && motion !== 'sad') {
+  if (segments.armRUpper && shoulderR) {
+    const armAngleR = pose.armAngleR * direction;
+    ctx.save();
+    ctx.translate(shoulderR.x, shoulderR.y);
+    ctx.rotate(armAngleR);
+    ctx.translate(-shoulderR.x, -shoulderR.y);
+    ctx.drawImage(segments.armRUpper, 0, 0);
+
+    if (segments.armRLower && elbowR) {
+      const elbowFlexR = pose.armAngleR * 0.5 * direction;
       ctx.save();
-      ctx.fillStyle = '#C8412F';
-      const mx = -w / 2 + mouth.relX * w;
-      const my = -h / 2 + mouth.relY * h;
-      ctx.beginPath();
-      ctx.ellipse(mx, my + 1, 3.5, 2.5 * pose.mouthOpen, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.translate(elbowR.x, elbowR.y);
+      ctx.rotate(elbowFlexR);
+      ctx.translate(-elbowR.x, -elbowR.y);
+      ctx.drawImage(segments.armRLower, 0, 0);
+      drawFastenerPin(ctx, elbowR.x, elbowR.y);
       ctx.restore();
     }
+    drawFastenerPin(ctx, shoulderR.x, shoulderR.y);
+    ctx.restore();
+  }
 
-    // 1. Hiệu ứng 'sad' (Ủ rũ): giọt nước mắt lăn dài từ 2 mắt
-    if (motion === 'sad' && eyeL && eyeR) {
+  // =========================================================================
+  // LỚP 2: THÂN MÌNH & CƠ HỌC GIẤY (Paper Accordion Folds / Paper Spring)
+  // =========================================================================
+  ctx.save();
+  ctx.translate(pelvis.x, pelvis.y);
+  ctx.rotate(pose.bodyBend * 0.45 * direction);
+  ctx.translate(-pelvis.x, -pelvis.y);
+  ctx.drawImage(segments.torso, 0, 0);
+
+  // Hiệu ứng cơ học nếp gấp xếp quạt / lò xo giấy
+  drawPaperAccordionCreases(ctx, spine, pelvis, sw, sh, motion, tick);
+  ctx.restore();
+
+  // =========================================================================
+  // LỚP 3: ĐẦU & BIỂU CẢM ĐỘNG (Paper Expression Slider / Emotion Wheel)
+  // =========================================================================
+  ctx.save();
+  ctx.translate(neck.x, neck.y);
+  const totalHeadAngle = (pose.headTilt + pose.bodyBend * 0.4) * direction;
+  ctx.rotate(totalHeadAngle);
+
+  // Độ nẩy lò xo giấy của đầu (Paper Spring Head Bob)
+  const headSpringBounce =
+    motion === 'happy_jump'
+      ? Math.sin(tick * 0.35) * 5
+      : motion === 'dance'
+      ? Math.sin(tick * 0.2) * 2.5
+      : 0;
+  ctx.translate(0, headSpringBounce);
+
+  ctx.save();
+  ctx.translate(-neck.x, -neck.y);
+  ctx.drawImage(segments.head, 0, 0);
+  ctx.restore();
+
+  // Thanh trượt / bánh xe biểu cảm động gắn chuẩn khung xương ngũ quan
+  drawDynamicPaperExpressions(ctx, rig, motion, tick, sw, sh);
+  drawFastenerPin(ctx, neck.x, neck.y);
+  ctx.restore();
+
+  // =========================================================================
+  // LỚP 4: CHI BÊN TRÁI (NẰM LỚP TRƯỚC: VẪY TAY, SẢI BƯỚC)
+  // =========================================================================
+  if (segments.legLUpper && hipL) {
+    const thighAngleL = ((pose.legOffsetL / 36) * 0.75) * direction;
+    ctx.save();
+    ctx.translate(hipL.x, hipL.y);
+    ctx.rotate(thighAngleL);
+    ctx.translate(-hipL.x, -hipL.y);
+    ctx.drawImage(segments.legLUpper, 0, 0);
+
+    if (segments.legLLower && kneeL) {
+      let kneeFlexL = Math.max(0, -pose.legOffsetL * 0.025) * direction;
+      if (pose.hopY < -8) kneeFlexL += 0.28;
       ctx.save();
-      ctx.fillStyle = '#4CC9F0';
-      const tearY1 = -h / 2 + eyeL.relY * h + 4 + ((tick * 1.2) % 18);
-      const tearY2 = -h / 2 + eyeR.relY * h + 4 + (((tick * 1.2) + 9) % 18);
-      const ex1 = -w / 2 + eyeL.relX * w;
-      const ex2 = -w / 2 + eyeR.relX * w;
-      ctx.beginPath();
-      ctx.arc(ex1, tearY1, 2.5, 0, Math.PI * 2);
-      ctx.arc(ex2, tearY2, 2.5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.translate(kneeL.x, kneeL.y);
+      ctx.rotate(kneeFlexL);
+      ctx.translate(-kneeL.x, -kneeL.y);
+      ctx.drawImage(segments.legLLower, 0, 0);
+      drawFastenerPin(ctx, kneeL.x, kneeL.y);
       ctx.restore();
     }
+    drawFastenerPin(ctx, hipL.x, hipL.y);
+    ctx.restore();
+  }
 
-    // 2. Hiệu ứng 'sleep' (Gấp giấy / Ngủ): chữ zZz bay lên từ đầu
-    if (motion === 'sleep') {
+  if (segments.armLUpper && shoulderL) {
+    const armAngleL = pose.armAngleL * direction;
+    ctx.save();
+    ctx.translate(shoulderL.x, shoulderL.y);
+    ctx.rotate(armAngleL);
+    ctx.translate(-shoulderL.x, -shoulderL.y);
+    ctx.drawImage(segments.armLUpper, 0, 0);
+
+    if (segments.armLLower && elbowL) {
+      // Trong động tác 'wave', cẳng tay vung vẩy thanh thoát qua lại
+      const elbowFlexL = (motion === 'wave'
+        ? Math.sin(tick * 0.28) * 0.55
+        : pose.armAngleL * 0.5) * direction;
       ctx.save();
-      const hX = -w / 2 + (headJ ? headJ.relX * w : w * 0.5);
-      const hY = -h / 2 + (headJ ? headJ.relY * h : h * 0.2);
-      const floatOffset = (tick * 0.7) % 36;
-      ctx.fillStyle = '#FFE18A';
-      ctx.font = 'bold 10px system-ui';
-      ctx.fillText('z', hX + 8, hY - 4 - floatOffset * 0.4);
-      ctx.font = 'bold 13px system-ui';
-      ctx.fillText('Z', hX + 15, hY - 12 - floatOffset * 0.6);
-      ctx.font = 'bold 16px system-ui';
-      ctx.fillText('Z', hX + 22, hY - 22 - floatOffset * 0.85);
+      ctx.translate(elbowL.x, elbowL.y);
+      ctx.rotate(elbowFlexL);
+      ctx.translate(-elbowL.x, -elbowL.y);
+      ctx.drawImage(segments.armLLower, 0, 0);
+      drawFastenerPin(ctx, elbowL.x, elbowL.y);
       ctx.restore();
     }
-
-    // 3. Hiệu ứng 'dance' & 'happy_jump': sao lấp lánh và nốt nhạc quanh vai/tay
-    if (motion === 'dance' || motion === 'happy_jump') {
-      ctx.save();
-      ctx.font = '12px system-ui';
-      const nx = -w / 2 + (shLJ ? shLJ.relX * w : 0) - 8;
-      const ny = -h / 2 + (shLJ ? shLJ.relY * h : 0) - 10 + Math.sin(tick * 0.2) * 4;
-      ctx.fillText(motion === 'dance' ? '🎵' : '✨', nx, ny);
-      const nx2 = -w / 2 + (shRJ ? shRJ.relX * w : w) + 6;
-      const ny2 = -h / 2 + (shRJ ? shRJ.relY * h : 0) - 12 + Math.cos(tick * 0.2) * 4;
-      ctx.fillText(motion === 'dance' ? '🎶' : '🌟', nx2, ny2);
-      ctx.restore();
-    }
-
-    // 4. Hiệu ứng 'teri_panic': toát mồ hôi rung bần bật
-    if (motion === 'teri_panic') {
-      ctx.save();
-      ctx.font = '12px system-ui';
-      const px = -w / 2 + (headJ ? headJ.relX * w : w * 0.5);
-      const py = -h / 2 + (headJ ? headJ.relY * h : h * 0.2);
-      ctx.fillText('💧', px - 18, py - 4);
-      ctx.fillText('💧', px + 12, py - 6);
-      ctx.restore();
-    }
+    drawFastenerPin(ctx, shoulderL.x, shoulderL.y);
+    ctx.restore();
   }
 
   ctx.restore();
