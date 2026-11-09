@@ -339,6 +339,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   const [turntableRotation, setTurntableRotation] = useState<number>(0);
   const [isAutoSpin, setIsAutoSpin] = useState<boolean>(false);
   const loadedImgRef = useRef<HTMLImageElement | null>(null);
+  const step2BaseImgRef = useRef<HTMLImageElement | null>(null);
 
   // STEP 5: Quản lý Tab & Biểu cảm nét mặt tự chọn (Pull-tab & Nét vẽ Đông Hồ)
   const [step5Tab, setStep5Tab] = useState<'motion' | 'expression'>('motion');
@@ -726,6 +727,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     const img = new Image();
     img.src = dataUri;
     img.onload = () => {
+      step2BaseImgRef.current = img;
       loadedImgRef.current = img;
       setStep(2);
       SoundEngine.playBambooKnock();
@@ -742,6 +744,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     const img = new Image();
     img.src = sample.svgUri;
     img.onload = () => {
+      step2BaseImgRef.current = img;
       loadedImgRef.current = img;
       setStep(4);
     };
@@ -758,24 +761,81 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
+      const rawImg = new Image();
+      rawImg.onload = () => {
+        // Chuẩn hóa vào khung canvas 330x320 giữ nguyên tỉ lệ (aspect ratio) trên nền giấy trắng
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = 330;
         tempCanvas.height = 320;
         const ctx = tempCanvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, 330, 320);
-          const uri = tempCanvas.toDataURL('image/png');
-          setRawImageUri(uri);
-          setImageSource('upload');
-          loadedImgRef.current = img;
-          setBoundingBox({ x: 25, y: 20, w: 270, h: 280 });
+        if (!ctx) return;
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, 330, 320);
+
+        const scale = Math.min(330 / rawImg.naturalWidth, 320 / rawImg.naturalHeight);
+        const dw = Math.round(rawImg.naturalWidth * scale);
+        const dh = Math.round(rawImg.naturalHeight * scale);
+        const dx = Math.round((330 - dw) / 2);
+        const dy = Math.round((320 - dh) / 2);
+
+        ctx.drawImage(rawImg, dx, dy, dw, dh);
+
+        // Tự động dò pixel nét vẽ trên ảnh tải lên để đặt khung bounding box ôm sát nhân vật
+        const imgData = ctx.getImageData(0, 0, 330, 320).data;
+        let minX = 330;
+        let maxX = 0;
+        let minY = 320;
+        let maxY = 0;
+        let found = false;
+
+        for (let y = 0; y < 320; y++) {
+          for (let x = 0; x < 330; x++) {
+            const idx = (y * 330 + x) * 4;
+            // Điểm ảnh có nét vẽ (không phải màu trắng tinh hay trong suốt)
+            if (imgData[idx + 3] > 35 && (imgData[idx] < 235 || imgData[idx + 1] < 235 || imgData[idx + 2] < 235)) {
+              found = true;
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+
+        if (found && maxX > minX + 15 && maxY > minY + 15) {
+          const pad = 12;
+          const bx = Math.max(8, minX - pad);
+          const by = Math.max(8, minY - pad);
+          const bw = Math.min(330 - bx - 8, maxX - minX + pad * 2);
+          const bh = Math.min(320 - by - 8, maxY - minY + pad * 2);
+          setBoundingBox({ x: bx, y: by, w: bw, h: bh });
+        } else {
+          // Fallback: Ôm sát vùng ảnh tải lên
+          const padX = Math.max(10, Math.round(dw * 0.05));
+          const padY = Math.max(10, Math.round(dh * 0.05));
+          setBoundingBox({
+            x: Math.max(6, dx + padX),
+            y: Math.max(6, dy + padY),
+            w: Math.min(330 - dx - 12, dw - padX * 2),
+            h: Math.min(320 - dy - 12, dh - padY * 2),
+          });
+        }
+
+        const uri = tempCanvas.toDataURL('image/png');
+        setRawImageUri(uri);
+        setImageSource('upload');
+
+        const normImg = new Image();
+        normImg.onload = () => {
+          step2BaseImgRef.current = normImg;
+          loadedImgRef.current = normImg;
           setStep(2);
           SoundEngine.playBlessingChime();
-        }
+        };
+        normImg.src = uri;
       };
-      img.src = event.target?.result as string;
+      rawImg.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
   };
@@ -786,14 +846,15 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   useEffect(() => {
     if (step !== 2) return;
     const cvs = boxCanvasRef.current;
-    if (!cvs || !loadedImgRef.current) return;
+    const sourceImg = step2BaseImgRef.current || loadedImgRef.current;
+    if (!cvs || !sourceImg) return;
     const ctx = cvs.getContext('2d');
     if (!ctx) return;
 
     ctx.clearRect(0, 0, cvs.width, cvs.height);
 
-    // 1. Vẽ hình ảnh gốc
-    ctx.drawImage(loadedImgRef.current, 0, 0, cvs.width, cvs.height);
+    // 1. Vẽ hình ảnh gốc đã chuẩn hóa tỉ lệ
+    ctx.drawImage(sourceImg, 0, 0, cvs.width, cvs.height);
 
     // 2. Làm tối vùng ngoài Bounding Box
     ctx.save();
@@ -1015,7 +1076,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
 
   // Bước 2 -> Bước 3: Crop ảnh theo Bounding Box & khởi tạo mặt nạ AI tách nền
   const handleProceedToStep3Separate = () => {
-    if (!loadedImgRef.current) return;
+    const sourceImg = step2BaseImgRef.current || loadedImgRef.current;
+    if (!sourceImg) return;
 
     // Cắt phần ảnh nằm gọn trong Bounding Box
     const cropCanvas = document.createElement('canvas');
@@ -1024,16 +1086,29 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     const cropCtx = cropCanvas.getContext('2d');
     if (!cropCtx) return;
 
+    // 1. Nền giấy trắng sạch
+    cropCtx.fillStyle = '#FFFFFF';
+    cropCtx.fillRect(0, 0, 330, 320);
+
+    // 2. Canh giữa nhân vật đã cắt, giữ nguyên tỉ lệ (aspect ratio) với lề an toàn
+    const targetMaxW = 294; // 330 - 36
+    const targetMaxH = 284; // 320 - 36
+    const cropScale = Math.min(targetMaxW / boundingBox.w, targetMaxH / boundingBox.h);
+    const destW = Math.round(boundingBox.w * cropScale);
+    const destH = Math.round(boundingBox.h * cropScale);
+    const destX = Math.round((330 - destW) / 2);
+    const destY = Math.round((320 - destH) / 2);
+
     cropCtx.drawImage(
-      loadedImgRef.current,
+      sourceImg,
       boundingBox.x,
       boundingBox.y,
       boundingBox.w,
       boundingBox.h,
-      15,
-      15,
-      300,
-      290
+      destX,
+      destY,
+      destW,
+      destH
     );
 
     const croppedUri = cropCanvas.toDataURL('image/png');
@@ -1041,6 +1116,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     croppedImg.src = croppedUri;
     croppedImg.onload = () => {
       loadedImgRef.current = croppedImg;
+      setAiCutoutUri(null);
       setStep(3);
       SoundEngine.playBlessingChime();
       runAiSegmentation(croppedUri);
