@@ -11,7 +11,7 @@ Repository này được tổ chức theo mô hình phân tách các prototype �
 ```text
 main (Nhánh gốc — chỉ lưu tài liệu tổng quan & hướng dẫn chung)
 ├── prototype/busquest
-├── prototype/focusgarden (hoặc prototype/mangnon)
+├── prototype/mangnon (Măng Non / FocusGarden)
 └── prototype/petworld
 ```
 
@@ -20,9 +20,9 @@ main (Nhánh gốc — chỉ lưu tài liệu tổng quan & hướng dẫn chung
 | Nhánh | Mục đích / Nội dung | Trạng thái |
 |---|---|---|
 | `main` | Nhánh tài liệu tổng hợp, quy chuẩn dự án, báo cáo và hướng dẫn chung. | Nhánh mặc định |
-| `prototype/busquest` | Không gian phát triển prototype **BusQuest**. | Đang phát triển |
-| `prototype/focusgarden` | Không gian phát triển prototype **FocusGarden** *(hoặc Măng Non)*. | Đang phát triển |
-| `prototype/petworld` | Không gian phát triển prototype **PetWorld**. | Đang phát triển |
+| `prototype/mangnon` | Không gian phát triển prototype **Măng Non** (Avalanche L1 & C-Chain, AI Companion). | Đã hoàn thiện MVP |
+| `prototype/busquest` | Không gian phát triển prototype **BusQuest** (Huy hiệu & Voucher lộ trình xe buýt). | Đang phát triển |
+| `prototype/petworld` | Không gian phát triển prototype **PetWorld** (Nuôi pet, đồng thuận cộng đồng duyệt ảnh). | Đang phát triển |
 
 ---
 
@@ -45,8 +45,8 @@ Chọn nhánh tương ứng với prototype bạn phụ trách:
 # Đối với BusQuest:
 git checkout prototype/busquest
 
-# Đối với FocusGarden:
-git checkout prototype/focusgarden
+# Đối với Măng Non:
+git checkout prototype/mangnon
 
 # Đối với PetWorld:
 git checkout prototype/petworld
