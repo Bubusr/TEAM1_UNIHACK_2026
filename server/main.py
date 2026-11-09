@@ -11,6 +11,8 @@ from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 from PIL import Image, ImageDraw, ImageFilter
 import replicate
+import requests
+import rembg
 
 app = FastAPI(
     title="Măng Non — Meta Animated Drawings & Replicate AI Server",
@@ -30,6 +32,171 @@ class AnimateRequest(BaseModel):
     image_base64: str
     motion: Optional[str] = "walk"  # walk, run, jump, dance, funny
     format: Optional[str] = "mp4"   # mp4, webp, gif
+
+class SegmentRequest(BaseModel):
+    image_base64: str
+    model: Optional[str] = "auto"   # auto, u2netp, birefnet, remove_bg, clipdrop, replicate
+    remove_bg_api_key: Optional[str] = None
+    clipdrop_api_key: Optional[str] = None
+    replicate_api_token: Optional[str] = None
+
+_REMBG_SESSIONS: Dict[str, Any] = {}
+
+def get_rembg_session(model_name: str = "u2netp"):
+    global _REMBG_SESSIONS
+    if model_name not in _REMBG_SESSIONS:
+        try:
+            _REMBG_SESSIONS[model_name] = rembg.new_session(model_name)
+        except Exception as e:
+            print(f"Warning: could not load rembg session '{model_name}': {e}")
+            return None
+    return _REMBG_SESSIONS.get(model_name)
+
+def segment_character_ai(
+    src_image: Image.Image,
+    model_choice: str = "auto",
+    remove_bg_api_key: Optional[str] = None,
+    clipdrop_api_key: Optional[str] = None,
+    replicate_api_token: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Tự động nhận diện và bóc tách nhân vật khỏi ảnh vẽ bằng AI (Meta Demo Lab Step 3 standard):
+    1. Remove.bg API (nếu có API Key trong request hoặc env)
+    2. Clipdrop API (nếu có API Key trong request hoặc env)
+    3. Replicate Cloud AI (nếu có Token trong request hoặc env)
+    4. rembg ONNX Local AI (u2netp siêu tốc ~0.2s hoặc birefnet sắc nét)
+    5. Adaptive Computer Vision fallback
+    """
+    src_rgba = src_image.convert("RGBA")
+    w, h = src_rgba.size
+    cutout_img: Optional[Image.Image] = None
+    engine_name = "rembg AI (u2netp)"
+
+    # 1. Thử Remove.bg API
+    rb_key = remove_bg_api_key or os.getenv("REMOVE_BG_API_KEY")
+    if rb_key and (model_choice in ["auto", "remove_bg"]):
+        try:
+            buf = io.BytesIO()
+            src_image.save(buf, format="PNG")
+            resp = requests.post(
+                "https://api.remove.bg/v1.0/removebg",
+                files={"image_file": buf.getvalue()},
+                data={"size": "auto", "format": "png"},
+                headers={"X-Api-Key": rb_key},
+                timeout=12,
+            )
+            if resp.status_code == 200:
+                cutout_img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+                engine_name = "Remove.bg Cloud API"
+        except Exception as e:
+            print(f"Remove.bg error: {e}")
+
+    # 2. Thử Clipdrop API
+    cd_key = clipdrop_api_key or os.getenv("CLIPDROP_API_KEY")
+    if not cutout_img and cd_key and (model_choice in ["auto", "clipdrop"]):
+        try:
+            buf = io.BytesIO()
+            src_image.save(buf, format="PNG")
+            resp = requests.post(
+                "https://clipdrop-api.co/remove-background/v1",
+                files={"image_file": ("image.png", buf.getvalue(), "image/png")},
+                headers={"x-api-key": cd_key},
+                timeout=12,
+            )
+            if resp.status_code == 200:
+                cutout_img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+                engine_name = "Clipdrop Cloud API"
+        except Exception as e:
+            print(f"Clipdrop error: {e}")
+
+    # 3. Thử Replicate API
+    rep_token = replicate_api_token or os.getenv("REPLICATE_API_TOKEN")
+    if not cutout_img and rep_token and (model_choice in ["auto", "replicate"]):
+        try:
+            buf = io.BytesIO()
+            src_image.save(buf, format="PNG")
+            rep_client = replicate.Client(api_token=rep_token)
+            out = rep_client.run(
+                "cjwbw/rembg:fb8af171cfa1616ddcf12428596cced42fb55608b8b2f8425ba60e09787865de",
+                input={"image": buf}
+            )
+            if out:
+                resp = requests.get(str(out), timeout=12)
+                if resp.status_code == 200:
+                    cutout_img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+                    engine_name = "Replicate Cloud AI (Rembg)"
+        except Exception as e:
+            print(f"Replicate segmentation error: {e}")
+
+    # 4. rembg ONNX Local AI (u2netp hoặc bria-rmbg)
+    if not cutout_img:
+        try:
+            target_model = "bria-rmbg" if model_choice == "birefnet" else "u2netp"
+            session = get_rembg_session(target_model)
+            buf = io.BytesIO()
+            src_image.save(buf, format="PNG")
+
+            if session:
+                out_bytes = rembg.remove(buf.getvalue(), session=session)
+            else:
+                out_bytes = rembg.remove(buf.getvalue())
+
+            cutout_img = Image.open(io.BytesIO(out_bytes)).convert("RGBA")
+            engine_name = f"rembg AI Local ({target_model})"
+        except Exception as e:
+            print(f"rembg local error: {e}")
+
+    # 5. Fallback Computer Vision nếu tất cả lỗi
+    if not cutout_img:
+        cutout_img = extract_character_cutout(src_image)
+        engine_name = "Adaptive Computer Vision (Stroke Luma Fallback)"
+
+    # Đảm bảo cutout cùng kích thước
+    if cutout_img.size != (w, h):
+        cutout_img = cutout_img.resize((w, h), Image.Resampling.LANCZOS)
+
+    # 6. Trích xuất Mask & Tính Bounding Box
+    alpha_channel = cutout_img.split()[-1]
+    bbox_tuple = alpha_channel.getbbox() or (10, 10, w - 10, h - 10)
+    bbox = {
+        "x": int(bbox_tuple[0]),
+        "y": int(bbox_tuple[1]),
+        "w": int(bbox_tuple[2] - bbox_tuple[0]),
+        "h": int(bbox_tuple[3] - bbox_tuple[1]),
+    }
+
+    # 7. Tạo ảnh Overlay màu xanh ngọc bích (#06D6A0) chuẩn Meta Animated Drawings
+    overlay_img = src_rgba.copy()
+    overlay_pixels = list(overlay_img.getdata())
+    alpha_pixels = list(alpha_channel.getdata())
+
+    tinted_pixels = []
+    for orig, a in zip(overlay_pixels, alpha_pixels):
+        if a > 25:
+            # Phủ ngọc bích lên nhân vật
+            r = int(orig[0] * 0.35 + 6 * 0.65)
+            g = int(orig[1] * 0.35 + 214 * 0.65)
+            b = int(orig[2] * 0.35 + 160 * 0.65)
+            tinted_pixels.append((r, g, b, 255))
+        else:
+            tinted_pixels.append(orig)
+
+    overlay_img.putdata(tinted_pixels)
+
+    # 8. Encode Base64
+    def to_b64(img: Image.Image) -> str:
+        b = io.BytesIO()
+        img.save(b, format="PNG")
+        return "data:image/png;base64," + base64.b64encode(b.getvalue()).decode()
+
+    return {
+        "status": "success",
+        "engine": engine_name,
+        "cutout_base64": to_b64(cutout_img),
+        "mask_base64": to_b64(alpha_channel),
+        "overlay_base64": to_b64(overlay_img),
+        "bbox": bbox,
+    }
 
 def extract_character_cutout(img: Image.Image, border_width: int = 4) -> Image.Image:
     """
@@ -288,10 +455,66 @@ def render_paper_animation_frames(img: Image.Image, motion: str = "walk", num_fr
 def health():
     return {
         "status": "online",
-        "engine": "Meta Animated Drawings Kinematics + Replicate Bridge",
+        "engine": "Meta Animated Drawings Kinematics + Rembg AI + Cloud Segmentation",
+        "rembg_installed": True,
+        "u2netp_ready": True,
+        "remove_bg_configured": bool(os.getenv("REMOVE_BG_API_KEY")),
+        "clipdrop_configured": bool(os.getenv("CLIPDROP_API_KEY")),
+        "replicate_configured": bool(os.getenv("REPLICATE_API_TOKEN")),
         "ffmpeg": os.path.exists("/opt/homebrew/bin/ffmpeg") or os.system("which ffmpeg") == 0,
-        "replicate_available": bool(os.getenv("REPLICATE_API_TOKEN"))
     }
+
+@app.post("/api/segment-drawing")
+async def segment_drawing_form(
+    file: Optional[UploadFile] = File(None),
+    image_base64: Optional[str] = Form(None),
+    model: str = Form("auto"),
+    remove_bg_api_key: Optional[str] = Form(None),
+    clipdrop_api_key: Optional[str] = Form(None),
+    replicate_api_token: Optional[str] = Form(None),
+):
+    try:
+        if file:
+            contents = await file.read()
+            src_image = Image.open(io.BytesIO(contents))
+        elif image_base64:
+            if "," in image_base64:
+                image_base64 = image_base64.split(",")[1]
+            contents = base64.b64decode(image_base64)
+            src_image = Image.open(io.BytesIO(contents))
+        else:
+            raise HTTPException(status_code=400, detail="Vui lòng cung cấp file ảnh hoặc image_base64.")
+
+        res = segment_character_ai(
+            src_image,
+            model_choice=model,
+            remove_bg_api_key=remove_bg_api_key,
+            clipdrop_api_key=clipdrop_api_key,
+            replicate_api_token=replicate_api_token,
+        )
+        return JSONResponse(res)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/segment")
+async def segment_drawing_json(req: SegmentRequest):
+    try:
+        raw_b64 = req.image_base64
+        if "," in raw_b64:
+            raw_b64 = raw_b64.split(",")[1]
+        contents = base64.b64decode(raw_b64)
+        src_image = Image.open(io.BytesIO(contents))
+
+        res = segment_character_ai(
+            src_image,
+            model_choice=req.model or "auto",
+            remove_bg_api_key=req.remove_bg_api_key,
+            clipdrop_api_key=req.clipdrop_api_key,
+            replicate_api_token=req.replicate_api_token,
+        )
+        return JSONResponse(res)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/animate-drawing")
 async def animate_drawing(

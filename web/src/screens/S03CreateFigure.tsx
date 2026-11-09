@@ -58,6 +58,7 @@ import {
   Shield,
   Smile,
   Zap,
+  Settings,
 } from 'lucide-react';
 
 interface S03CreateFigureProps {
@@ -273,13 +274,37 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     initBox: { x: 25, y: 20, w: 270, h: 280 },
   });
 
-  // STEP 3: Separate Character (Mask Editing)
+  // STEP 3: Separate Character (Mask Editing & AI Auto-Segmentation)
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [maskTool, setMaskTool] = useState<'pen' | 'eraser'>('pen');
   const [maskBrushSize, setMaskBrushSize] = useState(16);
   const [isMasking, setIsMasking] = useState(false);
   const [showStickerPreview, setShowStickerPreview] = useState(false);
   const maskHistoryRef = useRef<ImageData[]>([]);
+
+  // AI Auto-Segmentation (rembg AI, Remove.bg, Clipdrop, Replicate)
+  const [aiSegmenting, setAiSegmenting] = useState(false);
+  const [segmentEngine, setSegmentEngine] = useState<string>('rembg AI Local (u2netp)');
+  const [aiCutoutUri, setAiCutoutUri] = useState<string | null>(null);
+  const [showAiSettingsModal, setShowAiSettingsModal] = useState(false);
+  const [aiModelChoice, setAiModelChoice] = useState<'auto' | 'u2netp' | 'birefnet' | 'remove_bg' | 'clipdrop' | 'replicate'>('auto');
+  const [removeBgKey, setRemoveBgKey] = useState<string>('');
+  const [clipdropKey, setClipdropKey] = useState<string>('');
+  const [replicateKey, setReplicateKey] = useState<string>('');
+  const userEditedMaskRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const savedRb = localStorage.getItem('mangnon_rb_key');
+      if (savedRb) setRemoveBgKey(savedRb);
+      const savedCd = localStorage.getItem('mangnon_cd_key');
+      if (savedCd) setClipdropKey(savedCd);
+      const savedRep = localStorage.getItem('mangnon_rep_key');
+      if (savedRep) setReplicateKey(savedRep);
+      const savedModel = localStorage.getItem('mangnon_ai_model');
+      if (savedModel) setAiModelChoice(savedModel as any);
+    } catch {}
+  }, []);
 
   // STEP 4: Finding Character Joints & Skeleton Types
   const rigCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -821,7 +846,86 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     setDragHandle(null);
   };
 
-  // Bước 2 -> Bước 3: Crop ảnh theo Bounding Box & khởi tạo mặt nạ tách nền
+  // Quét điểm ảnh cục bộ (Fallback)
+  const applyLocalPixelScan = () => {
+    const cvs = maskCanvasRef.current;
+    if (!cvs || !loadedImgRef.current) return;
+    const ctx = cvs.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    ctx.drawImage(loadedImgRef.current, 0, 0, cvs.width, cvs.height);
+
+    const imgData = ctx.getImageData(0, 0, cvs.width, cvs.height);
+    const data = imgData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+
+      if (a > 30 && (r < 235 || g < 235 || b < 235)) {
+        data[i] = Math.round(r * 0.35 + 6 * 0.65);
+        data[i + 1] = Math.round(g * 0.35 + 214 * 0.65);
+        data[i + 2] = Math.round(b * 0.35 + 160 * 0.65);
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  };
+
+  // AI Tự động nhận diện & bóc tách nhân vật (rembg / Remove.bg / Clipdrop / Replicate)
+  const runAiSegmentation = async (imageUriToSegment: string) => {
+    setAiSegmenting(true);
+    userEditedMaskRef.current = false;
+    try {
+      const res = await fetch('/api/segment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_base64: imageUriToSegment,
+          model: aiModelChoice,
+          remove_bg_api_key: removeBgKey || undefined,
+          clipdrop_api_key: clipdropKey || undefined,
+          replicate_api_token: replicateKey || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'success' && data.overlay_base64) {
+          setSegmentEngine(data.engine || 'rembg AI Local');
+          if (data.cutout_base64) {
+            setAiCutoutUri(data.cutout_base64);
+          }
+
+          const overlayImg = new Image();
+          overlayImg.src = data.overlay_base64;
+          overlayImg.onload = () => {
+            const cvs = maskCanvasRef.current;
+            if (cvs) {
+              const ctx = cvs.getContext('2d');
+              if (ctx) {
+                ctx.clearRect(0, 0, cvs.width, cvs.height);
+                ctx.drawImage(overlayImg, 0, 0, cvs.width, cvs.height);
+              }
+            }
+          };
+          SoundEngine.playBlessingChime();
+          setAiSegmenting(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('AI segmentation error, falling back to local scan:', err);
+    }
+
+    applyLocalPixelScan();
+    setSegmentEngine('Thuật toán nhận diện nét cục bộ');
+    setAiSegmenting(false);
+  };
+
+  // Bước 2 -> Bước 3: Crop ảnh theo Bounding Box & khởi tạo mặt nạ AI tách nền
   const handleProceedToStep3Separate = () => {
     if (!loadedImgRef.current) return;
 
@@ -851,45 +955,23 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
       loadedImgRef.current = croppedImg;
       setStep(3);
       SoundEngine.playBlessingChime();
+      runAiSegmentation(croppedUri);
     };
   };
 
   // =========================================================================
-  // BƯỚC 3: SEPARATE CHARACTER (TÁCH NỀN BẰNG BÚT TÔ & CỤC TẨY MẶT NẠ)
+  // BƯỚC 3: SEPARATE CHARACTER (AI TỰ ĐỘNG PHỦ MẶT NẠ & SỬA TAY NẾU CẦN)
   // =========================================================================
   useEffect(() => {
     if (step !== 3) return;
-    const cvs = maskCanvasRef.current;
-    if (!cvs || !loadedImgRef.current) return;
-    const ctx = cvs.getContext('2d');
-    if (!ctx) return;
-
-    // Khởi tạo mặt nạ: CHỈ phủ màu ngọc bích lên phần nét vẽ, TUYỆT ĐỐI KHÔNG PHỦ FULL NỀN TRẮNG!
-    ctx.clearRect(0, 0, cvs.width, cvs.height);
-    ctx.drawImage(loadedImgRef.current, 0, 0, cvs.width, cvs.height);
-
-    const imgData = ctx.getImageData(0, 0, cvs.width, cvs.height);
-    const data = imgData.data;
-
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const a = data[i + 3];
-
-      // Pixel là nét vẽ (không phải nền trắng thuần và có độ mờ)
-      if (a > 30 && (r < 235 || g < 235 || b < 235)) {
-        // Phủ màu ngọc bích (#06D6A0) bán trong suốt lên nét vẽ
-        data[i] = Math.round(r * 0.35 + 6 * 0.65);
-        data[i + 1] = Math.round(g * 0.35 + 214 * 0.65);
-        data[i + 2] = Math.round(b * 0.35 + 160 * 0.65);
-      }
+    if (loadedImgRef.current && !aiSegmenting && !aiCutoutUri) {
+      runAiSegmentation(loadedImgRef.current.src);
     }
-    ctx.putImageData(imgData, 0, 0);
   }, [step]);
 
   const handleMaskDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isMasking) return;
+    userEditedMaskRef.current = true;
     const cvs = maskCanvasRef.current;
     if (!cvs) return;
     const ctx = cvs.getContext('2d');
@@ -1720,22 +1802,66 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
       )}
 
       {/* =========================================================================
-          BƯỚC 3: SEPARATE CHARACTER (TÁCH NỀN BẰNG BÚT TÔ & CỤC TẨY MẶT NẠ)
+          BƯỚC 3: SEPARATE CHARACTER (AI TỰ ĐỘNG BÓC TÁCH NỀN & SỬA TAY NẾU CẦN)
          ========================================================================= */}
       {step === 3 && (
         <div className="flex-1 flex flex-col items-center justify-between my-1 animate-fade-in">
-          <div className="text-center px-4 max-w-xs mb-1">
-            <h3 className="text-xs font-bold text-warm-glow flex items-center justify-center gap-1.5">
-              <Layers className="w-4 h-4 text-warm-amber" />
-              <span>Bước 3: Tách nhân vật &amp; Mặt nạ (Separate)</span>
-            </h3>
-            <p className="text-[11px] text-dongho-paper/70 mt-0.5 leading-relaxed">
-              Lớp màu ngọc phủ lên thân nhân vật. Dùng <strong>Bút tô</strong> nếu thiếu nét, hoặc{' '}
-              <strong>Tẩy</strong> để tách các nét bị dính vào thân.
-            </p>
-          </div>
+          {/* Header trạng thái AI */}
+          {aiSegmenting ? (
+            <div className="w-[330px] p-2.5 rounded-2xl bg-forest-darker/95 border border-[#06D6A0]/60 flex items-center justify-between animate-pulse mb-1 shadow-lg">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#06D6A0] animate-spin" />
+                <span className="text-xs font-bold text-[#06D6A0]">
+                  AI đang tự động quét và bóc tách nét vẽ...
+                </span>
+              </div>
+              <span className="text-[10px] text-dongho-paper/60 font-mono">rembg AI</span>
+            </div>
+          ) : (
+            <div className="w-[330px] flex items-center justify-between mb-1 px-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#06D6A0] bg-[#06D6A0]/15 border border-[#06D6A0]/40 px-2.5 py-0.5 rounded-full shadow">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>AI: {segmentEngine}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    if (loadedImgRef.current) runAiSegmentation(loadedImgRef.current.src);
+                    SoundEngine.playBambooKnock();
+                  }}
+                  className="text-[10px] text-warm-amber hover:text-warm-glow flex items-center gap-1 bg-forest-darker px-2.5 py-1 rounded-full border border-warm-amber/40 transition shadow active:scale-95"
+                  title="Chạy lại AI tách nền"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Quét lại AI</span>
+                </button>
+                <button
+                  onClick={() => setShowAiSettingsModal(true)}
+                  className="text-[10px] text-dongho-paper/80 hover:text-dongho-paper flex items-center gap-1 bg-forest-darker px-2.5 py-1 rounded-full border border-bamboo-mid/40 transition shadow active:scale-95"
+                  title="Cấu hình Model AI & API Keys (Remove.bg / Clipdrop / Replicate)"
+                >
+                  <Settings className="w-3 h-3 text-warm-amber" />
+                  <span>Model AI</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <p className="text-[10px] text-dongho-paper/70 text-center max-w-[330px] mb-1 px-1">
+            ✨ AI đã tự động nhận diện và phủ mặt nạ. Nếu cần tinh chỉnh thêm, cậu có thể dùng{' '}
+            <strong className="text-[#06D6A0]">Bút tô</strong> để bù nét hoặc{' '}
+            <strong className="text-dongho-red">Tẩy</strong> để xóa mép thừa nhé.
+          </p>
 
           <div className="relative w-[330px] h-[320px] rounded-3xl overflow-hidden bg-white border-4 border-bamboo-mid/70 shadow-2xl flex items-center justify-center touch-none">
+            {aiSegmenting && (
+              <div className="absolute inset-0 z-20 bg-forest-abyss/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+                <div className="w-8 h-8 rounded-full border-2 border-[#06D6A0] border-t-transparent animate-spin" />
+                <span className="text-xs font-semibold text-[#06D6A0]">
+                  Đang nhận diện sinh linh giấy...
+                </span>
+              </div>
+            )}
             <canvas
               ref={maskCanvasRef}
               width={330}
@@ -1751,9 +1877,9 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
             />
           </div>
 
-          {/* Công cụ tinh chỉnh mặt nạ chuẩn Meta */}
+          {/* Công cụ sửa tay sau khi AI tự làm (Fine-tuning tools) */}
           <div className="w-[330px] mt-1.5 space-y-1.5">
-            <div className="flex items-center justify-between bg-forest-darker/95 p-1.5 rounded-2xl border border-bamboo-mid/40">
+            <div className="flex items-center justify-between bg-forest-darker/95 p-1.5 rounded-2xl border border-bamboo-mid/40 shadow">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -1765,6 +1891,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                       ? 'bg-[#06D6A0] text-forest-abyss shadow'
                       : 'text-dongho-paper/60 hover:text-dongho-paper'
                   }`}
+                  title="Tô thêm vùng ngọc nếu AI bị khuyết"
                 >
                   <Paintbrush className="w-3.5 h-3.5" />
                   <span>Bút tô ngọc</span>
@@ -1779,9 +1906,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                       ? 'bg-dongho-red text-dongho-paper shadow'
                       : 'text-dongho-paper/60 hover:text-dongho-paper'
                   }`}
+                  title="Tẩy bớt vùng bị dính nét hoặc bóng bàn"
                 >
                   <Eraser className="w-3.5 h-3.5" />
-                  <span>Tẩy tách nét</span>
+                  <span>Tẩy sửa nét</span>
                 </button>
               </div>
 
@@ -1811,7 +1939,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 onClick={handleProceedToStep4Joints}
                 className="flex-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-1.5"
               >
-                <span>Tách nền xong → Gắn xương (Bước 4)</span>
+                <span>Mặt nạ chuẩn → Gắn xương (Bước 4)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -2349,6 +2477,114 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               >
                 <Check className="w-4 h-4 text-forest-abyss" />
                 <span>Đưa Măng Non Vào Rừng Tre</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CẤU HÌNH MODEL AI & API KEYS (REMOVE.BG / CLIPDROP / REPLICATE) */}
+      {showAiSettingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-abyss/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-sm bg-forest-deep border-2 border-warm-amber/70 rounded-3xl p-5 text-dongho-paper shadow-2xl flex flex-col">
+            <button
+              onClick={() => setShowAiSettingsModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-xl bg-forest-darker hover:bg-forest-mist text-dongho-paper/60 hover:text-dongho-paper transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2 text-warm-glow font-bold text-sm mb-2">
+              <Settings className="w-4 h-4 text-warm-amber" />
+              <span>Cấu Hình Tách Nền AI</span>
+            </div>
+            <p className="text-[11px] text-dongho-paper/70 mb-3 leading-relaxed">
+              Măng Non tích hợp sẵn <strong>rembg AI Local</strong> (chạy trực tiếp không cần key). Nếu có API Key riêng, cậu có thể kết nối thêm các dịch vụ bên dưới:
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-warm-glow mb-1">
+                  Mô hình AI tách nền ưu tiên:
+                </label>
+                <select
+                  value={aiModelChoice}
+                  onChange={(e) => setAiModelChoice(e.target.value as any)}
+                  className="w-full bg-forest-darker border border-bamboo-mid/50 rounded-xl px-3 py-2 text-dongho-paper text-xs focus:outline-none focus:border-warm-amber"
+                >
+                  <option value="auto">Tự động (Ưu tiên API Key nếu có, fallback rembg)</option>
+                  <option value="u2netp">rembg Local AI (u2netp - Siêu tốc &lt; 0.5s)</option>
+                  <option value="birefnet">rembg Local AI (BiRefNet - Tinh tế 2026)</option>
+                  <option value="remove_bg">Remove.bg Cloud API</option>
+                  <option value="clipdrop">Clipdrop Cloud API</option>
+                  <option value="replicate">Replicate Cloud AI</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-dongho-paper/80 mb-0.5">
+                  Remove.bg API Key (Tùy chọn):
+                </label>
+                <input
+                  type="password"
+                  value={removeBgKey}
+                  placeholder="Nhập API Key từ remove.bg..."
+                  onChange={(e) => setRemoveBgKey(e.target.value)}
+                  className="w-full bg-forest-darker border border-bamboo-mid/40 rounded-xl px-3 py-1.5 text-dongho-paper text-xs placeholder:text-dongho-paper/30 focus:outline-none focus:border-warm-amber"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-dongho-paper/80 mb-0.5">
+                  Clipdrop API Key (Tùy chọn):
+                </label>
+                <input
+                  type="password"
+                  value={clipdropKey}
+                  placeholder="Nhập API Key từ clipdrop.co..."
+                  onChange={(e) => setClipdropKey(e.target.value)}
+                  className="w-full bg-forest-darker border border-bamboo-mid/40 rounded-xl px-3 py-1.5 text-dongho-paper text-xs placeholder:text-dongho-paper/30 focus:outline-none focus:border-warm-amber"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-dongho-paper/80 mb-0.5">
+                  Replicate API Token (Tùy chọn):
+                </label>
+                <input
+                  type="password"
+                  value={replicateKey}
+                  placeholder="r8_..."
+                  onChange={(e) => setReplicateKey(e.target.value)}
+                  className="w-full bg-forest-darker border border-bamboo-mid/40 rounded-xl px-3 py-1.5 text-dongho-paper text-xs placeholder:text-dongho-paper/30 focus:outline-none focus:border-warm-amber"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-bamboo-mid/30 flex gap-2">
+              <button
+                onClick={() => setShowAiSettingsModal(false)}
+                className="flex-1 py-2 rounded-xl bg-forest-darker border border-bamboo-soft/40 text-dongho-paper/80 text-xs font-medium hover:text-dongho-paper transition"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.setItem('mangnon_rb_key', removeBgKey);
+                    localStorage.setItem('mangnon_cd_key', clipdropKey);
+                    localStorage.setItem('mangnon_rep_key', replicateKey);
+                    localStorage.setItem('mangnon_ai_model', aiModelChoice);
+                  } catch {}
+                  setShowAiSettingsModal(false);
+                  if (loadedImgRef.current) {
+                    runAiSegmentation(loadedImgRef.current.src);
+                  }
+                  SoundEngine.playBlessingChime();
+                }}
+                className="flex-1 py-2 rounded-xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss text-xs font-bold shadow hover:brightness-105 transition"
+              >
+                Lưu &amp; Quét Lại AI
               </button>
             </div>
           </div>
