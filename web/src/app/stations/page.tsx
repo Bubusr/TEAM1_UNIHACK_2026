@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '@/lib/storage';
 import { Station } from '@/lib/types';
+import { SoundEngine } from '@/lib/sound-engine';
 import { Coffee, MapPin, CheckCircle2, Ticket, ShieldCheck, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -15,11 +16,13 @@ export default function StationsPage() {
   }, []);
 
   const handleCheckin = (stationId: string) => {
+    SoundEngine.playBambooKnock();
     setCheckingInId(stationId);
 
     setTimeout(() => {
       const claimed = StorageService.checkinStation(stationId);
       if (claimed) {
+        SoundEngine.playBlessingChime();
         setStations(StorageService.getStations());
         confetti({
           particleCount: 80,
