@@ -15,6 +15,7 @@ import {
   drawReferenceMannequin,
   drawSkeletonWireframe,
   drawPaperPuppet,
+  PaperTouchSpring,
   SkeletonRig,
   SkeletonType,
   SKELETON_TYPE_OPTIONS,
@@ -323,6 +324,14 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   const [previewMotion, setPreviewMotion] = useState<CreatureAction>('walk');
   const [worldMode, setWorldMode] = useState<'3d_world' | 'turntable'>('3d_world');
   const [showSkeletonWireframe, setShowSkeletonWireframe] = useState(false);
+  const [showCreasePattern, setShowCreasePattern] = useState(true);
+  const touchSpringRef = useRef<PaperTouchSpring>({
+    pressure: 0,
+    deflectX: 0,
+    deflectY: 0,
+    springTick: 0,
+  });
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const [turntableRotation, setTurntableRotation] = useState<number>(0);
   const [isAutoSpin, setIsAutoSpin] = useState<boolean>(false);
   const loadedImgRef = useRef<HTMLImageElement | null>(null);
@@ -1176,6 +1185,39 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     }
   };
 
+  // Tương tác vật lý xúc giác: Người chơi ấn, đẩy, hoặc uốn cong tờ giấy
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    touchSpringRef.current = {
+      pressure: 0.85,
+      deflectX: 0,
+      deflectY: 0,
+      springTick: 0,
+    };
+    SoundEngine.playBambooKnock();
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!pointerStartRef.current) return;
+    const dx = e.clientX - pointerStartRef.current.x;
+    const dy = e.clientY - pointerStartRef.current.y;
+    touchSpringRef.current.deflectX = Math.max(-35, Math.min(35, dx));
+    touchSpringRef.current.deflectY = Math.max(-35, Math.min(35, dy));
+    touchSpringRef.current.pressure = Math.min(1.0, 0.4 + Math.hypot(dx, dy) * 0.025);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (pointerStartRef.current) {
+      const dx = e.clientX - pointerStartRef.current.x;
+      const dy = e.clientY - pointerStartRef.current.y;
+      if (Math.hypot(dx, dy) < 6) {
+        handlePreviewCanvasClick(e as unknown as React.MouseEvent<HTMLCanvasElement>);
+      }
+    }
+    pointerStartRef.current = null;
+    touchSpringRef.current.springTick = 1;
+  };
+
   // =========================================================================
   // BƯỚC 5: ADD ANIMATION & THẾ GIỚI RỐI GIẤY 3D (TERI THE PAPER BEAR GUMBALL)
   // =========================================================================
@@ -1202,6 +1244,16 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
       tick++;
       const w = cvs.width;
       const h = cvs.height;
+
+      // Cập nhật dao động lò xo xúc giác giấy (Paper Spring Oscillation)
+      if (touchSpringRef.current.pressure > 0.01) {
+        touchSpringRef.current.springTick++;
+        if (!pointerStartRef.current) {
+          touchSpringRef.current.pressure *= 0.93;
+          touchSpringRef.current.deflectX *= 0.91;
+          touchSpringRef.current.deflectY *= 0.91;
+        }
+      }
 
       ctx.clearRect(0, 0, w, h);
 
@@ -1238,7 +1290,9 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           1,
           turntableRotation,
           previewMotion,
-          tick
+          tick,
+          touchSpringRef.current,
+          showCreasePattern
         );
 
         if (showSkeletonWireframe) {
@@ -1433,7 +1487,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
         const charWidth = 120 * charScale;
         const charHeight = 132 * charScale;
 
-        // Vẽ Rối Giấy Teri 3D (Sticker Viền Trắng + Lật 3D + Đầy đủ hiệu ứng cảm xúc)
+        // Vẽ Rối Giấy Teri 3D (Sticker Viền Trắng + Lật 3D + Nếp gấp Origami + Đầy đủ hiệu ứng cảm xúc)
         drawPaperPuppet(
           ctx,
           loadedImgRef.current!,
@@ -1446,7 +1500,9 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           char.direction,
           char.rotationY,
           effectiveMotion,
-          tick
+          tick,
+          touchSpringRef.current,
+          showCreasePattern
         );
 
         // HIỂN THỊ KHUNG XƯƠNG ĐỘNG (FK) TRONG THẾ GIỚI 3D RỪNG TRE!
@@ -1499,7 +1555,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [step, currentImageUri, worldMode, turntableRotation, isAutoSpin, previewMotion, showSkeletonWireframe, rigData]);
+  }, [step, currentImageUri, worldMode, turntableRotation, isAutoSpin, previewMotion, showSkeletonWireframe, showCreasePattern, rigData]);
 
   return (
     <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-y-auto select-none p-3.5">
@@ -2150,8 +2206,11 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               ref={previewCanvasRef}
               width={260}
               height={260}
-              className="relative z-10 w-full h-full cursor-pointer"
-              onClick={handlePreviewCanvasClick}
+              className="relative z-10 w-full h-full cursor-pointer touch-none"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             />
           </div>
 
@@ -2186,6 +2245,42 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 </button>
               </div>
             </div>
+
+            {/* Thanh công cụ: Nếp gấp Origami & Khung xương FK */}
+            <div className="w-full flex items-center justify-between bg-forest-darker/90 px-2.5 py-1.5 rounded-2xl border border-bamboo-mid/30 text-xs">
+              <span className="text-[10px] text-dongho-paper/70 font-semibold flex items-center gap-1">
+                <span>Cơ chế giấy:</span>
+              </span>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setShowCreasePattern(!showCreasePattern)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 ${
+                    showCreasePattern
+                      ? 'bg-warm-amber/20 border-warm-amber text-warm-glow'
+                      : 'bg-forest-deep border-bamboo-mid/30 text-dongho-paper/50'
+                  }`}
+                  title="Hiển thị nếp gấp Origami & nếp cấn"
+                >
+                  <span>📐 Nếp gấp Origami</span>
+                </button>
+                <button
+                  onClick={() => setShowSkeletonWireframe(!showSkeletonWireframe)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 ${
+                    showSkeletonWireframe
+                      ? 'bg-[#06D6A0]/20 border-[#06D6A0] text-[#06D6A0]'
+                      : 'bg-forest-deep border-bamboo-mid/30 text-dongho-paper/50'
+                  }`}
+                  title="Hiển thị khung xương động học thuận FK"
+                >
+                  <span>🦴 Khung xương FK</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Mẹo xúc giác */}
+            <p className="text-[9.5px] text-warm-glow/70 text-center w-full px-1 italic">
+              💡 Chạm hoặc kéo rê nhân vật để gập uốn tờ giấy và kích hoạt lò xo cơ học!
+            </p>
 
             {/* Turntable Slider nếu chọn turntable */}
             {worldMode === 'turntable' && (

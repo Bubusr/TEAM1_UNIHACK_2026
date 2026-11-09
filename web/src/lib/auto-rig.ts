@@ -888,617 +888,380 @@ export function calculateRigPose(
   };
 }
 
-export interface ArticulatedPuppetSegments {
-  head: HTMLCanvasElement;
-  torso: HTMLCanvasElement;
-  armLUpper: HTMLCanvasElement | null;
-  armLLower: HTMLCanvasElement | null;
-  armRUpper: HTMLCanvasElement | null;
-  armRLower: HTMLCanvasElement | null;
-  legLUpper: HTMLCanvasElement | null;
-  legLLower: HTMLCanvasElement | null;
-  legRUpper: HTMLCanvasElement | null;
-  legRLower: HTMLCanvasElement | null;
-  tail: HTMLCanvasElement | null;
-  width: number;
-  height: number;
+export interface PaperTouchSpring {
+  pressure: number;   // 0..1 độ nén xúc giác khi người chơi ấn/đẩy tờ giấy
+  deflectX: number;   // Độ uốn cong dạt ngang
+  deflectY: number;   // Độ uốn cong dạt dọc
+  springTick: number; // Chu kỳ nhún đàn hồi lò xo giấy
 }
 
-const puppetSegmentCache = new Map<string, ArticulatedPuppetSegments>();
+/**
+ * Vẽ đường cấn gấp nếp Origami (Embossed Paper Crease Line)
+ * Tạo cảm giác nếp gấp giấy thủ công thật với 1 bên sáng và 1 bên bóng đổ
+ */
+export function drawOrigamiCreaseLine(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  foldIntensity = 1,
+  creaseStyle: 'fold' | 'perforated' | 'crease' = 'crease'
+) {
+  if (foldIntensity <= 0.02) return;
+  ctx.save();
 
-function distToSeg(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
   const dx = x2 - x1;
   const dy = y2 - y1;
-  const l2 = dx * dx + dy * dy;
-  if (l2 < 1) return Math.hypot(px - x1, py - y1);
-  let t = ((px - x1) * dx + (py - y1) * dy) / l2;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
-}
+  const len = Math.hypot(dx, dy);
+  if (len < 1.5) {
+    ctx.restore();
+    return;
+  }
 
-function getPuppetCacheKey(img: HTMLCanvasElement | HTMLImageElement, rig: SkeletonRig): string {
-  let imgKey = '';
-  if ('src' in img && typeof img.src === 'string' && img.src.length > 0) {
-    imgKey = img.src.slice(0, 80) + img.src.length;
+  // Vector pháp tuyến vuông góc với đường gấp
+  const nx = -dy / len;
+  const ny = dx / len;
+  const alpha = Math.min(0.65, Math.abs(foldIntensity) * 0.55);
+
+  // 1. Vệt sáng phản quang trên sống nếp gấp (Highlight ridge)
+  ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.85})`;
+  ctx.lineWidth = 1.0;
+  if (creaseStyle === 'perforated') {
+    ctx.setLineDash([3, 2.5]);
   } else {
-    if (!(img as any).__puppetCacheId) {
-      (img as any).__puppetCacheId = 'cvs_' + Math.random().toString(36).slice(2, 9);
-    }
-    imgKey = (img as any).__puppetCacheId;
+    ctx.setLineDash([]);
   }
-  const rigKey = rig.joints.map((j) => `${j.id}:${j.relX.toFixed(2)},${j.relY.toFixed(2)}`).join('|');
-  return `${imgKey}#${rigKey}`;
-}
-
-/**
- * PHÂN TÁCH BỨC VẼ THÀNH CÁC MẢNH GIẤY RỐI KHỚP NỐI (Paper Puppet Articulation Segmentation)
- * Dựa trên Khung Xương (Skeleton Framework) làm bản đồ định vị:
- * - Đầu (Head)
- * - Thân (Torso)
- * - Tay trái / Tay phải (Hai khúc: Bắp tay + Cẳng tay)
- * - Chân trái / Chân phải (Hai khúc: Đùi + Cẳng chân)
- * Tự động tạo nẹp giấy chồng lên nhau (6px overlap) để khi uốn cong gập khớp không bị hở.
- */
-export function createArticulatedPuppetSegments(
-  sourceImg: HTMLCanvasElement | HTMLImageElement,
-  rig: SkeletonRig
-): ArticulatedPuppetSegments | null {
-  const w = sourceImg.width || 260;
-  const h = sourceImg.height || 260;
-  if (w <= 0 || h <= 0) return null;
-
-  // 1. Vẽ ảnh gốc vào canvas phụ để lấy ma trận điểm ảnh (ImageData)
-  const srcCanvas = document.createElement('canvas');
-  srcCanvas.width = w;
-  srcCanvas.height = h;
-  const sCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
-  if (!sCtx) return null;
-  sCtx.drawImage(sourceImg, 0, 0, w, h);
-  const srcImgData = sCtx.getImageData(0, 0, w, h);
-  const data = srcImgData.data;
-
-  // 2. Tìm tọa độ thực tế của từng khớp xương theo kích thước ảnh
-  const jMap = new Map<string, { x: number; y: number }>();
-  rig.joints.forEach((j) => {
-    jMap.set(j.type, { x: j.relX * w, y: j.relY * h });
-  });
-
-  const head = jMap.get('head');
-  const neck = jMap.get('neck') || (head ? { x: head.x, y: head.y + h * 0.12 } : { x: w * 0.5, y: h * 0.35 });
-  const spine = jMap.get('spine') || { x: w * 0.5, y: h * 0.52 };
-  const hipL = jMap.get('hip_l') || jMap.get('hip') || { x: w * 0.42, y: h * 0.7 };
-  const hipR = jMap.get('hip_r') || jMap.get('hip') || { x: w * 0.58, y: h * 0.7 };
-  const pelvis = { x: (hipL.x + hipR.x) / 2, y: (hipL.y + hipR.y) / 2 };
-
-  const shoulderL = jMap.get('shoulder_l');
-  const elbowL = jMap.get('elbow_l');
-  const handL = jMap.get('hand_l');
-
-  const shoulderR = jMap.get('shoulder_r');
-  const elbowR = jMap.get('elbow_r');
-  const handR = jMap.get('hand_r');
-
-  const kneeL = jMap.get('knee_l');
-  const footL = jMap.get('foot_l');
-
-  const kneeR = jMap.get('knee_r');
-  const footR = jMap.get('foot_r');
-
-  // Khởi tạo các canvas con và ImageData tương ứng
-  const createSubPiece = () => {
-    const cvs = document.createElement('canvas');
-    cvs.width = w;
-    cvs.height = h;
-    const ctx = cvs.getContext('2d');
-    const imgData = ctx ? ctx.createImageData(w, h) : null;
-    return { cvs, ctx, imgData };
-  };
-
-  const pHead = createSubPiece();
-  const pTorso = createSubPiece();
-  const pArmLU = shoulderL ? createSubPiece() : null;
-  const pArmLL = elbowL ? createSubPiece() : null;
-  const pArmRU = shoulderR ? createSubPiece() : null;
-  const pArmRL = elbowR ? createSubPiece() : null;
-  const pLegLU = kneeL ? createSubPiece() : null;
-  const pLegLL = footL ? createSubPiece() : null;
-  const pLegRU = kneeR ? createSubPiece() : null;
-  const pLegRL = footR ? createSubPiece() : null;
-
-  // Khớp chồng gập (Overlap) để các mảnh giấy nối khít khao khi chuyển động
-  const jointsWithOverlap = [
-    { pt: neck, parts: [pHead, pTorso] },
-    { pt: shoulderL, parts: [pTorso, pArmLU] },
-    { pt: elbowL, parts: [pArmLU, pArmLL] },
-    { pt: shoulderR, parts: [pTorso, pArmRU] },
-    { pt: elbowR, parts: [pArmRU, pArmRL] },
-    { pt: hipL, parts: [pTorso, pLegLU] },
-    { pt: kneeL, parts: [pLegLU, pLegLL] },
-    { pt: hipR, parts: [pTorso, pLegRU] },
-    { pt: kneeR, parts: [pLegRU, pLegRL] },
-  ].filter((j) => j.pt && j.parts[0] && j.parts[1]);
-
-  const copyPixel = (target: { imgData: ImageData | null } | null, idx: number) => {
-    if (!target || !target.imgData) return;
-    const tData = target.imgData.data;
-    tData[idx] = data[idx];
-    tData[idx + 1] = data[idx + 1];
-    tData[idx + 2] = data[idx + 2];
-    tData[idx + 3] = data[idx + 3];
-  };
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const idx = (y * w + x) * 4;
-      const alpha = data[idx + 3];
-      if (alpha <= 20) continue;
-
-      let minDist = 999999;
-      let bestPart = pTorso;
-
-      // 1. Khoảng cách tới Đầu
-      if (head) {
-        let dHead = distToSeg(x, y, neck.x, neck.y, head.x, head.y);
-        if (y < neck.y) dHead -= 20; // Ưu tiên điểm ảnh trên cổ cho đầu
-        if (dHead < minDist) {
-          minDist = dHead;
-          bestPart = pHead;
-        }
-      }
-
-      // 2. Khoảng cách tới Thân
-      const dTorso = Math.min(
-        distToSeg(x, y, neck.x, neck.y, spine.x, spine.y),
-        distToSeg(x, y, spine.x, spine.y, pelvis.x, pelvis.y)
-      );
-      if (dTorso < minDist) {
-        minDist = dTorso;
-        bestPart = pTorso;
-      }
-
-      // 3. Khoảng cách tới Tay Trái
-      if (shoulderL && elbowL && pArmLU) {
-        const dArmLU = distToSeg(x, y, shoulderL.x, shoulderL.y, elbowL.x, elbowL.y);
-        if (dArmLU < minDist) {
-          minDist = dArmLU;
-          bestPart = pArmLU;
-        }
-        if (handL && pArmLL) {
-          const dArmLL = distToSeg(x, y, elbowL.x, elbowL.y, handL.x, handL.y);
-          if (dArmLL < minDist) {
-            minDist = dArmLL;
-            bestPart = pArmLL;
-          }
-        }
-      } else if (shoulderL && handL && pArmLU) {
-        const dArmL = distToSeg(x, y, shoulderL.x, shoulderL.y, handL.x, handL.y);
-        if (dArmL < minDist) {
-          minDist = dArmL;
-          bestPart = pArmLU;
-        }
-      }
-
-      // 4. Khoảng cách tới Tay Phải
-      if (shoulderR && elbowR && pArmRU) {
-        const dArmRU = distToSeg(x, y, shoulderR.x, shoulderR.y, elbowR.x, elbowR.y);
-        if (dArmRU < minDist) {
-          minDist = dArmRU;
-          bestPart = pArmRU;
-        }
-        if (handR && pArmRL) {
-          const dArmRL = distToSeg(x, y, elbowR.x, elbowR.y, handR.x, handR.y);
-          if (dArmRL < minDist) {
-            minDist = dArmRL;
-            bestPart = pArmRL;
-          }
-        }
-      } else if (shoulderR && handR && pArmRU) {
-        const dArmR = distToSeg(x, y, shoulderR.x, shoulderR.y, handR.x, handR.y);
-        if (dArmR < minDist) {
-          minDist = dArmR;
-          bestPart = pArmRU;
-        }
-      }
-
-      // 5. Khoảng cách tới Chân Trái
-      if (hipL && kneeL && pLegLU) {
-        const dLegLU = distToSeg(x, y, hipL.x, hipL.y, kneeL.x, kneeL.y);
-        if (dLegLU < minDist) {
-          minDist = dLegLU;
-          bestPart = pLegLU;
-        }
-        if (footL && pLegLL) {
-          const dLegLL = distToSeg(x, y, kneeL.x, kneeL.y, footL.x, footL.y);
-          if (dLegLL < minDist) {
-            minDist = dLegLL;
-            bestPart = pLegLL;
-          }
-        }
-      }
-
-      // 6. Khoảng cách tới Chân Phải
-      if (hipR && kneeR && pLegRU) {
-        const dLegRU = distToSeg(x, y, hipR.x, hipR.y, kneeR.x, kneeR.y);
-        if (dLegRU < minDist) {
-          minDist = dLegRU;
-          bestPart = pLegRU;
-        }
-        if (footR && pLegRL) {
-          const dLegRL = distToSeg(x, y, kneeR.x, kneeR.y, footR.x, footR.y);
-          if (dLegRL < minDist) {
-            minDist = dLegRL;
-            bestPart = pLegRL;
-          }
-        }
-      }
-
-      // Sao chép điểm ảnh vào bộ phận phù hợp
-      copyPixel(bestPart, idx);
-
-      // Thêm nẹp giấy nối (overlap 6px) tại các khớp để gập không bị đứt đoạn
-      for (let k = 0; k < jointsWithOverlap.length; k++) {
-        const j = jointsWithOverlap[k];
-        const dist = Math.hypot(x - j.pt!.x, y - j.pt!.y);
-        if (dist <= 7) {
-          copyPixel(j.parts[0], idx);
-          copyPixel(j.parts[1], idx);
-        }
-      }
-    }
-  }
-
-  // 4. Lưu ImageData vào Canvas
-  const commitCanvas = (piece: { cvs: HTMLCanvasElement; ctx: CanvasRenderingContext2D | null; imgData: ImageData | null } | null) => {
-    if (!piece || !piece.ctx || !piece.imgData) return null;
-    piece.ctx.putImageData(piece.imgData, 0, 0);
-    return piece.cvs;
-  };
-
-  return {
-    head: commitCanvas(pHead)!,
-    torso: commitCanvas(pTorso)!,
-    armLUpper: commitCanvas(pArmLU),
-    armLLower: commitCanvas(pArmLL),
-    armRUpper: commitCanvas(pArmRU),
-    armRLower: commitCanvas(pArmRL),
-    legLUpper: commitCanvas(pLegLU),
-    legLLower: commitCanvas(pLegLL),
-    legRUpper: commitCanvas(pLegRU),
-    legRLower: commitCanvas(pLegRL),
-    tail: null,
-    width: w,
-    height: h,
-  };
-}
-
-function getOrCreateArticulatedPuppet(
-  sourceImg: HTMLCanvasElement | HTMLImageElement,
-  rig: SkeletonRig
-): ArticulatedPuppetSegments | null {
-  const cacheKey = getPuppetCacheKey(sourceImg, rig);
-  if (puppetSegmentCache.has(cacheKey)) {
-    return puppetSegmentCache.get(cacheKey)!;
-  }
-  const segments = createArticulatedPuppetSegments(sourceImg, rig);
-  if (segments) {
-    puppetSegmentCache.set(cacheKey, segments);
-  }
-  return segments;
-}
-
-/**
- * Chốt ghim đồng mini (Brass Fastener Pins) tạo cảm giác mô hình rối giấy thủ công
- */
-function drawFastenerPin(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.save();
-  ctx.fillStyle = 'rgba(244, 162, 89, 0.85)';
   ctx.beginPath();
-  ctx.arc(x, y, 2.8, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#1B2A2F';
-  ctx.lineWidth = 0.9;
+  ctx.moveTo(x1 + nx * 0.8, y1 + ny * 0.8);
+  ctx.lineTo(x2 + nx * 0.8, y2 + ny * 0.8);
   ctx.stroke();
 
-  ctx.fillStyle = '#FFE18A';
+  // 2. Vệt bóng đổ lõm của rãnh nếp gấp (Shadow groove)
+  ctx.strokeStyle = `rgba(10, 18, 20, ${alpha * 0.8})`;
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.arc(x - 0.7, y - 0.7, 0.9, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(x1 - nx * 0.8, y1 - ny * 0.8);
+  ctx.lineTo(x2 - nx * 0.8, y2 - ny * 0.8);
+  ctx.stroke();
+
   ctx.restore();
 }
 
 /**
- * Nếp gấp giấy xếp quạt (Accordion Folds) và lò xo giấy (Paper Springs)
+ * Vẽ lò xo giấy xếp nếp (Accordion Fold / Paper Spring)
+ * Xuất hiện ở các khớp uốn cong (khuỷu tay, đầu gối, eo) khi chuyển động hoặc bị ấn/uốn cong
  */
-function drawPaperAccordionCreases(
+export function drawAccordionPaperSpring(
   ctx: CanvasRenderingContext2D,
-  spine: { x: number; y: number },
-  pelvis: { x: number; y: number },
-  w: number,
-  h: number,
-  motion: CreatureAction,
-  tick: number
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  foldWidth = 12,
+  pleatCount = 3,
+  foldPhase = 0
 ) {
   ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-  ctx.lineWidth = 1.6;
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const len = Math.hypot(dx, dy);
+  if (len < 3) {
+    ctx.restore();
+    return;
+  }
+
+  const nx = -dy / len;
+  const ny = dx / len;
+  ctx.lineWidth = 1.0;
+  const step = len / pleatCount;
+
+  for (let i = 0; i < pleatCount; i++) {
+    const p1x = startX + (dx / len) * (i * step);
+    const p1y = startY + (dy / len) * (i * step);
+    const midX = startX + (dx / len) * ((i + 0.5) * step);
+    const midY = startY + (dy / len) * ((i + 0.5) * step);
+    const p2x = startX + (dx / len) * ((i + 1) * step);
+    const p2y = startY + (dy / len) * ((i + 1) * step);
+
+    const sign = i % 2 === 0 ? 1 : -1;
+    const dynamicW = foldWidth * (0.8 + Math.sin(foldPhase) * 0.2);
+    const peakX = midX + nx * dynamicW * sign;
+    const peakY = midY + ny * dynamicW * sign;
+
+    // Mặt đón sáng của nếp gấp ziczac
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.45)' : 'rgba(20, 30, 25, 0.2)';
+    ctx.strokeStyle = 'rgba(25, 35, 30, 0.4)';
+    ctx.beginPath();
+    ctx.moveTo(p1x, p1y);
+    ctx.lineTo(peakX, peakY);
+    ctx.lineTo(p2x, p2y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Sống gập nếp phản quang
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(p1x, p1y);
+    ctx.lineTo(peakX, peakY);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Thanh trượt biểu cảm cơ học bằng giấy (Paper Expression Slider / Pull-Tab) tại Mắt
+ * Thay đổi nét mặt linh hoạt bằng cơ cấu giấy trượt qua rãnh khoét (slot)
+ */
+export function drawPaperEyeSlider(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius = 5.5,
+  emotion: CreatureAction = 'idle',
+  isBlink = false,
+  isLeft = true,
+  tick = 0
+) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // 1. Rãnh trượt giấy khoét thủ công (Paper slider slot cutout)
+  const slotW = radius * 2.5;
+  const slotH = radius * 2.0;
+  ctx.fillStyle = 'rgba(15, 25, 28, 0.16)';
+  ctx.strokeStyle = 'rgba(10, 20, 22, 0.4)';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.roundRect(-slotW / 2, -slotH / 2, slotW, slotH, 3);
+  ctx.fill();
+  ctx.stroke();
+
+  // 2. Thẻ trượt bên trong (Sliding Paper Tab)
+  let slideX = 0;
+  let slideY = 0;
+  if (emotion === 'walk' || emotion === 'run') {
+    slideX = Math.sin(tick * 0.2) * 1.4;
+  } else if (emotion === 'sad') {
+    slideY = 2.0; // Thẻ trượt hạ thấp buồn rầu
+  } else if (emotion === 'happy_jump' || emotion === 'dance') {
+    slideY = -1.2; // Thẻ trượt nâng cao tươi vui
+  } else if (emotion === 'teri_panic') {
+    slideX = Math.sin(tick * 1.5) * 1.8;
+    slideY = Math.cos(tick * 1.5) * 1.2;
+  }
+
+  // Nền thẻ giấy trượt (Paper Card)
+  ctx.fillStyle = '#FAF7F0';
+  ctx.strokeStyle = 'rgba(20, 30, 32, 0.28)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.roundRect(-slotW / 2 + 1 + slideX, -slotH / 2 + 1 + slideY, slotW - 2, slotH - 2, 2.5);
+  ctx.fill();
+  ctx.stroke();
+
+  // 3. Nét vẽ biểu cảm mực in Đông Hồ trên thẻ trượt
+  ctx.strokeStyle = '#1B2A2F';
+  ctx.fillStyle = '#1B2A2F';
+  ctx.lineWidth = 1.8;
   ctx.lineCap = 'round';
 
-  const midY = (spine.y + pelvis.y) / 2;
-  const torsoW = w * 0.22;
+  const eyeCX = slideX;
+  const eyeCY = slideY;
 
-  if (motion === 'happy_jump' || motion === 'hop') {
-    // Lò xo giấy nảy tưng bừng (Paper Spring)
-    const springAmp = Math.sin(tick * 0.3) * 3;
+  if (isBlink || emotion === 'sleep') {
+    // Nhắm mắt dạng đường cong êm dịu (Sleeping / Blinking Arc)
     ctx.beginPath();
-    for (let i = -2; i <= 2; i++) {
-      const cy = midY + i * 7 + springAmp;
-      ctx.moveTo(spine.x - torsoW * 0.6, cy);
-      ctx.lineTo(spine.x, cy - 3);
-      ctx.lineTo(spine.x + torsoW * 0.6, cy);
-    }
+    ctx.arc(eyeCX, eyeCY + (emotion === 'sleep' ? 0.5 : 1), radius * 0.7, 0.1 * Math.PI, 0.9 * Math.PI, false);
     ctx.stroke();
-  } else if (motion === 'sleep') {
-    // Nếp gấp giấy gập lại nằm yên (Origami Fold Creases)
-    ctx.strokeStyle = 'rgba(17, 30, 34, 0.45)';
+  } else if (emotion === 'happy_jump' || emotion === 'dance') {
+    // Mắt cười híp hình cung vui sướng (^ ^)
     ctx.beginPath();
-    ctx.moveTo(spine.x - torsoW * 0.8, midY - 6);
-    ctx.lineTo(spine.x + torsoW * 0.8, midY - 6);
-    ctx.moveTo(spine.x - torsoW * 0.7, midY + 4);
-    ctx.lineTo(spine.x + torsoW * 0.7, midY + 4);
+    ctx.arc(eyeCX, eyeCY + 1.5, radius * 0.75, 1.1 * Math.PI, 1.9 * Math.PI, false);
     ctx.stroke();
+  } else if (emotion === 'sad') {
+    // Mắt cụp buồn (︵ ︵)
+    ctx.beginPath();
+    ctx.arc(eyeCX, eyeCY + 2.5, radius * 0.75, 1.15 * Math.PI, 1.85 * Math.PI, false);
+    ctx.stroke();
+  } else if (emotion === 'teri_panic') {
+    // Mắt hoảng hốt mở to rung bần bật
+    ctx.beginPath();
+    ctx.arc(eyeCX, eyeCY, radius * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(eyeCX - 1, eyeCY - 1, 1, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Trạng thái bình thường: Con ngươi mực tròn vẽ tay
+    ctx.beginPath();
+    ctx.arc(eyeCX + (isLeft ? 0.3 : -0.3), eyeCY, radius * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(eyeCX + (isLeft ? -0.5 : -1.1), eyeCY - 0.8, 0.9, 0, Math.PI * 2);
+    ctx.fill();
   }
+
+  // 4. Lẫy giấy kéo thanh trượt mini (Paper pull-tab handle)
+  ctx.fillStyle = '#E3D7BF';
+  ctx.strokeStyle = 'rgba(25, 35, 30, 0.35)';
+  ctx.lineWidth = 0.6;
+  const tabDir = isLeft ? -1 : 1;
+  ctx.beginPath();
+  ctx.rect((slotW / 2) * tabDir - (isLeft ? 3.5 : 0), -1.8, 3.5, 3.6);
+  ctx.fill();
+  ctx.stroke();
+
   ctx.restore();
 }
 
 /**
- * BIỂU CẢM ĐỘNG THEO CƠ CHẾ GIẤY (Paper Expression Slider & Rotating Emotion Wheel)
- * Tự động gắn khớp chính xác theo vị trí mắt, miệng trên khung xương (Skeleton Framework)
+ * Bánh xe xoay cảm xúc bằng giấy (Rotating Paper Emotion Wheel / Volvelle) tại Miệng
+ * Cơ cấu bánh xe giấy xoay quanh đinh tán kim loại mini để đổi khuôn miệng
  */
-function drawDynamicPaperExpressions(
+export function drawPaperEmotionWheel(
   ctx: CanvasRenderingContext2D,
-  rig: SkeletonRig,
-  motion: CreatureAction,
-  tick: number,
-  w: number,
-  h: number
+  x: number,
+  y: number,
+  radius = 9,
+  emotion: CreatureAction = 'idle',
+  mouthOpen = 0.3,
+  tick = 0
 ) {
-  if (!rig || !rig.joints) return;
-
-  const eyeL = rig.joints.find((j) => j.type === 'eye_l');
-  const eyeR = rig.joints.find((j) => j.type === 'eye_r');
-  const mouth = rig.joints.find((j) => j.type === 'mouth');
-  const head = rig.joints.find((j) => j.type === 'head');
-
-  if (!eyeL || !eyeR) return;
-
-  const ex1 = eyeL.relX * w;
-  const ey1 = eyeL.relY * h;
-  const ex2 = eyeR.relX * w;
-  const ey2 = eyeR.relY * h;
-  const mx = mouth ? mouth.relX * w : (ex1 + ex2) / 2;
-  const my = mouth ? mouth.relY * h : (ey1 + ey2) / 2 + 14;
-
-  const eyeDist = Math.hypot(ex2 - ex1, ey2 - ey1) || 24;
-  const eyeRSize = Math.max(3, eyeDist * 0.16);
-
   ctx.save();
+  ctx.translate(x, y);
 
-  // 1. THANH TRƯỢT BIỂU CẢM: SAD (Ủ rũ, tuôn rơi dải nước mắt giấy)
-  if (motion === 'sad') {
-    ctx.strokeStyle = '#1B2A2F';
-    ctx.lineWidth = 2.4;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(ex1, ey1 + 2, eyeRSize, Math.PI * 1.1, Math.PI * 1.9);
-    ctx.arc(ex2, ey2 + 2, eyeRSize, Math.PI * 1.1, Math.PI * 1.9);
-    ctx.stroke();
-
-    const tearFlow1 = (tick * 1.4) % 24;
-    const tearFlow2 = (tick * 1.4 + 12) % 24;
-    ctx.fillStyle = '#4CC9F0';
-    ctx.strokeStyle = '#118AB2';
-    ctx.lineWidth = 1;
-
-    ctx.beginPath();
-    ctx.arc(ex1, ey1 + 5 + tearFlow1, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(ex2, ey2 + 5 + tearFlow2, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Miệng mếu máo gợn sóng
-    ctx.strokeStyle = '#C8412F';
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.arc(mx, my + 4, 5, Math.PI * 1.15, Math.PI * 1.85);
-    ctx.stroke();
+  // 1. Góc xoay của bánh xe giấy theo cảm xúc (Volvelle Rotation Angle)
+  let targetAngle = 0;
+  switch (emotion) {
+    case 'happy_jump':
+    case 'dance':
+      targetAngle = Math.PI * 0.5; // Xoay tới miệng cười há to reo vui
+      break;
+    case 'wave':
+    case 'walk':
+    case 'run':
+      targetAngle = Math.PI * 0.25; // Xoay tới miệng mỉm cười nói chuyện
+      break;
+    case 'sad':
+      targetAngle = Math.PI * 1.0; // Xoay tới miệng mếu máo cụp xuống
+      break;
+    case 'sleep':
+      targetAngle = Math.PI * 1.5; // Xoay tới miệng ngáy tròn nhỏ
+      break;
+    case 'teri_panic':
+      targetAngle = Math.PI * 0.75 + Math.sin(tick * 2.0) * 0.2; // Rung lắc miệng la hét
+      break;
+    default:
+      targetAngle = 0; // Mỉm cười dịu dàng
+      break;
   }
 
-  // 2. THANH TRƯỢT BIỂU CẢM: SLEEP (Cửa sập mắt giấy đóng lại, zZz giấy bay)
-  else if (motion === 'sleep') {
-    ctx.strokeStyle = '#1B2A2F';
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = 'round';
+  // 2. Viền rãnh khoét tròn trên tờ giấy (Circular paper cut window)
+  ctx.fillStyle = 'rgba(10, 20, 22, 0.14)';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(20, 30, 32, 0.35)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // 3. Đĩa giấy xoay (Paper Disc)
+  ctx.save();
+  ctx.rotate(targetAngle);
+
+  ctx.fillStyle = '#FDFBF7';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius - 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Vân thớ giấy tròn nhẹ
+  ctx.strokeStyle = 'rgba(200, 185, 160, 0.3)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius - 3.2, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Tai kéo xoay bằng giấy chìa ra ngoài mép đĩa (Dial Finger Tab)
+  ctx.fillStyle = '#FFD166';
+  ctx.strokeStyle = 'rgba(40, 30, 20, 0.5)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.rect(radius - 2.5, -2, 5, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  // Lỗ bấm trên tai kéo
+  ctx.fillStyle = '#1B2A2F';
+  ctx.beginPath();
+  ctx.arc(radius + 1, 0, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore(); // Kết thúc xoay đĩa
+
+  // 4. Biểu cảm miệng hiển thị qua cửa sổ giấy
+  ctx.save();
+  ctx.strokeStyle = '#C8412F'; // Màu son đỏ thủ công truyền thống
+  ctx.fillStyle = '#C8412F';
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = 'round';
+
+  if (emotion === 'happy_jump' || emotion === 'dance') {
     ctx.beginPath();
-    ctx.arc(ex1, ey1 - 1, eyeRSize, Math.PI * 0.1, Math.PI * 0.9);
-    ctx.arc(ex2, ey2 - 1, eyeRSize, Math.PI * 0.1, Math.PI * 0.9);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#E76F51';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.moveTo(mx - 3, my);
-    ctx.lineTo(mx, my + 2);
-    ctx.lineTo(mx + 3, my);
-    ctx.stroke();
-
-    const zFlow = (tick * 0.8) % 36;
-    const hx = head ? head.relX * w : (ex1 + ex2) / 2;
-    const hy = head ? head.relY * h : ey1 - 18;
-
-    ctx.save();
-    ctx.fillStyle = '#FFE18A';
-    ctx.shadowColor = 'rgba(0,0,0,0.4)';
-    ctx.shadowBlur = 4;
-    ctx.font = 'bold 11px system-ui';
-    ctx.fillText('z', hx + 10, hy - zFlow * 0.4);
-    ctx.font = 'bold 14px system-ui';
-    ctx.fillText('Z', hx + 18, hy - 8 - zFlow * 0.65);
-    ctx.font = 'bold 17px system-ui';
-    ctx.fillText('Z', hx + 26, hy - 18 - zFlow * 0.9);
-    ctx.restore();
-  }
-
-  // 3. BÁNH XE XOAY CẢM XÚC: HAPPY JUMP (Mắt cười tít ^ ^, Miệng há to reo vui)
-  else if (motion === 'happy_jump') {
-    ctx.strokeStyle = '#1B2A2F';
-    ctx.lineWidth = 2.8;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(ex1 - eyeRSize, ey1 + 2);
-    ctx.lineTo(ex1, ey1 - eyeRSize + 1);
-    ctx.lineTo(ex1 + eyeRSize, ey1 + 2);
-    ctx.moveTo(ex2 - eyeRSize, ey2 + 2);
-    ctx.lineTo(ex2, ey2 - eyeRSize + 1);
-    ctx.lineTo(ex2 + eyeRSize, ey2 + 2);
-    ctx.stroke();
-
-    ctx.fillStyle = '#C8412F';
-    ctx.strokeStyle = '#1B2A2F';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.arc(mx, my, 6.5, 0, Math.PI);
-    ctx.closePath();
+    ctx.ellipse(0, 1, 4, 3 + mouthOpen * 2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
-
     ctx.fillStyle = '#FF8FA3';
     ctx.beginPath();
-    ctx.arc(mx, my + 3.5, 3.5, 0, Math.PI);
+    ctx.ellipse(0, 2.2, 2.5, 1.5, 0, 0, Math.PI * 2);
     ctx.fill();
-
-    ctx.save();
-    ctx.font = '14px system-ui';
-    const starHop = Math.sin(tick * 0.3) * 4;
-    ctx.fillText('✦', ex1 - 18, ey1 - 10 + starHop);
-    ctx.fillText('★', ex2 + 10, ey2 - 14 - starHop);
-    ctx.restore();
-  }
-
-  // 4. BÁNH XE XOAY CẢM XÚC: DANCE (Mắt nháy tinh nghịch ^ ~, Miệng ca hát)
-  else if (motion === 'dance') {
-    ctx.strokeStyle = '#1B2A2F';
-    ctx.lineWidth = 2.6;
-    ctx.lineCap = 'round';
-
+  } else if (emotion === 'sad') {
     ctx.beginPath();
-    ctx.moveTo(ex1 - eyeRSize, ey1 + 1);
-    ctx.lineTo(ex1, ey1 - eyeRSize + 1);
-    ctx.lineTo(ex1 + eyeRSize, ey1 + 1);
+    ctx.arc(0, 3, 3.5, 1.15 * Math.PI, 1.85 * Math.PI, false);
     ctx.stroke();
-
-    ctx.fillStyle = '#1B2A2F';
+  } else if (emotion === 'sleep') {
     ctx.beginPath();
-    ctx.arc(ex2, ey2, eyeRSize * 0.85, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(ex2 - 1.2, ey2 - 1.2, eyeRSize * 0.35, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#E76F51';
-    ctx.strokeStyle = '#1B2A2F';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.arc(mx, my + 1, 5, 0, Math.PI);
-    ctx.closePath();
-    ctx.fill();
+    ctx.arc(0, 1, 1.8, 0, Math.PI * 2);
     ctx.stroke();
-
-    ctx.save();
-    ctx.font = '13px system-ui';
-    const noteBob = Math.sin(tick * 0.25) * 5;
-    ctx.fillText('♪', ex1 - 16, ey1 - 12 + noteBob);
-    ctx.fillText('♫', ex2 + 12, ey2 - 10 - noteBob);
-    ctx.restore();
-  }
-
-  // 5. THANH TRƯỢT BIỂU CẢM: TERI PANIC (Gấu Teri hoảng loạn kiểu Gumball)
-  else if (motion === 'teri_panic') {
-    const jitterX = Math.sin(tick * 1.8) * 1.8;
-    const jitterY = Math.cos(tick * 1.8) * 1.8;
-
-    ctx.fillStyle = '#1B2A2F';
+  } else if (emotion === 'teri_panic') {
     ctx.beginPath();
-    ctx.arc(ex1 + jitterX, ey1 + jitterY, 2.2, 0, Math.PI * 2);
-    ctx.arc(ex2 + jitterX, ey2 + jitterY, 2.2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#C8412F';
-    ctx.strokeStyle = '#1B2A2F';
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.ellipse(mx + jitterX, my + 3, 5, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(-4, 0);
+    ctx.lineTo(-2, 3);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(2, 3);
+    ctx.lineTo(4, 0);
     ctx.stroke();
-
-    ctx.save();
-    ctx.font = '13px system-ui';
-    ctx.fillText('💧', ex1 - 18, ey1 - 4);
-    ctx.fillText('💧', ex2 + 10, ey2 - 6);
-    ctx.restore();
-  }
-
-  // 6. THANH TRƯỢT BIỂU CẢM: WAVE (Vẫy tay chào)
-  else if (motion === 'wave') {
-    ctx.fillStyle = '#1B2A2F';
+  } else {
     ctx.beginPath();
-    ctx.arc(ex1, ey1, eyeRSize * 0.8, 0, Math.PI * 2);
-    ctx.arc(ex2, ey2, eyeRSize * 0.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(ex1 - 1, ey1 - 1, eyeRSize * 0.35, 0, Math.PI * 2);
-    ctx.arc(ex2 - 1, ey2 - 1, eyeRSize * 0.35, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#C8412F';
-    ctx.lineWidth = 2.2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(mx, my - 1, 5, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.arc(0, -0.5, 3.8, 0.15 * Math.PI, 0.85 * Math.PI, false);
     ctx.stroke();
   }
+  ctx.restore();
 
-  // 7. MẶC ĐỊNH (Walk, Run, Sneak, Idle): Chớp mắt tự nhiên
-  else {
-    const isBlinking = (tick % 110) < 6;
-    if (isBlinking) {
-      ctx.strokeStyle = '#1B2A2F';
-      ctx.lineWidth = 2.4;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(ex1 - eyeRSize, ey1);
-      ctx.lineTo(ex1 + eyeRSize, ey1);
-      ctx.moveTo(ex2 - eyeRSize, ey2);
-      ctx.lineTo(ex2 + eyeRSize, ey2);
-      ctx.stroke();
-    }
-  }
+  // 5. Đinh tán xoay kim loại mini ở tâm bánh xe (Split-Pin Rivet Core)
+  ctx.fillStyle = '#FFE18A';
+  ctx.beginPath();
+  ctx.arc(0, 0, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#1B2A2F';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  ctx.fillStyle = '#1B2A2F';
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.6, 0, Math.PI * 2);
+  ctx.fill();
 
   ctx.restore();
 }
 
 /**
- * VẼ CON RỐI GIẤY KHỚP NỐI CƠ HỌC (Physical Articulated Paper Puppet)
- * Phong cách Gấu Giấy Teri trong Gumball:
- * - Đầu, tay, chân, thân phân tách thành các mảnh giấy khớp nối theo Khung Xương
- * - Tay vẫy chào thực tế, chân sải bước, đầu gối gập khớp
- * - Thân gập xếp quạt (Accordion Fold) & nảy lò xo (Paper Spring)
- * - Biểu cảm thay đổi linh hoạt qua thanh trượt giấy / bánh xe cảm xúc
+ * VẼ CON RỐI GIẤY ORIGAMI CƠ HỌC LIỀN MẠCH (Continuous Origami Paper Puppet Renderer)
+ * Kết hợp độ cong mềm mại, biến dạng tờ giấy, và lật 3D quanh trục Y (Turntable)
  */
 export function drawPaperPuppet(
   ctx: CanvasRenderingContext2D,
@@ -1510,28 +1273,46 @@ export function drawPaperPuppet(
   targetWidth = 120,
   targetHeight = 120,
   direction: 1 | -1 = 1,
-  rotationY = 0,
+  rotationY = 0, // Góc lật 3D quanh trục Y (-180°..+180°)
   motion: CreatureAction = 'walk',
-  tick = 0
+  tick = 0,
+  touchSpring?: PaperTouchSpring,
+  showCreasePattern = true
 ) {
-  const segments = getOrCreateArticulatedPuppet(img, rig);
-
   ctx.save();
 
-  // 1. Dịch chuyển đến vị trí và độ nhún tổng thể
-  ctx.translate(centerX, centerY + pose.hopY);
+  // 1. Phản ứng xúc giác đàn hồi (Paper Spring & Touch Deflection)
+  let springSquashX = 1;
+  let springStretchY = 1;
+  let springBend = 0;
+  let springHopY = 0;
 
+  if (touchSpring && touchSpring.pressure > 0.01) {
+    const decay = Math.exp(-touchSpring.springTick * 0.08);
+    const bounce = Math.sin(touchSpring.springTick * 0.45) * decay * touchSpring.pressure;
+    springSquashX = 1 + bounce * 0.35;
+    springStretchY = 1 - bounce * 0.25;
+    springBend = touchSpring.deflectX * 0.018 * decay;
+    springHopY = touchSpring.deflectY * 0.6 * decay;
+  }
+
+  // Dịch chuyển đến tâm nhân vật & điều chỉnh trục nhảy (Hop) + lò xo nhún
+  ctx.translate(centerX, centerY + pose.hopY + springHopY);
+
+  // 2. Chế độ Xoay 2.5D Turntable (Xoay tờ giấy quanh trục thẳng đứng Y)
   const radY = (rotationY * Math.PI) / 180;
-  const perspectiveScaleX = Math.cos(radY);
+  const perspectiveScaleX = Math.cos(radY); // Co hẹp chiều ngang tạo cảm giác 3D xoay
 
-  ctx.scale(direction * pose.squashX * perspectiveScaleX, pose.stretchY);
+  ctx.scale(direction * pose.squashX * springSquashX * perspectiveScaleX, pose.stretchY * springStretchY);
+
+  // 3. Biến dạng uốn lượn của tờ giấy (Paper Skew & Angle)
   ctx.transform(1, 0, pose.skewX, 1, 0, 0);
-  ctx.rotate(pose.headTilt * 0.25 + pose.bodyBend * 0.35);
+  ctx.rotate(pose.headTilt * 0.4 + pose.bodyBend * 0.5 + springBend);
 
   const w = targetWidth;
   const h = targetHeight;
 
-  // 2. Bóng đổ mềm mại dưới chân
+  // 4. Vẽ bóng đổ mờ mềm mại dưới chân
   ctx.save();
   ctx.fillStyle = 'rgba(10, 17, 19, 0.35)';
   ctx.beginPath();
@@ -1539,181 +1320,263 @@ export function drawPaperPuppet(
   ctx.fill();
   ctx.restore();
 
-  // 3. Fallback an toàn nếu không phân tách được
-  if (!segments) {
-    ctx.drawImage(img, -w / 2, -h / 2, w, h);
-    ctx.restore();
-    return;
-  }
-
-  // 4. CHUYỂN HỆ TỌA ĐỘ VỀ KHÔNG GIAN BẢN VẼ [0..sw] x [0..sh]
-  const sw = segments.width;
-  const sh = segments.height;
-  const scaleRatioX = w / sw;
-  const scaleRatioY = h / sh;
-
-  ctx.scale(scaleRatioX, scaleRatioY);
-  ctx.translate(-sw / 2, -sh / 2);
-
-  // Lấy các điểm chốt khớp quan trọng
-  const jMap = new Map<string, { x: number; y: number }>();
-  rig.joints.forEach((j) => {
-    jMap.set(j.type, { x: j.relX * sw, y: j.relY * sh });
-  });
-
-  const head = jMap.get('head');
-  const neck = jMap.get('neck') || (head ? { x: head.x, y: head.y + sh * 0.12 } : { x: sw * 0.5, y: sh * 0.35 });
-  const spine = jMap.get('spine') || { x: sw * 0.5, y: sh * 0.52 };
-  const hipL = jMap.get('hip_l') || jMap.get('hip') || { x: sw * 0.42, y: sh * 0.7 };
-  const hipR = jMap.get('hip_r') || jMap.get('hip') || { x: sw * 0.58, y: sh * 0.7 };
-  const pelvis = { x: (hipL.x + hipR.x) / 2, y: (hipL.y + hipR.y) / 2 };
-
-  const shoulderL = jMap.get('shoulder_l');
-  const elbowL = jMap.get('elbow_l');
-
-  const shoulderR = jMap.get('shoulder_r');
-  const elbowR = jMap.get('elbow_r');
-
-  const kneeL = jMap.get('knee_l');
-  const kneeR = jMap.get('knee_r');
+  // 5. VẼ BỨC VẼ GỐC NGUYÊN VẸN TRÊN MỘT TỜ GIẤY PHẲNG LIỀN MẠCH (Không cắt rời tay chân!)
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
 
   // =========================================================================
-  // LỚP 1: CHI BÊN PHẢI (NẰM LỚP SAU THÂN KHI QUAY SANG PHẢI)
+  // 6. CƠ HỌC GẬP UỐN ORIGAMI THEO KHUNG XƯƠNG (Origami Folding Flaps)
+  // Khung xương là framework xác định chính xác vị trí đầu, vai, khuỷu, hông, gối
   // =========================================================================
-  if (segments.legRUpper && hipR) {
-    const thighAngleR = ((pose.legOffsetR / 36) * 0.75) * direction;
-    ctx.save();
-    ctx.translate(hipR.x, hipR.y);
-    ctx.rotate(thighAngleR);
-    ctx.translate(-hipR.x, -hipR.y);
-    ctx.drawImage(segments.legRUpper, 0, 0);
+  if (rig && rig.joints) {
+    const getJoint = (type: string) => rig.joints.find((j) => j.type === type);
+    const neckJ = getJoint('neck');
+    const headJ = getJoint('head');
+    const shLJ = getJoint('shoulder_l');
+    const elLJ = getJoint('elbow_l');
+    const shRJ = getJoint('shoulder_r');
+    const elRJ = getJoint('elbow_r');
+    const hpLJ = getJoint('hip_l');
+    const knLJ = getJoint('knee_l');
+    const hpRJ = getJoint('hip_r');
+    const knRJ = getJoint('knee_r');
+    const eyeL = getJoint('eye_l');
+    const eyeR = getJoint('eye_r');
+    const mouth = getJoint('mouth');
 
-    if (segments.legRLower && kneeR) {
-      let kneeFlexR = Math.max(0, -pose.legOffsetR * 0.025) * direction;
-      if (pose.hopY < -8) kneeFlexR += 0.28;
+    // Tọa độ cục bộ của từng khớp
+    const toLocalX = (relX: number) => -w / 2 + relX * w;
+    const toLocalY = (relY: number) => -h / 2 + relY * h;
+
+    const neckX = toLocalX(neckJ ? neckJ.relX : 0.5);
+    const neckY = toLocalY(neckJ ? neckJ.relY : 0.28);
+    const shLX = toLocalX(shLJ ? shLJ.relX : 0.32);
+    const shLY = toLocalY(shLJ ? shLJ.relY : 0.36);
+    const elLX = toLocalX(elLJ ? elLJ.relX : 0.22);
+    const elLY = toLocalY(elLJ ? elLJ.relY : 0.48);
+    const shRX = toLocalX(shRJ ? shRJ.relX : 0.68);
+    const shRY = toLocalY(shRJ ? shRJ.relY : 0.36);
+    const elRX = toLocalX(elRJ ? elRJ.relX : 0.78);
+    const elRY = toLocalY(elRJ ? elRJ.relY : 0.48);
+    const hpLX = toLocalX(hpLJ ? hpLJ.relX : 0.42);
+    const hpLY = toLocalY(hpLJ ? hpLJ.relY : 0.70);
+    const knLX = toLocalX(knLJ ? knLJ.relX : 0.40);
+    const knLY = toLocalY(knLJ ? knLJ.relY : 0.82);
+    const hpRX = toLocalX(hpRJ ? hpRJ.relX : 0.58);
+    const hpRY = toLocalY(hpRJ ? hpRJ.relY : 0.70);
+    const knRX = toLocalX(knRJ ? knRJ.relX : 0.60);
+    const knRY = toLocalY(knRJ ? knRJ.relY : 0.82);
+
+    // -----------------------------------------------------------------------
+    // A. ĐƯỜNG CẤN GẤP NẾP ORIGAMI TRÊN TỜ GIẤY PHẲNG (Score Crease Pattern)
+    // -----------------------------------------------------------------------
+    if (showCreasePattern) {
+      drawOrigamiCreaseLine(ctx, neckX - 22, neckY, neckX + 22, neckY, 0.7);
+      if (shLJ) drawOrigamiCreaseLine(ctx, neckX - 6, neckY, shLX, shLY + 10, 0.75);
+      if (shRJ) drawOrigamiCreaseLine(ctx, neckX + 6, neckY, shRX, shRY + 10, 0.75);
+      if (elLJ) drawOrigamiCreaseLine(ctx, elLX - 8, elLY, elLX + 8, elLY, 0.6);
+      if (elRJ) drawOrigamiCreaseLine(ctx, elRX - 8, elRY, elRX + 8, elRY, 0.6);
+      drawOrigamiCreaseLine(ctx, hpLX - 12, hpLY, hpRX + 12, hpRY, 0.8);
+      if (knLJ) drawOrigamiCreaseLine(ctx, knLX - 8, knLY, knLX + 8, knLY, 0.6);
+      if (knRJ) drawOrigamiCreaseLine(ctx, knRX - 8, knRY, knRX + 8, knRY, 0.6);
+    }
+
+    // -----------------------------------------------------------------------
+    // B. MẶT PHẲNG GẬP UỐN NẾP ORIGAMI (Origami Folding Flaps)
+    // Khi vẫy tay, bước chân, hay cúi đầu, các mặt phẳng giấy sẽ gập xoay quanh nếp cấn
+    // -----------------------------------------------------------------------
+
+    // 1. Cánh tay trái gập nếp & vẫy tay (Left Arm Origami Fold)
+    if (shLJ && Math.abs(pose.armAngleL) > 0.04) {
       ctx.save();
-      ctx.translate(kneeR.x, kneeR.y);
-      ctx.rotate(kneeFlexR);
-      ctx.translate(-kneeR.x, -kneeR.y);
-      ctx.drawImage(segments.legRLower, 0, 0);
-      drawFastenerPin(ctx, kneeR.x, kneeR.y);
+      ctx.translate(shLX, shLY);
+      ctx.rotate(pose.armAngleL * direction);
+      ctx.translate(-shLX, -shLY);
+
+      ctx.shadowColor = 'rgba(10, 20, 22, 0.45)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = -2 * direction;
+      ctx.shadowOffsetY = 3;
+
+      ctx.beginPath();
+      ctx.rect(-w / 2 - 15, shLY - 14, shLX - (-w / 2) + 16, h - (shLY - 14));
+      ctx.clip();
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+      drawOrigamiCreaseLine(ctx, shLX - 8, shLY - 6, shLX + 6, shLY + 12, 1.2);
+
+      if (elLJ && Math.abs(pose.armAngleL) > 0.3) {
+        drawAccordionPaperSpring(ctx, elLX - 6, elLY, elLX + 6, elLY, 10, 3, tick * 0.2);
+      }
       ctx.restore();
     }
-    drawFastenerPin(ctx, hipR.x, hipR.y);
-    ctx.restore();
-  }
 
-  if (segments.armRUpper && shoulderR) {
-    const armAngleR = pose.armAngleR * direction;
-    ctx.save();
-    ctx.translate(shoulderR.x, shoulderR.y);
-    ctx.rotate(armAngleR);
-    ctx.translate(-shoulderR.x, -shoulderR.y);
-    ctx.drawImage(segments.armRUpper, 0, 0);
-
-    if (segments.armRLower && elbowR) {
-      const elbowFlexR = pose.armAngleR * 0.5 * direction;
+    // 2. Cánh tay phải gập nếp & vẫy tay (Right Arm Origami Fold)
+    if (shRJ && Math.abs(pose.armAngleR) > 0.04) {
       ctx.save();
-      ctx.translate(elbowR.x, elbowR.y);
-      ctx.rotate(elbowFlexR);
-      ctx.translate(-elbowR.x, -elbowR.y);
-      ctx.drawImage(segments.armRLower, 0, 0);
-      drawFastenerPin(ctx, elbowR.x, elbowR.y);
+      ctx.translate(shRX, shRY);
+      ctx.rotate(pose.armAngleR * direction);
+      ctx.translate(-shRX, -shRY);
+
+      ctx.shadowColor = 'rgba(10, 20, 22, 0.45)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 2 * direction;
+      ctx.shadowOffsetY = 3;
+
+      ctx.beginPath();
+      ctx.rect(shRX - 4, shRY - 14, w / 2 - shRX + 20, h - (shRY - 14));
+      ctx.clip();
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+      drawOrigamiCreaseLine(ctx, shRX - 6, shRY - 6, shRX + 8, shRY + 12, 1.2);
+
+      if (elRJ && Math.abs(pose.armAngleR) > 0.3) {
+        drawAccordionPaperSpring(ctx, elRX - 6, elRY, elRX + 6, elRY, 10, 3, tick * 0.2);
+      }
       ctx.restore();
     }
-    drawFastenerPin(ctx, shoulderR.x, shoulderR.y);
-    ctx.restore();
-  }
 
-  // =========================================================================
-  // LỚP 2: THÂN MÌNH & CƠ HỌC GIẤY (Paper Accordion Folds / Paper Spring)
-  // =========================================================================
-  ctx.save();
-  ctx.translate(pelvis.x, pelvis.y);
-  ctx.rotate(pose.bodyBend * 0.45 * direction);
-  ctx.translate(-pelvis.x, -pelvis.y);
-  ctx.drawImage(segments.torso, 0, 0);
-
-  // Hiệu ứng cơ học nếp gấp xếp quạt / lò xo giấy
-  drawPaperAccordionCreases(ctx, spine, pelvis, sw, sh, motion, tick);
-  ctx.restore();
-
-  // =========================================================================
-  // LỚP 3: ĐẦU & BIỂU CẢM ĐỘNG (Paper Expression Slider / Emotion Wheel)
-  // =========================================================================
-  ctx.save();
-  ctx.translate(neck.x, neck.y);
-  const totalHeadAngle = (pose.headTilt + pose.bodyBend * 0.4) * direction;
-  ctx.rotate(totalHeadAngle);
-
-  // Độ nẩy lò xo giấy của đầu (Paper Spring Head Bob)
-  const headSpringBounce =
-    motion === 'happy_jump'
-      ? Math.sin(tick * 0.35) * 5
-      : motion === 'dance'
-      ? Math.sin(tick * 0.2) * 2.5
-      : 0;
-  ctx.translate(0, headSpringBounce);
-
-  ctx.save();
-  ctx.translate(-neck.x, -neck.y);
-  ctx.drawImage(segments.head, 0, 0);
-  ctx.restore();
-
-  // Thanh trượt / bánh xe biểu cảm động gắn chuẩn khung xương ngũ quan
-  drawDynamicPaperExpressions(ctx, rig, motion, tick, sw, sh);
-  drawFastenerPin(ctx, neck.x, neck.y);
-  ctx.restore();
-
-  // =========================================================================
-  // LỚP 4: CHI BÊN TRÁI (NẰM LỚP TRƯỚC: VẪY TAY, SẢI BƯỚC)
-  // =========================================================================
-  if (segments.legLUpper && hipL) {
-    const thighAngleL = ((pose.legOffsetL / 36) * 0.75) * direction;
-    ctx.save();
-    ctx.translate(hipL.x, hipL.y);
-    ctx.rotate(thighAngleL);
-    ctx.translate(-hipL.x, -hipL.y);
-    ctx.drawImage(segments.legLUpper, 0, 0);
-
-    if (segments.legLLower && kneeL) {
-      let kneeFlexL = Math.max(0, -pose.legOffsetL * 0.025) * direction;
-      if (pose.hopY < -8) kneeFlexL += 0.28;
+    // 3. Mặt phẳng đầu gập nếp theo cổ (Head Origami Fold)
+    if (neckJ && (Math.abs(pose.headTilt) > 0.03 || Math.abs(springBend) > 0.02)) {
       ctx.save();
-      ctx.translate(kneeL.x, kneeL.y);
-      ctx.rotate(kneeFlexL);
-      ctx.translate(-kneeL.x, -kneeL.y);
-      ctx.drawImage(segments.legLLower, 0, 0);
-      drawFastenerPin(ctx, kneeL.x, kneeL.y);
+      ctx.translate(neckX, neckY);
+      ctx.rotate((pose.headTilt * 0.8 + springBend) * direction);
+      ctx.translate(-neckX, -neckY);
+
+      ctx.shadowColor = 'rgba(10, 20, 22, 0.4)';
+      ctx.shadowBlur = 5;
+      ctx.shadowOffsetY = 2.5;
+
+      ctx.beginPath();
+      ctx.rect(-w / 2 - 10, -h / 2 - 10, w + 20, neckY - (-h / 2) + 6);
+      ctx.clip();
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+      drawOrigamiCreaseLine(ctx, neckX - 22, neckY, neckX + 22, neckY, 1.1);
       ctx.restore();
     }
-    drawFastenerPin(ctx, hipL.x, hipL.y);
-    ctx.restore();
-  }
 
-  if (segments.armLUpper && shoulderL) {
-    const armAngleL = pose.armAngleL * direction;
-    ctx.save();
-    ctx.translate(shoulderL.x, shoulderL.y);
-    ctx.rotate(armAngleL);
-    ctx.translate(-shoulderL.x, -shoulderL.y);
-    ctx.drawImage(segments.armLUpper, 0, 0);
-
-    if (segments.armLLower && elbowL) {
-      // Trong động tác 'wave', cẳng tay vung vẩy thanh thoát qua lại
-      const elbowFlexL = (motion === 'wave'
-        ? Math.sin(tick * 0.28) * 0.55
-        : pose.armAngleL * 0.5) * direction;
+    // 4. Chân trái & Chân phải gập nếp khi sải bước (Legs Origami Folds)
+    if (hpLJ && Math.abs(pose.legOffsetL) > 2) {
       ctx.save();
-      ctx.translate(elbowL.x, elbowL.y);
-      ctx.rotate(elbowFlexL);
-      ctx.translate(-elbowL.x, -elbowL.y);
-      ctx.drawImage(segments.armLLower, 0, 0);
-      drawFastenerPin(ctx, elbowL.x, elbowL.y);
+      ctx.translate(hpLX, hpLY);
+      ctx.rotate((pose.legOffsetL / 36) * 0.5 * direction);
+      ctx.translate(-hpLX, -hpLY);
+
+      ctx.shadowColor = 'rgba(10, 20, 22, 0.35)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetY = 2;
+
+      ctx.beginPath();
+      ctx.rect(-w / 2 - 5, hpLY - 4, (hpLX + (hpRX - hpLX) * 0.5) - (-w / 2), h - (hpLY - 4));
+      ctx.clip();
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+      drawOrigamiCreaseLine(ctx, hpLX - 10, hpLY, hpLX + 10, hpLY, 0.9);
+      if (knLJ) {
+        drawAccordionPaperSpring(ctx, knLX - 6, knLY, knLX + 6, knLY, 8, 3, tick * 0.2);
+      }
       ctx.restore();
     }
-    drawFastenerPin(ctx, shoulderL.x, shoulderL.y);
-    ctx.restore();
+
+    if (hpRJ && Math.abs(pose.legOffsetR) > 2) {
+      ctx.save();
+      ctx.translate(hpRX, hpRY);
+      ctx.rotate((pose.legOffsetR / 36) * 0.5 * direction);
+      ctx.translate(-hpRX, -hpRY);
+
+      ctx.shadowColor = 'rgba(10, 20, 22, 0.35)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetY = 2;
+
+      ctx.beginPath();
+      ctx.rect((hpLX + (hpRX - hpLX) * 0.5), hpRY - 4, w / 2 - (hpLX + (hpRX - hpLX) * 0.5) + 10, h - (hpRY - 4));
+      ctx.clip();
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+      drawOrigamiCreaseLine(ctx, hpRX - 10, hpRY, hpRX + 10, hpRY, 0.9);
+      if (knRJ) {
+        drawAccordionPaperSpring(ctx, knRX - 6, knRY, knRX + 6, knRY, 8, 3, tick * 0.2);
+      }
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 7. CƠ CHẾ BIỂU CẢM ĐỘNG BẰNG GIẤY (Dynamic Paper Expression Mechanisms)
+    // =========================================================================
+    // A. Thanh trượt biểu cảm tại 2 Mắt (Paper Eye Sliders)
+    if (eyeL && eyeR) {
+      const ex1 = toLocalX(eyeL.relX);
+      const ey1 = toLocalY(eyeL.relY);
+      const ex2 = toLocalX(eyeR.relX);
+      const ey2 = toLocalY(eyeR.relY);
+      const isBlinking = pose.eyeBlink > 0.5;
+
+      drawPaperEyeSlider(ctx, ex1, ey1, 5.2, motion, isBlinking, true, tick);
+      drawPaperEyeSlider(ctx, ex2, ey2, 5.2, motion, isBlinking, false, tick);
+    }
+
+    // B. Bánh xe xoay cảm xúc tại Miệng (Rotating Emotion Wheel)
+    if (mouth) {
+      const mx = toLocalX(mouth.relX);
+      const my = toLocalY(mouth.relY);
+      drawPaperEmotionWheel(ctx, mx, my, 8.5, motion, pose.mouthOpen, tick);
+    }
+
+    // C. Hiệu ứng giấy cảm xúc (Teardrops, zZz, Stars, Notes, Sweat)
+    // 1. 'sad' (Ủ rũ): giọt nước mắt trượt rơi từ thanh trượt mắt
+    if (motion === 'sad' && eyeL && eyeR) {
+      ctx.save();
+      ctx.fillStyle = '#4CC9F0';
+      const tearY1 = toLocalY(eyeL.relY) + 7 + ((tick * 1.2) % 18);
+      const tearY2 = toLocalY(eyeR.relY) + 7 + (((tick * 1.2) + 9) % 18);
+      const ex1 = toLocalX(eyeL.relX);
+      const ex2 = toLocalX(eyeR.relX);
+      ctx.beginPath();
+      ctx.arc(ex1, tearY1, 2.5, 0, Math.PI * 2);
+      ctx.arc(ex2, tearY2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 2. 'sleep' (Gấp giấy / Ngủ): thẻ chữ zZz nổi bật bay lên từ đầu
+    if (motion === 'sleep') {
+      ctx.save();
+      const hX = toLocalX(headJ ? headJ.relX : 0.5);
+      const hY = toLocalY(headJ ? headJ.relY : 0.2);
+      const floatOffset = (tick * 0.7) % 36;
+      ctx.fillStyle = '#FFE18A';
+      ctx.font = 'bold 10px system-ui';
+      ctx.fillText('z', hX + 8, hY - 4 - floatOffset * 0.4);
+      ctx.font = 'bold 13px system-ui';
+      ctx.fillText('Z', hX + 15, hY - 12 - floatOffset * 0.6);
+      ctx.font = 'bold 16px system-ui';
+      ctx.fillText('Z', hX + 22, hY - 22 - floatOffset * 0.85);
+      ctx.restore();
+    }
+
+    // 3. 'dance' & 'happy_jump': sao lấp lánh và nốt nhạc quanh vai/tay
+    if (motion === 'dance' || motion === 'happy_jump') {
+      ctx.save();
+      ctx.font = '12px system-ui';
+      const nx = toLocalX(shLJ ? shLJ.relX : 0.3) - 8;
+      const ny = toLocalY(shLJ ? shLJ.relY : 0.35) - 10 + Math.sin(tick * 0.2) * 4;
+      ctx.fillText(motion === 'dance' ? '🎵' : '✨', nx, ny);
+      const nx2 = toLocalX(shRJ ? shRJ.relX : 0.7) + 6;
+      const ny2 = toLocalY(shRJ ? shRJ.relY : 0.35) - 12 + Math.cos(tick * 0.2) * 4;
+      ctx.fillText(motion === 'dance' ? '🎶' : '🌟', nx2, ny2);
+      ctx.restore();
+    }
+
+    // 4. 'teri_panic': toát mồ hôi rung bần bật kiểu Gấu Teri (Gumball)
+    if (motion === 'teri_panic') {
+      ctx.save();
+      ctx.font = '12px system-ui';
+      const px = toLocalX(headJ ? headJ.relX : 0.5);
+      const py = toLocalY(headJ ? headJ.relY : 0.2);
+      ctx.fillText('💧', px - 18, py - 4);
+      ctx.fillText('💧', px + 12, py - 6);
+      ctx.restore();
+    }
   }
 
   ctx.restore();
