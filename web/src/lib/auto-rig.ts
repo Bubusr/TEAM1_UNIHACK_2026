@@ -893,6 +893,8 @@ export interface PaperTouchSpring {
   deflectX: number;   // Độ uốn cong dạt ngang
   deflectY: number;   // Độ uốn cong dạt dọc
   springTick: number; // Chu kỳ nhún đàn hồi lò xo giấy
+  x?: number;         // Toạ độ điểm chạm (tương đối, 0 = tâm nhân vật)
+  y?: number;         // Toạ độ điểm chạm (tương đối, 0 = tâm nhân vật)
 }
 
 /**
@@ -1279,300 +1281,470 @@ export function drawPaperPuppet(
   touchSpring?: PaperTouchSpring,
   showCreasePattern = true
 ) {
-  ctx.save();
+  // =========================================================================
+  // MESH DEFORMATION RENDERER — "Thước Dẻo Cao Su" Paper Puppet
+  // Toàn bộ tờ giấy được biến dạng như một thước dẻo — KHÔNG cắt rời bộ phận.
+  // Thuật toán: lưới (COLS+1)×(ROWS+1) vertex, mỗi vertex bị dịch chuyển theo
+  // zone khung xương (head, arm_l, arm_r, leg_l, leg_r, body).
+  // Mỗi ô lưới được vẽ bằng 2 tam giác affine (ctx.transform trick).
+  // =========================================================================
 
-  // 1. Phản ứng xúc giác đàn hồi (Paper Spring & Touch Deflection)
-  let springSquashX = 1;
-  let springStretchY = 1;
-  let springBend = 0;
-  let springHopY = 0;
-
-  if (touchSpring && touchSpring.pressure > 0.01) {
-    const decay = Math.exp(-touchSpring.springTick * 0.08);
-    const bounce = Math.sin(touchSpring.springTick * 0.45) * decay * touchSpring.pressure;
-    springSquashX = 1 + bounce * 0.35;
-    springStretchY = 1 - bounce * 0.25;
-    springBend = touchSpring.deflectX * 0.018 * decay;
-    springHopY = touchSpring.deflectY * 0.6 * decay;
-  }
-
-  // Dịch chuyển đến tâm nhân vật & điều chỉnh trục nhảy (Hop) + lò xo nhún
-  ctx.translate(centerX, centerY + pose.hopY + springHopY);
-
-  // 2. Chế độ Xoay 2.5D Turntable (Xoay tờ giấy quanh trục thẳng đứng Y)
-  const radY = (rotationY * Math.PI) / 180;
-  const perspectiveScaleX = Math.cos(radY); // Co hẹp chiều ngang tạo cảm giác 3D xoay
-
-  ctx.scale(direction * pose.squashX * springSquashX * perspectiveScaleX, pose.stretchY * springStretchY);
-
-  // 3. Biến dạng uốn lượn của tờ giấy (Paper Skew & Angle)
-  ctx.transform(1, 0, pose.skewX, 1, 0, 0);
-  ctx.rotate(pose.headTilt * 0.4 + pose.bodyBend * 0.5 + springBend);
+  // --- Thông số lưới ---
+  const COLS = 10; // số cột
+  const ROWS = 14; // số hàng (nhiều hơn theo chiều dọc)
 
   const w = targetWidth;
   const h = targetHeight;
 
-  // 4. Vẽ bóng đổ mờ mềm mại dưới chân
+  // --- Lấy khớp từ rig ---
+  const getJoint = (type: string) => (rig && rig.joints ? rig.joints.find((j) => j.type === type) : undefined);
+  const neckJ   = getJoint('neck');
+  const headJ   = getJoint('head');
+  const shLJ    = getJoint('shoulder_l');
+  const elLJ    = getJoint('elbow_l');
+  const handLJ  = getJoint('hand_l');
+  const shRJ    = getJoint('shoulder_r');
+  const elRJ    = getJoint('elbow_r');
+  const handRJ  = getJoint('hand_r');
+  const hpLJ    = getJoint('hip_l');
+  const knLJ    = getJoint('knee_l');
+  const ftLJ    = getJoint('foot_l');
+  const hpRJ    = getJoint('hip_r');
+  const knRJ    = getJoint('knee_r');
+  const ftRJ    = getJoint('foot_r');
+  const eyeL    = getJoint('eye_l');
+  const eyeR    = getJoint('eye_r');
+  const mouth   = getJoint('mouth');
+
+  // Vị trí tương đối (0–1) của các pivot chính
+  const neckRelY  = neckJ  ? neckJ.relY  : 0.28;
+  const shLRelX   = shLJ   ? shLJ.relX   : 0.32;
+  const shLRelY   = shLJ   ? shLJ.relY   : 0.36;
+  const shRRelX   = shRJ   ? shRJ.relX   : 0.68;
+  const shRRelY   = shRJ   ? shRJ.relY   : 0.36;
+  const hpLRelX   = hpLJ   ? hpLJ.relX   : 0.42;
+  const hpLRelY   = hpLJ   ? hpLJ.relY   : 0.68;
+  const hpRRelX   = hpRJ   ? hpRJ.relX   : 0.58;
+  const hpRRelY   = hpRJ   ? hpRJ.relY   : 0.68;
+
+  // Pivot pixels (local, trung tâm = 0,0 nằm ở centerX,centerY)
+  const neckPX   = (neckJ  ? neckJ.relX  : 0.5)  * w - w / 2;
+  const neckPY   = neckRelY * h - h / 2;
+  const shLPX    = shLRelX   * w - w / 2;
+  const shLPY    = shLRelY   * h - h / 2;
+  const shRPX    = shRRelX   * w - w / 2;
+  const shRPY    = shRRelY   * h - h / 2;
+  const hpLPX    = hpLRelX   * w - w / 2;
+  const hpLPY    = hpLRelY   * h - h / 2;
+  const hpRPX    = hpRRelX   * w - w / 2;
+  const hpRPY    = hpRRelY   * h - h / 2;
+
+  // Góc uốn từ pose (radian)
+  const bendHead = pose.headTilt * direction;
+  const bendArmL = pose.armAngleL * direction * 0.85;
+  const bendArmR = pose.armAngleR * direction * 0.85;
+  const bendLegL = (pose.legOffsetL / 36) * 0.65 * direction;
+  const bendLegR = (pose.legOffsetR / 36) * 0.65 * direction;
+  const bendBody = pose.bodyBend * 0.4 + pose.skewX * 0.3;
+
+  // Touch spring
+  let springSquashX = 1, springStretchY = 1, springHopY = 0;
+  let springDX = 0, springDY = 0, springDecay = 1;
+  if (touchSpring && touchSpring.pressure > 0.01) {
+    springDecay = Math.exp(-touchSpring.springTick * 0.08);
+    const bounce = Math.sin(touchSpring.springTick * 0.45) * springDecay * touchSpring.pressure;
+    springSquashX = 1 + bounce * 0.35;
+    springStretchY = 1 - bounce * 0.25;
+    springHopY = touchSpring.deflectY * 0.6 * springDecay;
+    springDX = touchSpring.deflectX * springDecay;
+    springDY = touchSpring.deflectY * springDecay;
+  }
+
+  // -------------------------------------------------------------------------
+  // Hàm nội tại: tính displacement của 1 vertex (relX, relY) theo zone
+  // Trả về { dx, dy } tính bằng pixel
+  // -------------------------------------------------------------------------
+  function computeVertexDisplacement(relX: number, relY: number): { dx: number; dy: number } {
+    let dx = 0;
+    let dy = 0;
+
+    // ---- Head zone: trên neckRelY ----
+    if (relY < neckRelY + 0.04) {
+      // Falloff: vertex càng xa neck (lên phía đầu) thì uốn nhiều hơn
+      const t = Math.max(0, (neckRelY - relY) / (neckRelY + 0.02));
+      // Xoay quanh neck pivot
+      const lx = relX * w - w / 2 - neckPX;
+      const ly = relY * h - h / 2 - neckPY;
+      const c = Math.cos(bendHead), s = Math.sin(bendHead);
+      dx += (lx * c - ly * s - lx) * t;
+      dy += (lx * s + ly * c - ly) * t;
+    }
+
+    // ---- Arm-L zone: relX < 0.45 & shoulder height → hand ----
+    if (relX < 0.45 && relY >= shLRelY - 0.08 && relY <= (handLJ ? handLJ.relY + 0.05 : 0.70)) {
+      // t = 0 tại vai → 1 tại tay (thước dẻo: đầu ngón tay uốn nhiều nhất)
+      const rangeY = Math.max(0.01, (handLJ ? handLJ.relY : 0.65) - shLRelY);
+      const t = Math.min(1, Math.max(0, (relY - shLRelY) / rangeY));
+      const lx = relX * w - w / 2 - shLPX;
+      const ly = relY * h - h / 2 - shLPY;
+      const c = Math.cos(bendArmL), s = Math.sin(bendArmL);
+      dx += (lx * c - ly * s - lx) * t;
+      dy += (lx * s + ly * c - ly) * t;
+    }
+
+    // ---- Arm-R zone: relX > 0.55 & shoulder height → hand ----
+    if (relX > 0.55 && relY >= shRRelY - 0.08 && relY <= (handRJ ? handRJ.relY + 0.05 : 0.70)) {
+      const rangeY = Math.max(0.01, (handRJ ? handRJ.relY : 0.65) - shRRelY);
+      const t = Math.min(1, Math.max(0, (relY - shRRelY) / rangeY));
+      const lx = relX * w - w / 2 - shRPX;
+      const ly = relY * h - h / 2 - shRPY;
+      const c = Math.cos(bendArmR), s = Math.sin(bendArmR);
+      dx += (lx * c - ly * s - lx) * t;
+      dy += (lx * s + ly * c - ly) * t;
+    }
+
+    // ---- Leg-L zone: relX < 0.5 & dưới hip ----
+    if (relX < 0.5 && relY > hpLRelY - 0.04) {
+      const rangeY = Math.max(0.01, (ftLJ ? ftLJ.relY : 1.0) - hpLRelY);
+      const t = Math.min(1, Math.max(0, (relY - hpLRelY) / rangeY));
+      const lx = relX * w - w / 2 - hpLPX;
+      const ly = relY * h - h / 2 - hpLPY;
+      const c = Math.cos(bendLegL), s = Math.sin(bendLegL);
+      dx += (lx * c - ly * s - lx) * t;
+      dy += (lx * s + ly * c - ly) * t;
+    }
+
+    // ---- Leg-R zone: relX >= 0.5 & dưới hip ----
+    if (relX >= 0.5 && relY > hpRRelY - 0.04) {
+      const rangeY = Math.max(0.01, (ftRJ ? ftRJ.relY : 1.0) - hpRRelY);
+      const t = Math.min(1, Math.max(0, (relY - hpRRelY) / rangeY));
+      const lx = relX * w - w / 2 - hpRPX;
+      const ly = relY * h - h / 2 - hpRPY;
+      const c = Math.cos(bendLegR), s = Math.sin(bendLegR);
+      dx += (lx * c - ly * s - lx) * t;
+      dy += (lx * s + ly * c - ly) * t;
+    }
+
+    // ---- Body zone: global skew/sway cho phần thân ----
+    const bodyT = Math.max(0, Math.min(1, (relY - neckRelY) / Math.max(0.01, hpLRelY - neckRelY)));
+    dx += bendBody * (relY - neckRelY) * h * 0.4 * bodyT;
+
+    // ---- Touch spring displacement (ảnh hưởng toàn tờ giấy, giảm dần từ điểm chạm) ----
+    if (touchSpring && touchSpring.pressure > 0.01) {
+      // Điểm chạm tương đối (mặc định tâm nếu không có x,y)
+      const touchRelX = touchSpring.x != null ? (touchSpring.x / w) + 0.5 : 0.5;
+      const touchRelY = touchSpring.y != null ? (touchSpring.y / h) + 0.5 : 0.5;
+      const dist = Math.hypot(relX - touchRelX, relY - touchRelY);
+      const springWeight = Math.max(0, 1 - dist * 2.5) * springDecay;
+      dx += springDX * 0.08 * springWeight;
+      dy += springDY * 0.08 * springWeight;
+    }
+
+    return { dx, dy };
+  }
+
+  // -------------------------------------------------------------------------
+  // Xây dựng lưới vertex đã biến dạng
+  // -------------------------------------------------------------------------
+  // Grid vertex: (COLS+1) × (ROWS+1) điểm
+  // Mỗi điểm: { srcX, srcY } trong hình gốc (0..w, 0..h)
+  //           { dstX, dstY } trong canvas local (trung tâm = 0,0)
+  const grid: Array<Array<{ srcX: number; srcY: number; dstX: number; dstY: number }>> = [];
+
+  for (let row = 0; row <= ROWS; row++) {
+    const rowArr: Array<{ srcX: number; srcY: number; dstX: number; dstY: number }> = [];
+    for (let col = 0; col <= COLS; col++) {
+      const relX = col / COLS;
+      const relY = row / ROWS;
+      const srcX = relX * w; // trong ảnh gốc (0..w)
+      const srcY = relY * h;
+      const baseDstX = relX * w - w / 2; // local canvas, trước biến dạng
+      const baseDstY = relY * h - h / 2;
+      const { dx, dy } = computeVertexDisplacement(relX, relY);
+      rowArr.push({ srcX, srcY, dstX: baseDstX + dx, dstY: baseDstY + dy });
+    }
+    grid.push(rowArr);
+  }
+
+  // -------------------------------------------------------------------------
+  // Hàm vẽ 1 tam giác có texture (affine warp)
+  // p0,p1,p2: { srcX,srcY } (nguồn trong img), { dstX,dstY } (đích canvas)
+  // -------------------------------------------------------------------------
+  function drawTexturedTriangle(
+    p0: { srcX: number; srcY: number; dstX: number; dstY: number },
+    p1: { srcX: number; srcY: number; dstX: number; dstY: number },
+    p2: { srcX: number; srcY: number; dstX: number; dstY: number }
+  ) {
+    // Tính ma trận affine mapping (srcX,srcY) → (dstX,dstY)
+    // [dstX]   [a c e] [srcX]
+    // [dstY] = [b d f] [srcY]
+    // [1   ]   [0 0 1] [1   ]
+    // Giải: có 3 điểm → 6 phương trình → {a,b,c,d,e,f}
+    const x0s = p0.srcX, y0s = p0.srcY;
+    const x1s = p1.srcX, y1s = p1.srcY;
+    const x2s = p2.srcX, y2s = p2.srcY;
+    const x0d = p0.dstX, y0d = p0.dstY;
+    const x1d = p1.dstX, y1d = p1.dstY;
+    const x2d = p2.dstX, y2d = p2.dstY;
+
+    const detS = (x0s * (y1s - y2s) + x1s * (y2s - y0s) + x2s * (y0s - y1s));
+    if (Math.abs(detS) < 1e-6) return; // tam giác suy biến
+
+    const a = ((x0d * (y1s - y2s) + x1d * (y2s - y0s) + x2d * (y0s - y1s)) / detS);
+    const b = ((y0d * (y1s - y2s) + y1d * (y2s - y0s) + y2d * (y0s - y1s)) / detS);
+    const c = ((x0s * (x2s * y1d - x1s * y2d) + x1s * (-x2s * y0d + x0s * y2d) + x2s * (x1s * y0d - x0s * y1d))
+               / (detS * (x0s * (x2s - x1s) + x1s * (x0s - x2s) + x2s * (x1s - x0s)) || 1));
+    // Phương trình affine 2D: dstX = a*srcX + c*srcY + e, dstY = b*srcX + d*srcY + f
+    // Dùng công thức chuẩn Cramer
+    const denom = (x1s - x0s) * (y2s - y0s) - (x2s - x0s) * (y1s - y0s);
+    if (Math.abs(denom) < 1e-6) return;
+    const aa = ((x1d - x0d) * (y2s - y0s) - (x2d - x0d) * (y1s - y0s)) / denom;
+    const bb = ((x2d - x0d) * (x1s - x0s) - (x1d - x0d) * (x2s - x0s)) / denom;
+    const cc = ((y1d - y0d) * (y2s - y0s) - (y2d - y0d) * (y1s - y0s)) / denom;
+    const dd = ((y2d - y0d) * (x1s - x0s) - (y1d - y0d) * (x2s - x0s)) / denom;
+    const ee = x0d - aa * x0s - bb * y0s;
+    const ff = y0d - cc * x0s - dd * y0s;
+
+    ctx.save();
+    // Clip đúng hình tam giác đích
+    ctx.beginPath();
+    ctx.moveTo(x0d, y0d);
+    ctx.lineTo(x1d, y1d);
+    ctx.lineTo(x2d, y2d);
+    ctx.closePath();
+    ctx.clip();
+    // Áp ma trận biến dạng & vẽ toàn bộ ảnh (canvas sẽ chỉ hiện phần trong clip)
+    ctx.transform(aa, cc, bb, dd, ee, ff);
+    ctx.drawImage(img, 0, 0, w, h);
+    ctx.restore();
+  }
+
+  // -------------------------------------------------------------------------
+  // Transform cấp cao: perspective turntable 2.5D & squash-stretch
+  // -------------------------------------------------------------------------
+  ctx.save();
+  const radY = (rotationY * Math.PI) / 180;
+  const perspScaleX = Math.cos(radY);
+
+  ctx.translate(centerX, centerY + pose.hopY + springHopY);
+  ctx.scale(direction * pose.squashX * springSquashX * perspScaleX, pose.stretchY * springStretchY);
+
+  // --- Bóng đổ dưới chân ---
   ctx.save();
   ctx.fillStyle = 'rgba(10, 17, 19, 0.35)';
   ctx.beginPath();
-  ctx.ellipse(0, h * 0.46, (w * 0.45) * Math.abs(perspectiveScaleX), 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, h * 0.46, w * 0.42 * Math.abs(perspScaleX), 7, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  // 5. VẼ BỨC VẼ GỐC NGUYÊN VẸN TRÊN MỘT TỜ GIẤY PHẲNG LIỀN MẠCH (Không cắt rời tay chân!)
-  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  // -------------------------------------------------------------------------
+  // Render từng ô lưới bằng 2 tam giác (Mesh Warp)
+  // -------------------------------------------------------------------------
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const tl = grid[row][col];       // top-left
+      const tr = grid[row][col + 1];   // top-right
+      const bl = grid[row + 1][col];   // bottom-left
+      const br = grid[row + 1][col + 1]; // bottom-right
 
-  // =========================================================================
-  // 6. CƠ HỌC GẬP UỐN ORIGAMI THEO KHUNG XƯƠNG (Origami Folding Flaps)
-  // Khung xương là framework xác định chính xác vị trí đầu, vai, khuỷu, hông, gối
-  // =========================================================================
+      // Tam giác 1: tl → tr → bl
+      drawTexturedTriangle(tl, tr, bl);
+      // Tam giác 2: tr → br → bl
+      drawTexturedTriangle(tr, br, bl);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Overlay: đường cấn origami & hiệu ứng cảm xúc (vẽ ĐÈ LÊN lưới đã warp)
+  // -------------------------------------------------------------------------
   if (rig && rig.joints) {
-    const getJoint = (type: string) => rig.joints.find((j) => j.type === type);
-    const neckJ = getJoint('neck');
-    const headJ = getJoint('head');
-    const shLJ = getJoint('shoulder_l');
-    const elLJ = getJoint('elbow_l');
-    const shRJ = getJoint('shoulder_r');
-    const elRJ = getJoint('elbow_r');
-    const hpLJ = getJoint('hip_l');
-    const knLJ = getJoint('knee_l');
-    const hpRJ = getJoint('hip_r');
-    const knRJ = getJoint('knee_r');
-    const eyeL = getJoint('eye_l');
-    const eyeR = getJoint('eye_r');
-    const mouth = getJoint('mouth');
-
-    // Tọa độ cục bộ của từng khớp
     const toLocalX = (relX: number) => -w / 2 + relX * w;
     const toLocalY = (relY: number) => -h / 2 + relY * h;
 
-    const neckX = toLocalX(neckJ ? neckJ.relX : 0.5);
-    const neckY = toLocalY(neckJ ? neckJ.relY : 0.28);
-    const shLX = toLocalX(shLJ ? shLJ.relX : 0.32);
-    const shLY = toLocalY(shLJ ? shLJ.relY : 0.36);
-    const elLX = toLocalX(elLJ ? elLJ.relX : 0.22);
-    const elLY = toLocalY(elLJ ? elLJ.relY : 0.48);
-    const shRX = toLocalX(shRJ ? shRJ.relX : 0.68);
-    const shRY = toLocalY(shRJ ? shRJ.relY : 0.36);
-    const elRX = toLocalX(elRJ ? elRJ.relX : 0.78);
-    const elRY = toLocalY(elRJ ? elRJ.relY : 0.48);
-    const hpLX = toLocalX(hpLJ ? hpLJ.relX : 0.42);
-    const hpLY = toLocalY(hpLJ ? hpLJ.relY : 0.70);
-    const knLX = toLocalX(knLJ ? knLJ.relX : 0.40);
-    const knLY = toLocalY(knLJ ? knLJ.relY : 0.82);
-    const hpRX = toLocalX(hpRJ ? hpRJ.relX : 0.58);
-    const hpRY = toLocalY(hpRJ ? hpRJ.relY : 0.70);
-    const knRX = toLocalX(knRJ ? knRJ.relX : 0.60);
-    const knRY = toLocalY(knRJ ? knRJ.relY : 0.82);
-
-    // -----------------------------------------------------------------------
-    // A. ĐƯỜNG CẤN GẤP NẾP ORIGAMI TRÊN TỜ GIẤY PHẲNG (Score Crease Pattern)
-    // -----------------------------------------------------------------------
+    // --- Đường cấn gấp nếp ---
     if (showCreasePattern) {
-      drawOrigamiCreaseLine(ctx, neckX - 22, neckY, neckX + 22, neckY, 0.7);
-      if (shLJ) drawOrigamiCreaseLine(ctx, neckX - 6, neckY, shLX, shLY + 10, 0.75);
-      if (shRJ) drawOrigamiCreaseLine(ctx, neckX + 6, neckY, shRX, shRY + 10, 0.75);
-      if (elLJ) drawOrigamiCreaseLine(ctx, elLX - 8, elLY, elLX + 8, elLY, 0.6);
-      if (elRJ) drawOrigamiCreaseLine(ctx, elRX - 8, elRY, elRX + 8, elRY, 0.6);
-      drawOrigamiCreaseLine(ctx, hpLX - 12, hpLY, hpRX + 12, hpRY, 0.8);
-      if (knLJ) drawOrigamiCreaseLine(ctx, knLX - 8, knLY, knLX + 8, knLY, 0.6);
-      if (knRJ) drawOrigamiCreaseLine(ctx, knRX - 8, knRY, knRX + 8, knRY, 0.6);
-    }
+      const neckX = toLocalX(neckJ ? neckJ.relX : 0.5);
+      const neckY = toLocalY(neckRelY);
+      const shLX  = toLocalX(shLRelX); const shLY = toLocalY(shLRelY);
+      const shRX  = toLocalX(shRRelX); const shRY = toLocalY(shRRelY);
+      const elLX  = toLocalX(elLJ  ? elLJ.relX  : 0.22); const elLY = toLocalY(elLJ  ? elLJ.relY  : 0.52);
+      const elRX  = toLocalX(elRJ  ? elRJ.relX  : 0.78); const elRY = toLocalY(elRJ  ? elRJ.relY  : 0.52);
+      const hpLX  = toLocalX(hpLRelX); const hpLY = toLocalY(hpLRelY);
+      const hpRX  = toLocalX(hpRRelX); const hpRY = toLocalY(hpRRelY);
+      const knLX  = toLocalX(knLJ  ? knLJ.relX  : 0.40); const knLY = toLocalY(knLJ  ? knLJ.relY  : 0.82);
+      const knRX  = toLocalX(knRJ  ? knRJ.relX  : 0.60); const knRY = toLocalY(knRJ  ? knRJ.relY  : 0.82);
 
-    // -----------------------------------------------------------------------
-    // B. MẶT PHẲNG GẬP UỐN NẾP ORIGAMI (Origami Folding Flaps)
-    // Khi vẫy tay, bước chân, hay cúi đầu, các mặt phẳng giấy sẽ gập xoay quanh nếp cấn
-    // -----------------------------------------------------------------------
+      drawOrigamiCreaseLine(ctx, neckX - 20, neckY, neckX + 20, neckY, 0.7);
+      drawOrigamiCreaseLine(ctx, neckX - 5,  neckY, shLX, shLY + 8, 0.65);
+      drawOrigamiCreaseLine(ctx, neckX + 5,  neckY, shRX, shRY + 8, 0.65);
+      drawOrigamiCreaseLine(ctx, elLX - 7,   elLY,  elLX + 7, elLY, 0.55);
+      drawOrigamiCreaseLine(ctx, elRX - 7,   elRY,  elRX + 7, elRY, 0.55);
+      drawOrigamiCreaseLine(ctx, hpLX - 10,  hpLY,  hpRX + 10, hpRY, 0.75);
+      drawOrigamiCreaseLine(ctx, knLX - 7,   knLY,  knLX + 7, knLY, 0.55);
+      drawOrigamiCreaseLine(ctx, knRX - 7,   knRY,  knRX + 7, knRY, 0.55);
 
-    // 1. Cánh tay trái gập nếp & vẫy tay (Left Arm Origami Fold)
-    if (shLJ && Math.abs(pose.armAngleL) > 0.04) {
-      ctx.save();
-      ctx.translate(shLX, shLY);
-      ctx.rotate(pose.armAngleL * direction);
-      ctx.translate(-shLX, -shLY);
-
-      ctx.shadowColor = 'rgba(10, 20, 22, 0.45)';
-      ctx.shadowBlur = 6;
-      ctx.shadowOffsetX = -2 * direction;
-      ctx.shadowOffsetY = 3;
-
-      ctx.beginPath();
-      ctx.rect(-w / 2 - 15, shLY - 14, shLX - (-w / 2) + 16, h - (shLY - 14));
-      ctx.clip();
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-
-      drawOrigamiCreaseLine(ctx, shLX - 8, shLY - 6, shLX + 6, shLY + 12, 1.2);
-
+      // Accordion spring tại khuỷu khi tay uốn nhiều
       if (elLJ && Math.abs(pose.armAngleL) > 0.3) {
-        drawAccordionPaperSpring(ctx, elLX - 6, elLY, elLX + 6, elLY, 10, 3, tick * 0.2);
+        drawAccordionPaperSpring(ctx, elLX - 5, elLY, elLX + 5, elLY, 9, 3, tick * 0.2);
       }
-      ctx.restore();
-    }
-
-    // 2. Cánh tay phải gập nếp & vẫy tay (Right Arm Origami Fold)
-    if (shRJ && Math.abs(pose.armAngleR) > 0.04) {
-      ctx.save();
-      ctx.translate(shRX, shRY);
-      ctx.rotate(pose.armAngleR * direction);
-      ctx.translate(-shRX, -shRY);
-
-      ctx.shadowColor = 'rgba(10, 20, 22, 0.45)';
-      ctx.shadowBlur = 6;
-      ctx.shadowOffsetX = 2 * direction;
-      ctx.shadowOffsetY = 3;
-
-      ctx.beginPath();
-      ctx.rect(shRX - 4, shRY - 14, w / 2 - shRX + 20, h - (shRY - 14));
-      ctx.clip();
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-
-      drawOrigamiCreaseLine(ctx, shRX - 6, shRY - 6, shRX + 8, shRY + 12, 1.2);
-
       if (elRJ && Math.abs(pose.armAngleR) > 0.3) {
-        drawAccordionPaperSpring(ctx, elRX - 6, elRY, elRX + 6, elRY, 10, 3, tick * 0.2);
+        drawAccordionPaperSpring(ctx, elRX - 5, elRY, elRX + 5, elRY, 9, 3, tick * 0.2);
       }
-      ctx.restore();
-    }
-
-    // 3. Mặt phẳng đầu gập nếp theo cổ (Head Origami Fold)
-    if (neckJ && (Math.abs(pose.headTilt) > 0.03 || Math.abs(springBend) > 0.02)) {
-      ctx.save();
-      ctx.translate(neckX, neckY);
-      ctx.rotate((pose.headTilt * 0.8 + springBend) * direction);
-      ctx.translate(-neckX, -neckY);
-
-      ctx.shadowColor = 'rgba(10, 20, 22, 0.4)';
-      ctx.shadowBlur = 5;
-      ctx.shadowOffsetY = 2.5;
-
-      ctx.beginPath();
-      ctx.rect(-w / 2 - 10, -h / 2 - 10, w + 20, neckY - (-h / 2) + 6);
-      ctx.clip();
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-
-      drawOrigamiCreaseLine(ctx, neckX - 22, neckY, neckX + 22, neckY, 1.1);
-      ctx.restore();
-    }
-
-    // 4. Chân trái & Chân phải gập nếp khi sải bước (Legs Origami Folds)
-    if (hpLJ && Math.abs(pose.legOffsetL) > 2) {
-      ctx.save();
-      ctx.translate(hpLX, hpLY);
-      ctx.rotate((pose.legOffsetL / 36) * 0.5 * direction);
-      ctx.translate(-hpLX, -hpLY);
-
-      ctx.shadowColor = 'rgba(10, 20, 22, 0.35)';
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetY = 2;
-
-      ctx.beginPath();
-      ctx.rect(-w / 2 - 5, hpLY - 4, (hpLX + (hpRX - hpLX) * 0.5) - (-w / 2), h - (hpLY - 4));
-      ctx.clip();
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-
-      drawOrigamiCreaseLine(ctx, hpLX - 10, hpLY, hpLX + 10, hpLY, 0.9);
-      if (knLJ) {
-        drawAccordionPaperSpring(ctx, knLX - 6, knLY, knLX + 6, knLY, 8, 3, tick * 0.2);
+      if (knLJ && Math.abs(pose.legOffsetL) > 10) {
+        drawAccordionPaperSpring(ctx, knLX - 5, knLY, knLX + 5, knLY, 7, 3, tick * 0.15);
       }
-      ctx.restore();
-    }
-
-    if (hpRJ && Math.abs(pose.legOffsetR) > 2) {
-      ctx.save();
-      ctx.translate(hpRX, hpRY);
-      ctx.rotate((pose.legOffsetR / 36) * 0.5 * direction);
-      ctx.translate(-hpRX, -hpRY);
-
-      ctx.shadowColor = 'rgba(10, 20, 22, 0.35)';
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetY = 2;
-
-      ctx.beginPath();
-      ctx.rect((hpLX + (hpRX - hpLX) * 0.5), hpRY - 4, w / 2 - (hpLX + (hpRX - hpLX) * 0.5) + 10, h - (hpRY - 4));
-      ctx.clip();
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-
-      drawOrigamiCreaseLine(ctx, hpRX - 10, hpRY, hpRX + 10, hpRY, 0.9);
-      if (knRJ) {
-        drawAccordionPaperSpring(ctx, knRX - 6, knRY, knRX + 6, knRY, 8, 3, tick * 0.2);
+      if (knRJ && Math.abs(pose.legOffsetR) > 10) {
+        drawAccordionPaperSpring(ctx, knRX - 5, knRY, knRX + 5, knRY, 7, 3, tick * 0.15);
       }
-      ctx.restore();
     }
 
-    // =========================================================================
-    // 7. CƠ CHẾ BIỂU CẢM ĐỘNG BẰNG GIẤY (Dynamic Paper Expression Mechanisms)
-    // =========================================================================
-    // A. Thanh trượt biểu cảm tại 2 Mắt (Paper Eye Sliders)
+    // --- Biểu cảm mặt: Pull-Tab Mechanism (trượt mesh zone mặt) ---
+    // Vẽ nét mặt thủ công ngay trên vùng mesh (không dùng widget ngoài)
     if (eyeL && eyeR) {
+      const isBlinking = pose.eyeBlink > 0.5;
       const ex1 = toLocalX(eyeL.relX);
       const ey1 = toLocalY(eyeL.relY);
       const ex2 = toLocalX(eyeR.relX);
       const ey2 = toLocalY(eyeR.relY);
-      const isBlinking = pose.eyeBlink > 0.5;
+      const er  = w * 0.045; // bán kính mắt tương đối với kích thước nhân vật
 
-      drawPaperEyeSlider(ctx, ex1, ey1, 5.2, motion, isBlinking, true, tick);
-      drawPaperEyeSlider(ctx, ex2, ey2, 5.2, motion, isBlinking, false, tick);
+      ctx.save();
+      ctx.strokeStyle = '#1B2A2F';
+      ctx.fillStyle   = '#1B2A2F';
+      ctx.lineWidth   = Math.max(1, er * 0.4);
+      ctx.lineCap     = 'round';
+
+      const drawEye = (ex: number, ey: number, isLeft: boolean) => {
+        if (isBlinking || motion === 'sleep') {
+          // Nhắm mắt — cung đơn giản
+          ctx.beginPath();
+          ctx.arc(ex, ey + er * 0.15, er * 0.65, 0.05 * Math.PI, 0.95 * Math.PI, false);
+          ctx.stroke();
+        } else if (motion === 'happy_jump' || motion === 'dance') {
+          // Mắt cười ^ ^
+          ctx.beginPath();
+          ctx.arc(ex, ey + er * 0.5, er * 0.7, 1.1 * Math.PI, 1.9 * Math.PI, false);
+          ctx.stroke();
+        } else if (motion === 'sad') {
+          // Mắt buồn ︵
+          ctx.beginPath();
+          ctx.arc(ex, ey + er * 0.7, er * 0.65, 1.15 * Math.PI, 1.85 * Math.PI, false);
+          ctx.stroke();
+        } else if (motion === 'teri_panic') {
+          // Mắt tròn hoảng hốt
+          ctx.beginPath();
+          ctx.arc(ex, ey, er * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#FFF';
+          ctx.beginPath();
+          ctx.arc(ex - er * 0.2, ey - er * 0.2, er * 0.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#1B2A2F';
+        } else {
+          // Mắt bình thường: con ngươi mực
+          ctx.beginPath();
+          ctx.arc(ex + (isLeft ? er * 0.15 : -er * 0.15), ey, er * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#FFF';
+          ctx.beginPath();
+          ctx.arc(ex + (isLeft ? -er * 0.1 : -er * 0.3), ey - er * 0.2, er * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#1B2A2F';
+        }
+      };
+
+      drawEye(ex1, ey1, true);
+      drawEye(ex2, ey2, false);
+      ctx.restore();
     }
 
-    // B. Bánh xe xoay cảm xúc tại Miệng (Rotating Emotion Wheel)
     if (mouth) {
-      const mx = toLocalX(mouth.relX);
-      const my = toLocalY(mouth.relY);
-      drawPaperEmotionWheel(ctx, mx, my, 8.5, motion, pose.mouthOpen, tick);
+      const mx  = toLocalX(mouth.relX);
+      const my  = toLocalY(mouth.relY);
+      const mr  = w * 0.055;
+
+      ctx.save();
+      ctx.strokeStyle = '#C8412F';
+      ctx.fillStyle   = '#C8412F';
+      ctx.lineWidth   = Math.max(1, mr * 0.35);
+      ctx.lineCap     = 'round';
+
+      if (motion === 'happy_jump' || motion === 'dance') {
+        ctx.beginPath();
+        ctx.ellipse(mx, my + mr * 0.2, mr * 0.75, mr * 0.6 + pose.mouthOpen * mr, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (motion === 'sad') {
+        ctx.beginPath();
+        ctx.arc(mx, my + mr * 0.6, mr * 0.65, 1.1 * Math.PI, 1.9 * Math.PI, false);
+        ctx.stroke();
+      } else if (motion === 'sleep') {
+        ctx.beginPath();
+        ctx.arc(mx, my, mr * 0.35, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (motion === 'teri_panic') {
+        ctx.beginPath();
+        const pts = [-mr * 0.8, 0, -mr * 0.4, mr * 0.5, 0, 0, mr * 0.4, mr * 0.5, mr * 0.8, 0];
+        ctx.moveTo(mx + pts[0], my + pts[1]);
+        for (let i = 2; i < pts.length; i += 2) ctx.lineTo(mx + pts[i], my + pts[i + 1]);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(mx, my - mr * 0.1, mr * 0.65, 0.12 * Math.PI, 0.88 * Math.PI, false);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
-    // C. Hiệu ứng giấy cảm xúc (Teardrops, zZz, Stars, Notes, Sweat)
-    // 1. 'sad' (Ủ rũ): giọt nước mắt trượt rơi từ thanh trượt mắt
+    // --- Hiệu ứng cảm xúc nổi phía trên tờ giấy ---
+    // 1. Giọt nước mắt (sad)
     if (motion === 'sad' && eyeL && eyeR) {
       ctx.save();
       ctx.fillStyle = '#4CC9F0';
-      const tearY1 = toLocalY(eyeL.relY) + 7 + ((tick * 1.2) % 18);
-      const tearY2 = toLocalY(eyeR.relY) + 7 + (((tick * 1.2) + 9) % 18);
-      const ex1 = toLocalX(eyeL.relX);
-      const ex2 = toLocalX(eyeR.relX);
+      const tearY1 = toLocalY(eyeL.relY) + 8 + ((tick * 1.2) % 20);
+      const tearY2 = toLocalY(eyeR.relY) + 8 + (((tick * 1.2) + 10) % 20);
       ctx.beginPath();
-      ctx.arc(ex1, tearY1, 2.5, 0, Math.PI * 2);
-      ctx.arc(ex2, tearY2, 2.5, 0, Math.PI * 2);
+      ctx.arc(toLocalX(eyeL.relX), tearY1, 2.5, 0, Math.PI * 2);
+      ctx.arc(toLocalX(eyeR.relX), tearY2, 2.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
 
-    // 2. 'sleep' (Gấp giấy / Ngủ): thẻ chữ zZz nổi bật bay lên từ đầu
+    // 2. zZz ngủ
     if (motion === 'sleep') {
       ctx.save();
       const hX = toLocalX(headJ ? headJ.relX : 0.5);
-      const hY = toLocalY(headJ ? headJ.relY : 0.2);
-      const floatOffset = (tick * 0.7) % 36;
+      const hY = toLocalY(headJ ? headJ.relY : 0.18);
+      const flt = (tick * 0.65) % 36;
       ctx.fillStyle = '#FFE18A';
-      ctx.font = 'bold 10px system-ui';
-      ctx.fillText('z', hX + 8, hY - 4 - floatOffset * 0.4);
-      ctx.font = 'bold 13px system-ui';
-      ctx.fillText('Z', hX + 15, hY - 12 - floatOffset * 0.6);
-      ctx.font = 'bold 16px system-ui';
-      ctx.fillText('Z', hX + 22, hY - 22 - floatOffset * 0.85);
+      ctx.strokeStyle = '#8A6F20';
+      ctx.lineWidth = 0.5;
+      (['z', 'Z', 'Z'] as string[]).forEach((ch, i) => {
+        const size = 9 + i * 3;
+        ctx.font = `bold ${size}px system-ui`;
+        ctx.fillText(ch, hX + 7 + i * 7, hY - 4 - flt * (0.35 + i * 0.25));
+      });
       ctx.restore();
     }
 
-    // 3. 'dance' & 'happy_jump': sao lấp lánh và nốt nhạc quanh vai/tay
+    // 3. ✨ / 🎵 khi dance / happy_jump
     if (motion === 'dance' || motion === 'happy_jump') {
       ctx.save();
       ctx.font = '12px system-ui';
-      const nx = toLocalX(shLJ ? shLJ.relX : 0.3) - 8;
-      const ny = toLocalY(shLJ ? shLJ.relY : 0.35) - 10 + Math.sin(tick * 0.2) * 4;
-      ctx.fillText(motion === 'dance' ? '🎵' : '✨', nx, ny);
-      const nx2 = toLocalX(shRJ ? shRJ.relX : 0.7) + 6;
-      const ny2 = toLocalY(shRJ ? shRJ.relY : 0.35) - 12 + Math.cos(tick * 0.2) * 4;
-      ctx.fillText(motion === 'dance' ? '🎶' : '🌟', nx2, ny2);
+      const shLX = toLocalX(shLRelX) - 8;
+      const shLY = toLocalY(shLRelY) - 10 + Math.sin(tick * 0.2) * 4;
+      const shRX = toLocalX(shRRelX) + 6;
+      const shRY = toLocalY(shRRelY) - 12 + Math.cos(tick * 0.2) * 4;
+      ctx.fillText(motion === 'dance' ? '🎵' : '✨', shLX, shLY);
+      ctx.fillText(motion === 'dance' ? '🎶' : '🌟', shRX, shRY);
       ctx.restore();
     }
 
-    // 4. 'teri_panic': toát mồ hôi rung bần bật kiểu Gấu Teri (Gumball)
+    // 4. 💧 Mồ hôi (teri_panic)
     if (motion === 'teri_panic') {
       ctx.save();
       ctx.font = '12px system-ui';
       const px = toLocalX(headJ ? headJ.relX : 0.5);
-      const py = toLocalY(headJ ? headJ.relY : 0.2);
+      const py = toLocalY(headJ ? headJ.relY : 0.18);
       ctx.fillText('💧', px - 18, py - 4);
       ctx.fillText('💧', px + 12, py - 6);
       ctx.restore();
