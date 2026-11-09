@@ -327,7 +327,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   const [previewMotion, setPreviewMotion] = useState<CreatureAction>('walk');
   const [worldMode, setWorldMode] = useState<'3d_world' | 'turntable'>('3d_world');
   const [showSkeletonWireframe, setShowSkeletonWireframe] = useState(false);
-  const [showCreasePattern, setShowCreasePattern] = useState(true);
+  const [showCreasePattern, setShowCreasePattern] = useState(false);
   const touchSpringRef = useRef<PaperTouchSpring>({
     pressure: 0,
     deflectX: 0,
@@ -344,7 +344,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   // STEP 5: Quản lý Tab & Biểu cảm nét mặt tự chọn (Pull-tab & Nét vẽ Đông Hồ)
   const [step5Tab, setStep5Tab] = useState<'motion' | 'expression'>('motion');
   const [faceExpr, setFaceExpr] = useState<FaceExpression>({
-    isAuto: true,
+    enabled: false,
+    isAuto: false,
     eye: 'normal',
     mouth: 'smile',
     customFaceCanvas: null,
@@ -397,6 +398,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     if (canvas) {
       setFaceExpr((prev) => ({
         ...prev,
+        enabled: true,
         isAuto: false,
         customFaceCanvas: canvas,
       }));
@@ -1448,7 +1450,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           tick,
           touchSpringRef.current,
           showCreasePattern,
-          faceExpr
+          faceExpr,
+          true
         );
 
         if (showSkeletonWireframe) {
@@ -1659,7 +1662,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           tick,
           touchSpringRef.current,
           showCreasePattern,
-          faceExpr
+          faceExpr,
+          false
         );
 
         // HIỂN THỊ KHUNG XƯƠNG ĐỘNG (FK) TRONG THẾ GIỚI 3D RỪNG TRE!
@@ -2493,7 +2497,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 }`}
               >
                 <span>🎭 Biểu cảm khuôn mặt</span>
-                {!faceExpr.isAuto && (
+                {faceExpr.enabled && (
                   <span className="w-1.5 h-1.5 rounded-full bg-dongho-red animate-ping" />
                 )}
               </button>
@@ -2711,30 +2715,55 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
             {/* NỘI DUNG TAB 2: BIỂU CẢM KHUÔN MẶT TỰ CHỌN (MẮT & MIỆNG) */}
             {step5Tab === 'expression' && (
               <div className="w-full bg-forest-darker/95 p-2 rounded-2xl border border-bamboo-mid/40 space-y-2">
-                {/* Header: Chế độ Tự động theo cử động vs Cố định nét mặt */}
+                {/* Header: Giữ nét vẽ gốc vs Tự động vs Tự chọn */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-bold text-warm-glow">🎭 Cơ chế nét mặt:</span>
                     <span className="text-[9.5px] text-dongho-paper/60">
-                      {faceExpr.isAuto ? '(Đổi theo cử động)' : '(Tự chọn)'}
+                      {!faceExpr.enabled
+                        ? '(100% Nét vẽ gốc)'
+                        : faceExpr.isAuto
+                        ? '(Đổi theo cử động)'
+                        : '(Tự chọn)'}
                     </span>
                   </div>
-                  <button
-                    onClick={() => {
-                      setFaceExpr((prev) => ({
-                        ...prev,
-                        isAuto: !prev.isAuto,
-                      }));
-                      SoundEngine.playBlessingChime();
-                    }}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 border ${
-                      faceExpr.isAuto
-                        ? 'bg-warm-amber text-forest-abyss border-warm-amber'
-                        : 'bg-forest-deep border-bamboo-mid/40 text-dongho-paper/70'
-                    }`}
-                  >
-                    <span>✨ Tự động theo cử động</span>
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setFaceExpr((prev) => ({
+                          ...prev,
+                          enabled: false,
+                        }));
+                        SoundEngine.playBambooKnock();
+                      }}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 border ${
+                        !faceExpr.enabled
+                          ? 'bg-warm-amber text-forest-abyss border-warm-amber shadow'
+                          : 'bg-forest-deep border-bamboo-mid/40 text-dongho-paper/70 hover:text-dongho-paper'
+                      }`}
+                      title="Giữ nguyên 100% mắt và miệng từ hình vẽ gốc ban đầu"
+                    >
+                      <span>🖼️ Nét vẽ gốc</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFaceExpr((prev) => ({
+                          ...prev,
+                          enabled: true,
+                          isAuto: !prev.isAuto,
+                        }));
+                        SoundEngine.playBlessingChime();
+                      }}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 border ${
+                        faceExpr.enabled && faceExpr.isAuto
+                          ? 'bg-warm-amber text-forest-abyss border-warm-amber shadow'
+                          : 'bg-forest-deep border-bamboo-mid/40 text-dongho-paper/70 hover:text-dongho-paper'
+                      }`}
+                      title="Tự động đổi nét mặt theo hoạt ảnh"
+                    >
+                      <span>✨ Tự động</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Sub-modes: Mẫu có sẵn vs Tự vẽ nét mặt */}
@@ -2770,7 +2799,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         <span className="font-semibold text-warm-amber flex items-center gap-1">
                           <span>👀 Kiểu mắt:</span>
                         </span>
-                        {!faceExpr.isAuto && (
+                        {faceExpr.enabled && !faceExpr.isAuto && (
                           <span className="text-[9px] text-dongho-paper/50 capitalize">
                             {faceExpr.eye}
                           </span>
@@ -2785,13 +2814,14 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                           { id: 'sleepy', label: '😴 Lim dim', desc: 'Nửa nhắm' },
                           { id: 'wink', label: '😉 Nháy mắt', desc: 'Tinh nghịch' },
                         ].map((eyeItem) => {
-                          const isSelected = !faceExpr.isAuto && faceExpr.eye === eyeItem.id && !faceExpr.customFaceCanvas;
+                          const isSelected = faceExpr.enabled && !faceExpr.isAuto && faceExpr.eye === eyeItem.id && !faceExpr.customFaceCanvas;
                           return (
                             <button
                               key={eyeItem.id}
                               onClick={() => {
                                 setFaceExpr((prev) => ({
                                   ...prev,
+                                  enabled: true,
                                   isAuto: false,
                                   eye: eyeItem.id as EyeShape,
                                   customFaceCanvas: null,
@@ -2820,7 +2850,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         <span className="font-semibold text-warm-amber flex items-center gap-1">
                           <span>👄 Kiểu miệng:</span>
                         </span>
-                        {!faceExpr.isAuto && (
+                        {faceExpr.enabled && !faceExpr.isAuto && (
                           <span className="text-[9px] text-dongho-paper/50 capitalize">
                             {faceExpr.mouth}
                           </span>
@@ -2835,13 +2865,14 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                           { id: 'open', label: '😮 Tròn chữ O', desc: 'Ngạc nhiên' },
                           { id: 'tongue', label: '😛 Thè lưỡi', desc: 'Tinh nghịch' },
                         ].map((mouthItem) => {
-                          const isSelected = !faceExpr.isAuto && faceExpr.mouth === mouthItem.id && !faceExpr.customFaceCanvas;
+                          const isSelected = faceExpr.enabled && !faceExpr.isAuto && faceExpr.mouth === mouthItem.id && !faceExpr.customFaceCanvas;
                           return (
                             <button
                               key={mouthItem.id}
                               onClick={() => {
                                 setFaceExpr((prev) => ({
                                   ...prev,
+                                  enabled: true,
                                   isAuto: false,
                                   mouth: mouthItem.id as MouthShape,
                                   customFaceCanvas: null,

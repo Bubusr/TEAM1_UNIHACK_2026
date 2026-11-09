@@ -83,6 +83,7 @@ export type MouthShape =
   | 'tongue';       // Thè lưỡi tinh nghịch
 
 export interface FaceExpression {
+  enabled?: boolean;              // Mặc định false: giữ nguyên 100% nét vẽ gốc của nhân vật
   isAuto?: boolean;               // Nếu true: tự động đổi theo hoạt ảnh
   eye?: EyeShape;                // 'normal' | 'happy' | 'sad' | 'sleepy' | 'wide' | 'wink'
   mouth?: MouthShape;            // 'smile' | 'big_smile' | 'sad' | 'neutral' | 'open' | 'tongue'
@@ -1321,8 +1322,9 @@ export function drawPaperPuppet(
   motion: CreatureAction = 'walk',
   tick = 0,
   touchSpring?: PaperTouchSpring,
-  showCreasePattern = true,
-  faceExpr?: FaceExpression // Biểu cảm mặt tự chọn — override motion mặc định
+  showCreasePattern = false,
+  faceExpr?: FaceExpression, // Biểu cảm mặt tự chọn — mặc định giữ nguyên nét vẽ gốc
+  drawLocalShadow = true
 ) {
   // =========================================================================
   // MESH DEFORMATION RENDERER — "Thước Dẻo Cao Su" Paper Puppet
@@ -1549,11 +1551,23 @@ export function drawPaperPuppet(
     const ff = y0d - cc * x0s - dd * y0s;
 
     ctx.save();
-    // Clip đúng hình tam giác đích
+    // Khử vết nứt viền tam giác (subpixel antialiasing seam) bằng cách nở nhẹ 0.45px ra ngoài tâm
+    const cx = (x0d + x1d + x2d) / 3;
+    const cy = (y0d + y1d + y2d) / 3;
+    const expand = (px: number, py: number) => {
+      const vx = px - cx;
+      const vy = py - cy;
+      const d = Math.hypot(vx, vy) || 1;
+      return { x: px + (vx / d) * 0.45, y: py + (vy / d) * 0.45 };
+    };
+    const e0 = expand(x0d, y0d);
+    const e1 = expand(x1d, y1d);
+    const e2 = expand(x2d, y2d);
+
     ctx.beginPath();
-    ctx.moveTo(x0d, y0d);
-    ctx.lineTo(x1d, y1d);
-    ctx.lineTo(x2d, y2d);
+    ctx.moveTo(e0.x, e0.y);
+    ctx.lineTo(e1.x, e1.y);
+    ctx.lineTo(e2.x, e2.y);
     ctx.closePath();
     ctx.clip();
     // Áp ma trận biến dạng & vẽ toàn bộ ảnh (canvas sẽ chỉ hiện phần trong clip)
@@ -1572,13 +1586,15 @@ export function drawPaperPuppet(
   ctx.translate(centerX, centerY + pose.hopY + springHopY);
   ctx.scale(direction * pose.squashX * springSquashX * perspScaleX, pose.stretchY * springStretchY);
 
-  // --- Bóng đổ dưới chân ---
-  ctx.save();
-  ctx.fillStyle = 'rgba(10, 17, 19, 0.35)';
-  ctx.beginPath();
-  ctx.ellipse(0, h * 0.46, w * 0.42 * Math.abs(perspScaleX), 7, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  // --- Bóng đổ dưới chân (chỉ vẽ khi drawLocalShadow = true) ---
+  if (drawLocalShadow) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(10, 17, 19, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, h * 0.46, w * 0.42 * Math.abs(perspScaleX), 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   // -------------------------------------------------------------------------
   // Render từng ô lưới bằng 2 tam giác (Mesh Warp)
@@ -1598,272 +1614,180 @@ export function drawPaperPuppet(
   }
 
   // -------------------------------------------------------------------------
-  // Overlay: đường cấn origami & hiệu ứng cảm xúc (vẽ ĐÈ LÊN lưới đã warp)
+  // Overlay: đường cấn origami & nét mặt tùy chọn (Chỉ vẽ khi người chơi bật)
   // -------------------------------------------------------------------------
   if (rig && rig.joints) {
     const toLocalX = (relX: number) => -w / 2 + relX * w;
     const toLocalY = (relY: number) => -h / 2 + relY * h;
 
-    // --- Đường cấn gấp nếp ---
+    // --- Đường cấn gấp nếp Origami (Chỉ vẽ khi bật cấn nếp) ---
     if (showCreasePattern) {
-      const neckX = toLocalX(neckJ ? neckJ.relX : 0.5);
-      const neckY = toLocalY(neckRelY);
-      const shLX  = toLocalX(shLRelX); const shLY = toLocalY(shLRelY);
-      const shRX  = toLocalX(shRRelX); const shRY = toLocalY(shRRelY);
-      const elLX  = toLocalX(elLJ  ? elLJ.relX  : 0.22); const elLY = toLocalY(elLJ  ? elLJ.relY  : 0.52);
-      const elRX  = toLocalX(elRJ  ? elRJ.relX  : 0.78); const elRY = toLocalY(elRJ  ? elRJ.relY  : 0.52);
-      const hpLX  = toLocalX(hpLRelX); const hpLY = toLocalY(hpLRelY);
-      const hpRX  = toLocalX(hpRRelX); const hpRY = toLocalY(hpRRelY);
-      const knLX  = toLocalX(knLJ  ? knLJ.relX  : 0.40); const knLY = toLocalY(knLJ  ? knLJ.relY  : 0.82);
-      const knRX  = toLocalX(knRJ  ? knRJ.relX  : 0.60); const knRY = toLocalY(knRJ  ? knRJ.relY  : 0.82);
-
-      drawOrigamiCreaseLine(ctx, neckX - 20, neckY, neckX + 20, neckY, 0.7);
-      drawOrigamiCreaseLine(ctx, neckX - 5,  neckY, shLX, shLY + 8, 0.65);
-      drawOrigamiCreaseLine(ctx, neckX + 5,  neckY, shRX, shRY + 8, 0.65);
-      drawOrigamiCreaseLine(ctx, elLX - 7,   elLY,  elLX + 7, elLY, 0.55);
-      drawOrigamiCreaseLine(ctx, elRX - 7,   elRY,  elRX + 7, elRY, 0.55);
-      drawOrigamiCreaseLine(ctx, hpLX - 10,  hpLY,  hpRX + 10, hpRY, 0.75);
-      drawOrigamiCreaseLine(ctx, knLX - 7,   knLY,  knLX + 7, knLY, 0.55);
-      drawOrigamiCreaseLine(ctx, knRX - 7,   knRY,  knRX + 7, knRY, 0.55);
-
-      // Accordion spring tại khuỷu khi tay uốn nhiều
-      if (elLJ && Math.abs(pose.armAngleL) > 0.3) {
-        drawAccordionPaperSpring(ctx, elLX - 5, elLY, elLX + 5, elLY, 9, 3, tick * 0.2);
-      }
-      if (elRJ && Math.abs(pose.armAngleR) > 0.3) {
-        drawAccordionPaperSpring(ctx, elRX - 5, elRY, elRX + 5, elRY, 9, 3, tick * 0.2);
-      }
-      if (knLJ && Math.abs(pose.legOffsetL) > 10) {
-        drawAccordionPaperSpring(ctx, knLX - 5, knLY, knLX + 5, knLY, 7, 3, tick * 0.15);
-      }
-      if (knRJ && Math.abs(pose.legOffsetR) > 10) {
-        drawAccordionPaperSpring(ctx, knRX - 5, knRY, knRX + 5, knRY, 7, 3, tick * 0.15);
-      }
+      const neckDisp = computeVertexDisplacement(neckJ ? neckJ.relX : 0.5, neckRelY);
+      const neckX = toLocalX(neckJ ? neckJ.relX : 0.5) + neckDisp.dx;
+      const neckY = toLocalY(neckRelY) + neckDisp.dy;
+      drawOrigamiCreaseLine(ctx, neckX - 18, neckY, neckX + 18, neckY, 0.45);
     }
 
     // --- Biểu cảm mặt: Pull-Tab Mechanism ---
-    // 1. Trường hợp người chơi tự vẽ nét mặt riêng (Custom Face Canvas):
-    if (faceExpr && faceExpr.customFaceCanvas && !faceExpr.isAuto) {
-      const faceCX = eyeL && eyeR ? (toLocalX(eyeL.relX) + toLocalX(eyeR.relX)) / 2 : toLocalX(0.5);
-      const faceCY = eyeL && eyeR && mouth ? (toLocalY(eyeL.relY) + toLocalY(mouth.relY)) / 2 : toLocalY(0.26);
-      const faceW = w * 0.44;
-      const faceH = h * 0.34;
-      ctx.drawImage(faceExpr.customFaceCanvas, faceCX - faceW / 2, faceCY - faceH / 2, faceW, faceH);
-    } else {
-      // 2. Vẽ nét mực Đông Hồ: Tự chọn hình dáng mắt & miệng hoặc tự động theo motion
-      if (eyeL && eyeR) {
-        const isBlinking = pose.eyeBlink > 0.5;
-        const ex1 = toLocalX(eyeL.relX);
-        const ey1 = toLocalY(eyeL.relY);
-        const ex2 = toLocalX(eyeR.relX);
-        const ey2 = toLocalY(eyeR.relY);
-        const er  = w * 0.045;
+    // QUAN TRỌNG: Mặc định giữ nguyên 100% nét mặt gốc của nhân vật!
+    // Chỉ vẽ khi người chơi chủ động bật tùy chỉnh nét mặt (faceExpr?.enabled === true)
+    if (faceExpr && faceExpr.enabled) {
+      if (faceExpr.customFaceCanvas) {
+        // Nét vẽ tay tự do: di chuyển theo độ uốn của vùng đầu
+        const neckDisp = computeVertexDisplacement(0.5, neckRelY);
+        const faceCX = (eyeL && eyeR ? (toLocalX(eyeL.relX) + toLocalX(eyeR.relX)) / 2 : toLocalX(0.5)) + neckDisp.dx;
+        const faceCY = (eyeL && eyeR && mouth ? (toLocalY(eyeL.relY) + toLocalY(mouth.relY)) / 2 : toLocalY(0.26)) + neckDisp.dy;
+        const faceW = w * 0.44;
+        const faceH = h * 0.34;
+        ctx.drawImage(faceExpr.customFaceCanvas, faceCX - faceW / 2, faceCY - faceH / 2, faceW, faceH);
+      } else {
+        // Biểu cảm theo mẫu: tính tọa độ ĐÃ BỊ BIẾN DẠNG THEO ĐẦU để bám chặt vào mặt
+        if (eyeL && eyeR) {
+          const eyeLDisp = computeVertexDisplacement(eyeL.relX, eyeL.relY);
+          const eyeRDisp = computeVertexDisplacement(eyeR.relX, eyeR.relY);
+          const ex1 = toLocalX(eyeL.relX) + eyeLDisp.dx;
+          const ey1 = toLocalY(eyeL.relY) + eyeLDisp.dy;
+          const ex2 = toLocalX(eyeR.relX) + eyeRDisp.dx;
+          const ey2 = toLocalY(eyeR.relY) + eyeRDisp.dy;
+          const er = w * 0.045;
 
-        // Xác định hình dáng mắt: faceExpr ưu tiên (nếu không auto) > motion fallback
-        const resolvedEye: EyeShape = (!faceExpr?.isAuto && faceExpr?.eye) ? faceExpr.eye : (
-          motion === 'happy_jump' || motion === 'dance' ? 'happy' :
-          motion === 'sad' ? 'sad' :
-          motion === 'sleep' ? 'sleepy' :
-          motion === 'teri_panic' ? 'wide' :
-          'normal'
-        );
+          const resolvedEye: EyeShape = (!faceExpr.isAuto && faceExpr.eye) ? faceExpr.eye : (
+            motion === 'happy_jump' || motion === 'dance' ? 'happy' :
+            motion === 'sad' ? 'sad' :
+            motion === 'sleep' ? 'sleepy' :
+            motion === 'teri_panic' ? 'wide' :
+            'normal'
+          );
 
-        ctx.save();
-        ctx.strokeStyle = '#1B2A2F';
-        ctx.fillStyle   = '#1B2A2F';
-        ctx.lineWidth   = Math.max(1, er * 0.4);
-        ctx.lineCap     = 'round';
+          ctx.save();
+          ctx.strokeStyle = '#1B2A2F';
+          ctx.fillStyle   = '#1B2A2F';
+          ctx.lineWidth   = Math.max(1, er * 0.4);
+          ctx.lineCap     = 'round';
 
-        const drawEye = (ex: number, ey: number, isLeft: boolean) => {
-          const shape = (resolvedEye === 'wink' && !isLeft) ? 'normal' : resolvedEye;
-          switch (shape) {
-            case 'sleepy':
-              // Mắt lim dim — cung nhắm nửa
-              ctx.beginPath();
-              ctx.arc(ex, ey + er * 0.15, er * 0.65, 0.05 * Math.PI, 0.95 * Math.PI, false);
-              ctx.stroke();
-              break;
-            case 'wink': // Mắt trái nháy (nhắm), được xử lý ở trên nếu isLeft
-              ctx.beginPath();
-              ctx.arc(ex, ey + er * 0.15, er * 0.55, 0.05 * Math.PI, 0.95 * Math.PI, false);
-              ctx.stroke();
-              break;
-            case 'happy':
-              // Mắt cười ^ ^
-              ctx.beginPath();
-              ctx.arc(ex, ey + er * 0.5, er * 0.7, 1.1 * Math.PI, 1.9 * Math.PI, false);
-              ctx.stroke();
-              break;
-            case 'sad':
-              // Mắt buồn ︵
-              ctx.beginPath();
-              ctx.arc(ex, ey + er * 0.7, er * 0.65, 1.15 * Math.PI, 1.85 * Math.PI, false);
-              ctx.stroke();
-              break;
-            case 'wide':
-              // Mắt tròn to hoảng hốt
-              ctx.beginPath();
-              ctx.arc(ex, ey, er * 0.6, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.fillStyle = '#FFF';
-              ctx.beginPath();
-              ctx.arc(ex - er * 0.2, ey - er * 0.2, er * 0.2, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.fillStyle = '#1B2A2F';
-              break;
-            case 'normal':
-            default:
-              // Chớp mắt tự nhiên override hình dáng
-              if (isBlinking) {
+          const drawEye = (ex: number, ey: number, isLeft: boolean) => {
+            const shape = (resolvedEye === 'wink' && !isLeft) ? 'normal' : resolvedEye;
+            switch (shape) {
+              case 'sleepy':
                 ctx.beginPath();
-                ctx.arc(ex, ey + er * 0.1, er * 0.5, 0.05 * Math.PI, 0.95 * Math.PI, false);
+                ctx.arc(ex, ey + er * 0.15, er * 0.65, 0.05 * Math.PI, 0.95 * Math.PI, false);
                 ctx.stroke();
-              } else {
+                break;
+              case 'wink':
                 ctx.beginPath();
-                ctx.arc(ex + (isLeft ? er * 0.15 : -er * 0.15), ey, er * 0.5, 0, Math.PI * 2);
+                ctx.arc(ex, ey + er * 0.15, er * 0.55, 0.05 * Math.PI, 0.95 * Math.PI, false);
+                ctx.stroke();
+                break;
+              case 'happy':
+                ctx.beginPath();
+                ctx.arc(ex, ey + er * 0.5, er * 0.7, 1.1 * Math.PI, 1.9 * Math.PI, false);
+                ctx.stroke();
+                break;
+              case 'sad':
+                ctx.beginPath();
+                ctx.arc(ex, ey + er * 0.7, er * 0.65, 1.15 * Math.PI, 1.85 * Math.PI, false);
+                ctx.stroke();
+                break;
+              case 'wide':
+                ctx.beginPath();
+                ctx.arc(ex, ey, er * 0.6, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.fillStyle = '#FFF';
                 ctx.beginPath();
-                ctx.arc(ex + (isLeft ? -er * 0.1 : -er * 0.3), ey - er * 0.2, er * 0.18, 0, Math.PI * 2);
+                ctx.arc(ex - er * 0.2, ey - er * 0.2, er * 0.2, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.fillStyle = '#1B2A2F';
-              }
+                break;
+              case 'normal':
+              default:
+                if (pose.eyeBlink > 0.5) {
+                  ctx.beginPath();
+                  ctx.arc(ex, ey + er * 0.1, er * 0.5, 0.05 * Math.PI, 0.95 * Math.PI, false);
+                  ctx.stroke();
+                } else {
+                  ctx.beginPath();
+                  ctx.arc(ex + (isLeft ? er * 0.15 : -er * 0.15), ey, er * 0.5, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.fillStyle = '#FFF';
+                  ctx.beginPath();
+                  ctx.arc(ex + (isLeft ? -er * 0.1 : -er * 0.3), ey - er * 0.2, er * 0.18, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.fillStyle = '#1B2A2F';
+                }
+                break;
+            }
+          };
+
+          drawEye(ex1, ey1, true);
+          drawEye(ex2, ey2, false);
+          ctx.restore();
+        }
+
+        if (mouth) {
+          const mouthDisp = computeVertexDisplacement(mouth.relX, mouth.relY);
+          const mx = toLocalX(mouth.relX) + mouthDisp.dx;
+          const my = toLocalY(mouth.relY) + mouthDisp.dy;
+          const mr = w * 0.055;
+
+          const resolvedMouth: MouthShape = (!faceExpr.isAuto && faceExpr.mouth) ? faceExpr.mouth : (
+            motion === 'happy_jump' || motion === 'dance' ? 'big_smile' :
+            motion === 'sad' ? 'sad' :
+            motion === 'sleep' ? 'neutral' :
+            motion === 'teri_panic' ? 'open' :
+            motion === 'wave' ? 'smile' :
+            'smile'
+          );
+
+          ctx.save();
+          ctx.strokeStyle = '#C8412F';
+          ctx.fillStyle   = '#C8412F';
+          ctx.lineWidth   = Math.max(1, mr * 0.35);
+          ctx.lineCap     = 'round';
+
+          switch (resolvedMouth) {
+            case 'big_smile':
+              ctx.beginPath();
+              ctx.ellipse(mx, my + mr * 0.2, mr * 0.75, mr * 0.6 + pose.mouthOpen * mr * 0.5, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#FF8FA3';
+              ctx.beginPath();
+              ctx.ellipse(mx, my + mr * 0.5, mr * 0.45, mr * 0.3, 0, 0, Math.PI * 2);
+              ctx.fill();
+              break;
+            case 'smile':
+              ctx.beginPath();
+              ctx.arc(mx, my - mr * 0.1, mr * 0.65, 0.12 * Math.PI, 0.88 * Math.PI, false);
+              ctx.stroke();
+              break;
+            case 'sad':
+              ctx.beginPath();
+              ctx.arc(mx, my + mr * 0.6, mr * 0.65, 1.1 * Math.PI, 1.9 * Math.PI, false);
+              ctx.stroke();
+              break;
+            case 'neutral':
+              ctx.beginPath();
+              ctx.moveTo(mx - mr * 0.5, my);
+              ctx.lineTo(mx + mr * 0.5, my);
+              ctx.stroke();
+              break;
+            case 'open':
+              ctx.beginPath();
+              ctx.arc(mx, my + mr * 0.1, mr * 0.42, 0, Math.PI * 2);
+              ctx.stroke();
+              break;
+            case 'tongue':
+              ctx.beginPath();
+              ctx.arc(mx, my - mr * 0.05, mr * 0.6, 0.1 * Math.PI, 0.9 * Math.PI, false);
+              ctx.stroke();
+              ctx.fillStyle = '#FF8FA3';
+              ctx.beginPath();
+              ctx.ellipse(mx, my + mr * 0.35, mr * 0.3, mr * 0.4, 0, 0, Math.PI * 2);
+              ctx.fill();
               break;
           }
-        };
-
-        drawEye(ex1, ey1, true);
-        drawEye(ex2, ey2, false);
-        ctx.restore();
-      }
-
-      if (mouth) {
-        const mx  = toLocalX(mouth.relX);
-        const my  = toLocalY(mouth.relY);
-        const mr  = w * 0.055;
-
-        // Xác định hình dáng miệng: faceExpr ưu tiên (nếu không auto) > motion fallback
-        const resolvedMouth: MouthShape = (!faceExpr?.isAuto && faceExpr?.mouth) ? faceExpr.mouth : (
-          motion === 'happy_jump' || motion === 'dance' ? 'big_smile' :
-          motion === 'sad' ? 'sad' :
-          motion === 'sleep' ? 'neutral' :
-          motion === 'teri_panic' ? 'open' :
-          motion === 'wave' ? 'smile' :
-          'smile'
-        );
-
-        ctx.save();
-        ctx.strokeStyle = '#C8412F';
-        ctx.fillStyle   = '#C8412F';
-        ctx.lineWidth   = Math.max(1, mr * 0.35);
-        ctx.lineCap     = 'round';
-
-        switch (resolvedMouth) {
-          case 'big_smile':
-            // Miệng há to vui vẻ — ellipse đậm
-            ctx.beginPath();
-            ctx.ellipse(mx, my + mr * 0.2, mr * 0.75, mr * 0.6 + pose.mouthOpen * mr * 0.5, 0, 0, Math.PI * 2);
-            ctx.fill();
-            // Lưỡi hồng bên trong
-            ctx.fillStyle = '#FF8FA3';
-            ctx.beginPath();
-            ctx.ellipse(mx, my + mr * 0.5, mr * 0.45, mr * 0.3, 0, 0, Math.PI * 2);
-            ctx.fill();
-            break;
-          case 'smile':
-            // Mỉm cười nhẹ — cung cong lên
-            ctx.beginPath();
-            ctx.arc(mx, my - mr * 0.1, mr * 0.65, 0.12 * Math.PI, 0.88 * Math.PI, false);
-            ctx.stroke();
-            break;
-          case 'sad':
-            // Miệng buồn cụp xuống — cung cong xuống
-            ctx.beginPath();
-            ctx.arc(mx, my + mr * 0.6, mr * 0.65, 1.1 * Math.PI, 1.9 * Math.PI, false);
-            ctx.stroke();
-            break;
-          case 'neutral':
-            // Miệng thẳng bình thường — đường thẳng ngắn
-            ctx.beginPath();
-            ctx.moveTo(mx - mr * 0.5, my);
-            ctx.lineTo(mx + mr * 0.5, my);
-            ctx.stroke();
-            break;
-          case 'open':
-            // Miệng há tròn ngạc nhiên — O tròn
-            ctx.beginPath();
-            ctx.arc(mx, my + mr * 0.1, mr * 0.42, 0, Math.PI * 2);
-            ctx.stroke();
-            break;
-          case 'tongue':
-            // Thè lưỡi tinh nghịch — cười + lưỡi thè
-            ctx.beginPath();
-            ctx.arc(mx, my - mr * 0.05, mr * 0.6, 0.1 * Math.PI, 0.9 * Math.PI, false);
-            ctx.stroke();
-            // Lưỡi hồng
-            ctx.fillStyle = '#FF8FA3';
-            ctx.beginPath();
-            ctx.ellipse(mx, my + mr * 0.35, mr * 0.3, mr * 0.4, 0, 0, Math.PI * 2);
-            ctx.fill();
-            break;
+          ctx.restore();
         }
-        ctx.restore();
       }
-    }
-
-    // --- Hiệu ứng cảm xúc nổi phía trên tờ giấy ---
-    // 1. Giọt nước mắt (sad)
-    if (motion === 'sad' && eyeL && eyeR) {
-      ctx.save();
-      ctx.fillStyle = '#4CC9F0';
-      const tearY1 = toLocalY(eyeL.relY) + 8 + ((tick * 1.2) % 20);
-      const tearY2 = toLocalY(eyeR.relY) + 8 + (((tick * 1.2) + 10) % 20);
-      ctx.beginPath();
-      ctx.arc(toLocalX(eyeL.relX), tearY1, 2.5, 0, Math.PI * 2);
-      ctx.arc(toLocalX(eyeR.relX), tearY2, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // 2. zZz ngủ
-    if (motion === 'sleep') {
-      ctx.save();
-      const hX = toLocalX(headJ ? headJ.relX : 0.5);
-      const hY = toLocalY(headJ ? headJ.relY : 0.18);
-      const flt = (tick * 0.65) % 36;
-      ctx.fillStyle = '#FFE18A';
-      ctx.strokeStyle = '#8A6F20';
-      ctx.lineWidth = 0.5;
-      (['z', 'Z', 'Z'] as string[]).forEach((ch, i) => {
-        const size = 9 + i * 3;
-        ctx.font = `bold ${size}px system-ui`;
-        ctx.fillText(ch, hX + 7 + i * 7, hY - 4 - flt * (0.35 + i * 0.25));
-      });
-      ctx.restore();
-    }
-
-    // 3. ✨ / 🎵 khi dance / happy_jump
-    if (motion === 'dance' || motion === 'happy_jump') {
-      ctx.save();
-      ctx.font = '12px system-ui';
-      const shLX = toLocalX(shLRelX) - 8;
-      const shLY = toLocalY(shLRelY) - 10 + Math.sin(tick * 0.2) * 4;
-      const shRX = toLocalX(shRRelX) + 6;
-      const shRY = toLocalY(shRRelY) - 12 + Math.cos(tick * 0.2) * 4;
-      ctx.fillText(motion === 'dance' ? '🎵' : '✨', shLX, shLY);
-      ctx.fillText(motion === 'dance' ? '🎶' : '🌟', shRX, shRY);
-      ctx.restore();
-    }
-
-    // 4. 💧 Mồ hôi (teri_panic)
-    if (motion === 'teri_panic') {
-      ctx.save();
-      ctx.font = '12px system-ui';
-      const px = toLocalX(headJ ? headJ.relX : 0.5);
-      const py = toLocalY(headJ ? headJ.relY : 0.18);
-      ctx.fillText('💧', px - 18, py - 4);
-      ctx.fillText('💧', px + 12, py - 6);
-      ctx.restore();
     }
   }
 
