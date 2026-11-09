@@ -28,3 +28,11 @@ yarn-error.log*
 # OS Files
 .DS_Store
 *.pem
+
+# Python Virtual Environments & Cache
+server/venv/
+venv/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+

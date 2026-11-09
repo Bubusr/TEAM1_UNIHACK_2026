@@ -11,19 +11,20 @@ interface BambooCanvasProps {
 export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState('#22c55e'); // Green bamboo
+  const [color, setColor] = useState('#6B8F71'); // Xanh tre tự nhiên
   const [brushSize, setBrushSize] = useState(8);
   const [isEraser, setIsEraser] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [hasContent, setHasContent] = useState(false);
 
+  // Bảng màu mộc bản Đông Hồ & Rừng tre theo mục 5.2
   const colors = [
-    { name: 'Xanh Mầm', hex: '#4ade80' },
-    { name: 'Xanh Tre', hex: '#16a34a' },
-    { name: 'Vàng Nắng', hex: '#fbbf24' },
-    { name: 'Đất Nâu', hex: '#b45309' },
-    { name: 'Hồng Nụ', hex: '#f472b6' },
-    { name: 'Mực Đen', hex: '#0f172a' },
+    { name: 'Xanh Tre Trầm', hex: '#3E5C45' },
+    { name: 'Xanh Tre Tự Nhiên', hex: '#6B8F71' },
+    { name: 'Vàng Cam Ấm (Ống Nứa)', hex: '#F4A259' },
+    { name: 'Vàng Trăng Rằm', hex: '#FFD166' },
+    { name: 'Đỏ Hoa Gạo (Đông Hồ)', hex: '#E63946' },
+    { name: 'Mực Tàu Đen', hex: '#1B2A2F' },
   ];
 
   useEffect(() => {
@@ -32,11 +33,8 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas dimensions
     canvas.width = 320;
     canvas.height = 320;
-
-    // Nền trong suốt
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (initialImage) {
@@ -48,15 +46,14 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
       };
       img.src = initialImage;
     } else {
-      // Vẽ sẵn hình gợi ý măng non mờ mờ
       drawStarterGhost(ctx);
     }
   }, [initialImage]);
 
   const drawStarterGhost = (ctx: CanvasRenderingContext2D) => {
     ctx.save();
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#52795B';
+    ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     // Thân măng
     ctx.beginPath();
@@ -100,7 +97,7 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
     const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
 
     ctx.lineTo(x, y);
-    ctx.strokeStyle = isEraser ? '#090d16' : color;
+    ctx.strokeStyle = isEraser ? '#132024' : color;
     ctx.lineWidth = brushSize;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -152,27 +149,27 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 bg-slate-900/90 border border-emerald-800/40 p-5 rounded-2xl shadow-xl w-full max-w-md">
+    <div className="flex flex-col items-center gap-4 bg-forest-darker/95 border-2 border-bamboo-mid/50 p-5 rounded-3xl shadow-2xl w-full max-w-md text-dongho-paper">
       <div className="flex items-center justify-between w-full">
-        <div className="text-sm font-semibold text-emerald-300 flex items-center gap-2">
-          <Wand2 className="w-4 h-4 text-emerald-400" />
-          Họa hình Măng Non của riêng bạn
+        <div className="text-sm font-semibold text-warm-glow flex items-center gap-2">
+          <Wand2 className="w-4 h-4 text-warm-amber" />
+          Nét vẽ độc nhất của riêng cậu
         </div>
         <button
           type="button"
           onClick={() => setPreviewMode(!previewMode)}
           className={`text-xs px-2.5 py-1 rounded-md font-medium border transition ${
             previewMode
-              ? 'bg-emerald-600 text-white border-emerald-500 shadow'
-              : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+              ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold shadow'
+              : 'bg-forest-deep text-dongho-paper/80 border-bamboo-mid/40 hover:text-warm-glow'
           }`}
         >
-          {previewMode ? 'Dừng xem trước' : '✨ Xem sống dậy'}
+          {previewMode ? 'Dừng xem trước' : '✨ Ngắm sống dậy'}
         </button>
       </div>
 
       {/* Canvas container */}
-      <div className="relative w-80 h-80 rounded-2xl bg-gradient-to-b from-slate-950 to-emerald-950/40 border-2 border-emerald-800/60 flex items-center justify-center overflow-hidden shadow-inner">
+      <div className="relative w-80 h-80 rounded-2xl bg-gradient-to-b from-forest-abyss to-forest-darker border-2 border-bamboo-mid/40 flex items-center justify-center overflow-hidden shadow-inner">
         <canvas
           ref={canvasRef}
           onMouseDown={startDrawing}
@@ -183,13 +180,13 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
           className={`cursor-crosshair touch-none ${
-            previewMode ? 'animate-breathe animate-sway drop-shadow-[0_0_15px_rgba(74,222,128,0.6)]' : ''
+            previewMode ? 'animate-breathe animate-sway-gentle drop-shadow-[0_0_16px_rgba(255,209,102,0.5)]' : ''
           }`}
         />
 
         {previewMode && (
-          <div className="absolute bottom-2 left-2 right-2 text-center text-[11px] bg-slate-950/80 backdrop-blur text-emerald-300 py-1 px-2 rounded-full border border-emerald-700/40">
-            🌱 Măng Non đang thở &amp; sống dậy trong Rừng Tre!
+          <div className="absolute bottom-2.5 left-2 right-2 text-center text-[11px] bg-forest-abyss/85 backdrop-blur text-warm-glow py-1 px-3 rounded-full border border-warm-amber/50">
+            🌱 Măng Non đang thở nhẹ nhàng giữa Rừng Tre
           </div>
         )}
       </div>
@@ -210,7 +207,7 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
                 style={{ backgroundColor: c.hex }}
                 title={c.name}
                 className={`w-7 h-7 rounded-full border-2 transition-transform ${
-                  !isEraser && color === c.hex ? 'scale-125 border-white shadow-md' : 'border-slate-800 opacity-90'
+                  !isEraser && color === c.hex ? 'scale-125 border-dongho-paper shadow-md' : 'border-forest-darker opacity-80'
                 }`}
               />
             ))}
@@ -222,8 +219,8 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
               onClick={() => setIsEraser(!isEraser)}
               className={`p-2 rounded-lg border text-xs flex items-center gap-1 ${
                 isEraser
-                  ? 'bg-amber-600 text-white border-amber-500'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+                  ? 'bg-warm-amber text-forest-abyss border-warm-amber font-bold'
+                  : 'bg-forest-deep text-dongho-paper/80 border-bamboo-mid/40 hover:text-warm-glow'
               }`}
             >
               <Eraser className="w-4 h-4" />
@@ -231,8 +228,8 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
             <button
               type="button"
               onClick={clearCanvas}
-              title="Xóa vẽ lại"
-              className="p-2 rounded-lg border bg-slate-800 text-slate-300 border-slate-700 hover:text-red-400"
+              title="Vẽ lại nét khác"
+              className="p-2 rounded-lg border bg-forest-deep text-dongho-paper/80 border-bamboo-mid/40 hover:text-dongho-red"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -240,7 +237,7 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
         </div>
 
         {/* Brush size slider */}
-        <div className="flex items-center gap-3 text-xs text-slate-300">
+        <div className="flex items-center gap-3 text-xs text-dongho-paper/70">
           <span>Nét:</span>
           <input
             type="range"
@@ -248,16 +245,16 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
             max="24"
             value={brushSize}
             onChange={(e) => setBrushSize(Number(e.target.value))}
-            className="w-full accent-emerald-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer"
+            className="w-full accent-warm-amber bg-forest-deep h-1.5 rounded-lg appearance-none cursor-pointer"
           />
-          <span className="w-6 text-right font-mono">{brushSize}px</span>
+          <span className="w-6 text-right font-mono text-warm-glow">{brushSize}px</span>
         </div>
 
         {/* Upload photo option */}
-        <div className="flex items-center justify-center pt-1 border-t border-slate-800">
-          <label className="flex items-center gap-2 text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer py-1 px-3 rounded-lg hover:bg-emerald-950/40 transition">
+        <div className="flex items-center justify-center pt-1 border-t border-bamboo-mid/20">
+          <label className="flex items-center gap-2 text-xs text-warm-amber hover:text-warm-glow cursor-pointer py-1 px-3 rounded-lg hover:bg-forest-deep transition">
             <Upload className="w-3.5 h-3.5" />
-            <span>Hoặc tải ảnh từ máy (tự động tách nền)</span>
+            <span>Hoặc tải ảnh từ máy (giữ nguyên hình gốc)</span>
             <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
           </label>
         </div>

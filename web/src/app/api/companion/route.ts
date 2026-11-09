@@ -59,3 +59,4 @@ Quy tắc:
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+

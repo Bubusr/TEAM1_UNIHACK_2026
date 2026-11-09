@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Goal, JournalEntry, Personality } from '@/lib/types';
-import { generatePersonaGreeting } from '@/lib/ai-companion';
+import { generatePersonaGreeting, getCognitiveStageName } from '@/lib/ai-companion';
 import { StorageService } from '@/lib/storage';
-import { X, Send, HelpCircle, MessageSquare, Sparkles, Award, ArrowRight } from 'lucide-react';
+import { X, Send, HelpCircle, MessageSquare, Sparkles, Waves, Heart } from 'lucide-react';
 import AnimatedMangNon from './AnimatedMangNon';
 
 interface ChatModalProps {
@@ -30,7 +30,6 @@ export default function ChatModal({
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    // Khởi tạo lời chào đầu tiên
     const greeting = generatePersonaGreeting(goal.personality, goal.name);
     setMessages([{ sender: 'companion', text: greeting }]);
   }, [goal]);
@@ -67,8 +66,7 @@ export default function ChatModal({
           setQuizAnswered(null);
         }
 
-        // Tăng chỉ số
-        applyStatGain(reply.statGain);
+        applyStatGain(reply.statGain, reply.cognitiveStageUpdated);
       }
     } catch (err) {
       console.error(err);
@@ -77,13 +75,17 @@ export default function ChatModal({
     }
   };
 
-  const applyStatGain = (statGain: { type: 'intelligence' | 'perseverance' | 'fitness' | 'creativity'; amount: number }) => {
+  const applyStatGain = (
+    statGain: { type: 'intelligence' | 'perseverance' | 'fitness' | 'creativity'; amount: number },
+    newStage?: any
+  ) => {
     const updated = { ...goal };
     updated.stats[statGain.type] += statGain.amount;
     updated.interactionCount += 1;
     updated.lastInteraction = Date.now();
+    if (newStage) updated.cognitiveStage = newStage;
 
-    // Map liên kết chỉ số: nếu có linkedGoalId, tăng 20%
+    // Cơ chế lan toả 20% sang Goal được nối
     if (updated.linkedGoalId) {
       const allGoals = StorageService.getGoals();
       const linked = allGoals.find((g) => g.id === updated.linkedGoalId && !g.isResting);
@@ -91,12 +93,12 @@ export default function ChatModal({
         const spreadAmount = Math.max(1, Math.floor(statGain.amount * 0.2));
         linked.stats[statGain.type] += spreadAmount;
         StorageService.updateGoal(linked);
-        setStatNotification(`+${statGain.amount} ${statGain.type} (Lan tỏa +${spreadAmount} sang ${linked.name})`);
+        setStatNotification(`+${statGain.amount} mầm lực (Lan toả +${spreadAmount} sang ${linked.name})`);
       } else {
-        setStatNotification(`+${statGain.amount} ${statGain.type}`);
+        setStatNotification(`+${statGain.amount} mầm lực`);
       }
     } else {
-      setStatNotification(`+${statGain.amount} ${statGain.type}`);
+      setStatNotification(`+${statGain.amount} mầm lực`);
     }
 
     setTimeout(() => setStatNotification(null), 3500);
@@ -114,17 +116,17 @@ export default function ChatModal({
         ...prev,
         {
           sender: 'companion',
-          text: `🎯 Hoan hô bạn! ${activeQuiz.explanation}`,
-          statGain: { type: 'intelligence', amount: 10 },
+          text: `🎯 Hay quá cậu ơi! ${activeQuiz.explanation}`,
+          statGain: { type: 'intelligence', amount: 8 },
         },
       ]);
-      applyStatGain({ type: 'intelligence', amount: 10 });
+      applyStatGain({ type: 'intelligence', amount: 8 });
     } else {
       setMessages((prev) => [
         ...prev,
         {
           sender: 'companion',
-          text: `Gần đúng rồi nè! Cùng xem nhé: ${activeQuiz.explanation}`,
+          text: `Gần đúng rồi nè cậu! ${activeQuiz.explanation}`,
           statGain: { type: 'perseverance', amount: 4 },
         },
       ]);
@@ -133,23 +135,23 @@ export default function ChatModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-emerald-800/60 rounded-3xl shadow-2xl flex flex-col h-[90vh] max-h-[720px] overflow-hidden text-slate-100">
-        {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-emerald-900/40 bg-slate-950/60 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-forest-abyss/85 backdrop-blur-md">
+      <div className="relative w-full max-w-2xl bg-forest-deep border-2 border-bamboo-mid/50 rounded-3xl shadow-2xl flex flex-col h-[90vh] max-h-[720px] overflow-hidden text-dongho-paper">
+        {/* Header dạng thẻ tre mộc bản */}
+        <div className="p-4 sm:p-5 border-b border-bamboo-mid/30 bg-forest-darker/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-950 border border-emerald-700/60 flex items-center justify-center overflow-hidden">
+            <div className="w-12 h-12 rounded-2xl bg-forest-abyss border border-bamboo-soft/40 flex items-center justify-center overflow-hidden">
               <AnimatedMangNon goal={goal} size="sm" showStats={false} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-emerald-300">{goal.name}</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 capitalize">
+                <h3 className="font-bold text-base text-warm-glow">{goal.name}</h3>
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-forest-mist border border-bamboo-soft text-bamboo-light capitalize">
                   {goal.personality}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                Lượt tương tác: <span className="text-emerald-400 font-semibold">{goal.interactionCount}</span> · Cấp độ: {goal.level}
+              <p className="text-xs text-dongho-paper/70">
+                Giai đoạn: <span className="text-warm-amber font-medium">{getCognitiveStageName(goal.cognitiveStage || 'raw_curiosity')}</span> · {goal.interactionCount} lần tâm sự
               </p>
             </div>
           </div>
@@ -157,14 +159,14 @@ export default function ChatModal({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onRestGoal(goal)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-300 transition flex items-center gap-1 shadow"
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-warm-wood/30 hover:bg-warm-wood/50 border border-warm-amber text-warm-glow transition flex items-center gap-1.5 shadow"
             >
-              <Award className="w-3.5 h-3.5" />
-              <span>An nghỉ &amp; Mint NFT</span>
+              <Waves className="w-3.5 h-3.5 text-warm-glow" />
+              <span>Tiễn đưa an nghỉ</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-2 rounded-xl text-dongho-paper/60 hover:text-dongho-paper hover:bg-forest-mist transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -173,35 +175,35 @@ export default function ChatModal({
 
         {/* Floating Stat Notification */}
         {statNotification && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg animate-bounce flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-gradient-to-r from-bamboo-deep to-forest-mist text-warm-glow text-xs font-bold px-4 py-1.5 rounded-full border border-warm-amber/60 shadow-lg animate-bounce flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-warm-glow" />
             {statNotification}
           </div>
         )}
 
         {/* Mode Switcher */}
-        <div className="flex items-center px-4 py-2 bg-slate-950/30 border-b border-slate-800/60 gap-2">
+        <div className="flex items-center px-4 py-2 bg-forest-darker/40 border-b border-bamboo-mid/20 gap-2">
           <button
             onClick={() => setMode('chat')}
             className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg font-medium transition ${
               mode === 'chat'
-                ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/60'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-bamboo-deep text-warm-glow border border-warm-amber/50'
+                : 'text-dongho-paper/60 hover:text-dongho-paper'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            Tâm sự &amp; Kể chuyện
+            Tâm sự cùng Măng Non
           </button>
           <button
             onClick={() => setMode('quiz')}
             className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg font-medium transition ${
               mode === 'quiz'
-                ? 'bg-amber-900/60 text-amber-300 border border-amber-700/60'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-warm-wood/40 text-warm-glow border border-warm-amber'
+                : 'text-dongho-paper/60 hover:text-dongho-paper'
             }`}
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            Quiz thử tài nhẹ nhàng
+            Đố vui nhẹ nhàng
           </button>
         </div>
 
@@ -213,10 +215,10 @@ export default function ChatModal({
               className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-2xl p-3.5 text-sm leading-relaxed ${
+                className={`max-w-[82%] rounded-2xl p-4 text-sm leading-relaxed ${
                   m.sender === 'user'
-                    ? 'bg-emerald-700 text-white rounded-br-sm shadow-md'
-                    : 'bg-slate-800/90 border border-emerald-900/40 text-slate-200 rounded-bl-sm shadow'
+                    ? 'bg-bamboo-deep text-dongho-paper border border-bamboo-soft/40 rounded-br-sm shadow'
+                    : 'bg-forest-mist/90 border border-bamboo-mid/40 text-dongho-paper rounded-bl-sm shadow'
                 }`}
               >
                 {m.text}
@@ -226,22 +228,22 @@ export default function ChatModal({
 
           {/* Active Quiz if any */}
           {activeQuiz && (
-            <div className="bg-gradient-to-br from-amber-950/50 to-slate-900 border border-amber-700/50 rounded-2xl p-4 my-2 text-slate-100 shadow-lg">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300 mb-2">
-                <HelpCircle className="w-4 h-4" />
-                Câu đố từ Măng Non:
+            <div className="bg-forest-darker/90 border border-warm-amber/50 rounded-2xl p-4 my-2 text-dongho-paper shadow-lg">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-warm-glow mb-2">
+                <HelpCircle className="w-4 h-4 text-warm-amber" />
+                Câu đố nhỏ từ Măng Non:
               </div>
               <p className="text-sm font-medium mb-3">{activeQuiz.question}</p>
               <div className="space-y-2">
                 {activeQuiz.options.map((opt: string, i: number) => {
-                  let btnClass = 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200';
+                  let btnClass = 'bg-forest-deep hover:bg-forest-mist border-bamboo-mid/40 text-dongho-paper';
                   if (quizAnswered !== null) {
                     if (i === activeQuiz.correctIndex) {
-                      btnClass = 'bg-emerald-800/90 border-emerald-500 text-white font-semibold';
+                      btnClass = 'bg-bamboo-deep border-warm-amber text-warm-glow font-semibold';
                     } else if (i === quizAnswered) {
-                      btnClass = 'bg-red-900/70 border-red-600 text-red-200';
+                      btnClass = 'bg-dongho-crimson/40 border-dongho-red text-dongho-paper';
                     } else {
-                      btnClass = 'opacity-50 bg-slate-800 border-slate-800';
+                      btnClass = 'opacity-40 bg-forest-deep border-forest-deep';
                     }
                   }
                   return (
@@ -260,8 +262,8 @@ export default function ChatModal({
           )}
 
           {loading && (
-            <div className="flex items-center gap-2 text-xs text-emerald-400 italic">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <div className="flex items-center gap-2 text-xs text-warm-glow italic">
+              <span className="w-2 h-2 rounded-full bg-warm-glow animate-ping"></span>
               Măng Non đang lắng nghe và suy ngẫm...
             </div>
           )}
@@ -270,7 +272,7 @@ export default function ChatModal({
         </div>
 
         {/* Input Bar */}
-        <div className="p-3 sm:p-4 bg-slate-950/80 border-t border-slate-800">
+        <div className="p-3 sm:p-4 bg-forest-darker/90 border-t border-bamboo-mid/30">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -284,17 +286,17 @@ export default function ChatModal({
               onChange={(e) => setInputMessage(e.target.value)}
               placeholder={
                 mode === 'chat'
-                  ? 'Kể cho Măng Non nghe điều bạn vừa học được...'
-                  : 'Gợi ý chủ đề để Măng Non đố bạn...'
+                  ? 'Kể cho Măng Non nghe điều cậu vừa trải nghiệm hôm nay...'
+                  : 'Gợi ý một chủ đề để Măng Non đố cậu...'
               }
-              className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+              className="flex-1 bg-forest-deep border border-bamboo-mid/40 rounded-xl px-4 py-2.5 text-sm text-dongho-paper placeholder-dongho-paper/40 focus:outline-none focus:border-warm-amber transition"
             />
             <button
               type="submit"
               disabled={!inputMessage.trim() || loading}
-              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl font-medium text-sm transition flex items-center gap-1 shadow-md shadow-emerald-950"
+              className="px-4 py-2.5 bg-warm-amber hover:bg-warm-glow disabled:opacity-40 text-forest-abyss font-bold rounded-xl text-sm transition flex items-center gap-1 shadow-md"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4 text-forest-abyss" />
             </button>
           </form>
         </div>

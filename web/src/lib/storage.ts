@@ -15,6 +15,7 @@ const SEED_GOALS: Goal[] = [
     name: 'Chinh phục IELTS 7.5',
     level: 'intermediate',
     personality: 'curious',
+    cognitiveStage: 'association',
     imageUri: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="30" ry="40" fill="%234ade80"/><circle cx="40" cy="40" r="5" fill="%230f172a"/><circle cx="60" cy="40" r="5" fill="%230f172a"/><path d="M42 55 Q50 65 58 55" stroke="%230f172a" stroke-width="3" fill="none"/><polygon points="50,10 40,25 60,25" fill="%2322c55e"/></svg>',
     stats: {
       intelligence: 68,
@@ -46,7 +47,8 @@ const SEED_GOALS: Goal[] = [
     name: 'Đọc 10 trang sách tiếng Anh mỗi ngày',
     level: 'beginner',
     personality: 'excited',
-    imageUri: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="52" rx="28" ry="36" fill="%2386efac"/><circle cx="42" cy="45" r="4" fill="%230f172a"/><circle cx="58" cy="45" r="4" fill="%230f172a"/><path d="M43 56 Q50 68 57 56" stroke="%23e11d48" stroke-width="3" fill="%23fda4af"/><polygon points="45,15 35,30 55,30" fill="%2316a34a"/><polygon points="55,15 45,30 65,30" fill="%2315803d"/></svg>',
+    cognitiveStage: 'association',
+    imageUri: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="28" ry="38" fill="%2386efac"/><circle cx="42" cy="45" r="4" fill="%230f172a"/><circle cx="58" cy="45" r="4" fill="%230f172a"/><path d="M43 56 Q50 68 57 56" stroke="%23e11d48" stroke-width="3" fill="%23fda4af"/><polygon points="45,15 35,30 55,30" fill="%2316a34a"/><polygon points="55,15 45,30 65,30" fill="%2315803d"/></svg>',
     stats: {
       intelligence: 52,
       perseverance: 60,
@@ -227,3 +229,4 @@ export const StorageService = {
     }
   },
 };
+

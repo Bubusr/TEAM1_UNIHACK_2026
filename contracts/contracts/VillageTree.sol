@@ -58,3 +58,4 @@ contract VillageTree {
         return (totalLifetimeEnergy, currentCycleEnergy, thresholdForBlessing, blessingCycleCount);
     }
 }
+

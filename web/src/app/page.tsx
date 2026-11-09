@@ -1,181 +1,595 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Sparkles, Trees, Landmark, Flower2, Coffee, ShieldCheck, ArrowRight, Wand2, Zap } from 'lucide-react';
-import NewGoalModal from '@/components/NewGoalModal';
-import { StorageService } from '@/lib/storage';
-import { Goal } from '@/lib/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import MobileFrame from '@/components/MobileFrame';
+import DemoControlPanel from '@/components/DemoControlPanel';
+import { AppStore, AppStateData, Mangnon, Personality, MemoryItem, ChatMessage, AppSettings } from '@/lib/app-state';
+import { content } from '@/content/vi';
+import { SoundEngine } from '@/lib/sound-engine';
 
-export default function HomePage() {
-  const router = useRouter();
-  const [showOnboardModal, setShowOnboardModal] = useState(false);
+// Screens
+import S01NightForest from '@/screens/S01NightForest';
+import S02OpenBamboo from '@/screens/S02OpenBamboo';
+import S03CreateFigure from '@/screens/S03CreateFigure';
+import S04NamingPersonality from '@/screens/S04NamingPersonality';
+import S05FirstMeeting from '@/screens/S05FirstMeeting';
+import S06HomeForest from '@/screens/S06HomeForest';
+import S07StoryChat from '@/screens/S07StoryChat';
+import S08Memories from '@/screens/S08Memories';
+import S09JourneySheet from '@/screens/S09JourneySheet';
+import S10RestingRitual from '@/screens/S10RestingRitual';
+import S11MemoryStream from '@/screens/S11MemoryStream';
+import S12PhuDongVillage from '@/screens/S12PhuDongVillage';
+import S13Settings from '@/screens/S13Settings';
 
-  const handleGoalCreated = (goal: Goal) => {
-    StorageService.addGoal(goal);
-    setShowOnboardModal(false);
-    router.push('/forest');
+// Hash routes mapping
+const SCREEN_HASH_MAP: Record<string, string> = {
+  S01: '#/bat-dau/ong-nua',
+  S02: '#/bat-dau/mo',
+  S03: '#/bat-dau/tao-hinh',
+  S04: '#/bat-dau/dat-ten',
+  S05: '#/bat-dau/gap-dau',
+  S06: '#/rung',
+  S07: '#/ke',
+  S08: '#/nho',
+  S11: '#/vuon',
+  S12: '#/lang',
+  S13: '#/cai-dat',
+};
+
+const HASH_SCREEN_MAP: Record<string, string> = {
+  '#/bat-dau/ong-nua': 'S01',
+  '#/bat-dau/mo': 'S02',
+  '#/bat-dau/tao-hinh': 'S03',
+  '#/bat-dau/dat-ten': 'S04',
+  '#/bat-dau/gap-dau': 'S05',
+  '#/rung': 'S06',
+  '#/ke': 'S07',
+  '#/nho': 'S08',
+  '#/vuon': 'S11',
+  '#/lang': 'S12',
+  '#/cai-dat': 'S13',
+};
+
+export default function MangNonApp() {
+  const [state, setState] = useState<AppStateData | null>(null);
+  const [showJourneySheet, setShowJourneySheet] = useState(false);
+  const [showRestingRitual, setShowRestingRitual] = useState(false);
+  const [welcomeBanner, setWelcomeBanner] = useState<string | null>(null);
+
+  // Temporary onboarding creation draft
+  const [draftImageUri, setDraftImageUri] = useState<string>('');
+  const [draftImageSource, setDraftImageSource] = useState<'draw' | 'photo' | 'upload' | 'sample'>('draw');
+  const [draftName, setDraftName] = useState<string>('Măng');
+  const [draftPersonality, setDraftPersonality] = useState<Personality>('haohung');
+
+  // Load initial state
+  useEffect(() => {
+    const loaded = AppStore.load();
+    const hash = window.location.hash;
+    const mappedScreen = HASH_SCREEN_MAP[hash];
+
+    let initialScreen = loaded.currentScreen;
+    if (mappedScreen) {
+      initialScreen = mappedScreen;
+    } else if (!loaded.activeMangnon && loaded.currentScreen === 'S06') {
+      initialScreen = 'S01';
+    }
+
+    // Check Welcome Back (UC08)
+    if (loaded.activeMangnon && loaded.settings.lastOpenedAt) {
+      const daysDiff = (Date.now() - new Date(loaded.settings.lastOpenedAt).getTime()) / (1000 * 3600 * 24);
+      if (daysDiff >= 7) {
+        setWelcomeBanner(content.s06_homeForest.welcomeBackLong);
+      } else if (daysDiff >= 3) {
+        setWelcomeBanner(content.s06_homeForest.welcomeBackMild);
+      }
+    }
+
+    // Update lastOpenedAt
+    const updated = {
+      ...loaded,
+      currentScreen: initialScreen,
+      settings: {
+        ...loaded.settings,
+        lastOpenedAt: new Date().toISOString(),
+      },
+    };
+
+    setState(updated);
+    AppStore.save(updated);
+
+    // Sync hash
+    if (SCREEN_HASH_MAP[initialScreen]) {
+      window.location.hash = SCREEN_HASH_MAP[initialScreen];
+    }
+  }, []);
+
+  // Listen to hash changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      const h = window.location.hash;
+      const targetScreen = HASH_SCREEN_MAP[h];
+      if (targetScreen && state && state.currentScreen !== targetScreen) {
+        setState((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, currentScreen: targetScreen };
+          AppStore.save(next);
+          return next;
+        });
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [state]);
+
+  // Navigate helper
+  const navigateTo = useCallback((screen: string) => {
+    SoundEngine.playBambooKnock();
+    setState((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, currentScreen: screen };
+      AppStore.save(next);
+      return next;
+    });
+    if (SCREEN_HASH_MAP[screen]) {
+      window.location.hash = SCREEN_HASH_MAP[screen];
+    }
+  }, []);
+
+  if (!state) return null;
+
+  // Determine current effective time of day and season
+  const getTimeOfDay = (): 'morning' | 'noon' | 'dusk' | 'night' => {
+    if (state.settings.timeOverride && state.settings.timeOverride !== 'real') {
+      return state.settings.timeOverride;
+    }
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'noon';
+    if (hour >= 17 && hour < 19) return 'dusk';
+    return 'night';
+  };
+
+  const getSeason = (): 'spring' | 'summer' | 'autumn' | 'winter' => {
+    if (state.settings.seasonOverride && state.settings.seasonOverride !== 'real') {
+      return state.settings.seasonOverride;
+    }
+    const month = new Date().getMonth() + 1;
+    if (month >= 2 && month <= 4) return 'spring';
+    if (month >= 5 && month <= 7) return 'summer';
+    if (month >= 8 && month <= 10) return 'autumn';
+    return 'winter';
+  };
+
+  const timeOfDay = getTimeOfDay();
+  const season = getSeason();
+
+  // Bottom Navigation visibility
+  const isBottomNavVisible = ['S06', 'S11', 'S12'].includes(state.currentScreen) && !showJourneySheet && !showRestingRitual;
+
+  // FLOW A: Onboarding Steps
+  const handleTapBambooS01 = () => {
+    navigateTo('S02');
+  };
+
+  const handleCompleteS02 = () => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, bambooOpened: true };
+      AppStore.save(next);
+      return next;
+    });
+    navigateTo('S03');
+  };
+
+  const handleConfirmFigureS03 = (imageUri: string, source: 'draw' | 'photo' | 'upload' | 'sample') => {
+    setDraftImageUri(imageUri);
+    setDraftImageSource(source);
+    navigateTo('S04');
+  };
+
+  const handleNextNamingS04 = (name: string, personality: Personality) => {
+    setDraftName(name);
+    setDraftPersonality(personality);
+    navigateTo('S05');
+  };
+
+  const handleCompleteFirstMeetingS05 = (goalTitle: string, durationDays: number | null) => {
+    const newMangnon: Mangnon = {
+      id: `mn-${Date.now()}`,
+      name: draftName,
+      personality: draftPersonality,
+      stage: 1,
+      imageUri: draftImageUri,
+      imageSource: draftImageSource,
+      status: 'active',
+      goalTitle,
+      likes: ['tiếng gió reo', 'ngắm lá rơi'],
+      dislike: 'nơi ồn ào',
+      sessionsCount: 1,
+      activeDays: [new Date().toISOString().split('T')[0]],
+      createdAt: new Date().toISOString(),
+    };
+
+    const initialGreetingMessage: ChatMessage = {
+      id: `msg-init-${Date.now()}`,
+      role: 'mangnon',
+      text: `Chào cậu, mình là ${draftName}. Mình rất vui vì được đồng hành cùng cậu trên hành trình "${goalTitle}"!`,
+      createdAt: new Date().toISOString(),
+    };
+
+    setState((prev) => {
+      if (!prev) return prev;
+      const next: AppStateData = {
+        ...prev,
+        activeMangnon: newMangnon,
+        currentScreen: 'S06',
+        messages: [initialGreetingMessage],
+      };
+      AppStore.save(next);
+      return next;
+    });
+
+    SoundEngine.playBlessingChime();
+    navigateTo('S06');
+  };
+
+  // FLOW B: Story Chat & Memories
+  const handleSendMessageS07 = (userText: string, replyText: string, newMemoryCandidate?: string) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const userMsg: ChatMessage = {
+        id: `msg-u-${Date.now()}`,
+        role: 'user',
+        text: userText,
+        createdAt: new Date().toISOString(),
+      };
+      const botMsg: ChatMessage = {
+        id: `msg-b-${Date.now() + 1}`,
+        role: 'mangnon',
+        text: replyText,
+        createdAt: new Date().toISOString(),
+      };
+
+      let newMems = prev.memories;
+      if (newMemoryCandidate && prev.activeMangnon) {
+        const memItem: MemoryItem = {
+          id: `mem-${Date.now()}`,
+          mangnonId: prev.activeMangnon.id,
+          text: newMemoryCandidate,
+          pinned: false,
+          forgotten: false,
+          createdAt: new Date().toISOString(),
+        };
+        newMems = [memItem, ...prev.memories];
+      }
+
+      // Check stage progression
+      const active = prev.activeMangnon;
+      let nextStage = active?.stage || 1;
+      const sessions = (active?.sessionsCount || 0) + 1;
+      if (sessions >= 35) nextStage = 4;
+      else if (sessions >= 15) nextStage = 3;
+      else if (sessions >= 5) nextStage = 2;
+
+      const next: AppStateData = {
+        ...prev,
+        messages: [...prev.messages, userMsg, botMsg],
+        memories: newMems,
+        activeMangnon: active
+          ? {
+              ...active,
+              sessionsCount: sessions,
+              stage: Math.max(active.stage, nextStage) as 1 | 2 | 3 | 4,
+            }
+          : null,
+      };
+      AppStore.save(next);
+      return next;
+    });
+  };
+
+  // Toggle Pin Memory
+  const handleTogglePinMemory = (memoryId: string) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const updated = prev.memories.map((m) =>
+        m.id === memoryId ? { ...m, pinned: !m.pinned } : m
+      );
+      const next = { ...prev, memories: updated };
+      AppStore.save(next);
+      return next;
+    });
+  };
+
+  // Forget Memory (UC07)
+  const handleForgetMemory = (memoryId: string) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const updated = prev.memories.map((m) =>
+        m.id === memoryId ? { ...m, forgotten: true } : m
+      );
+      const next = { ...prev, memories: updated };
+      AppStore.save(next);
+      return next;
+    });
+  };
+
+  // FLOW C: Resting Ritual (S10)
+  const handleFinishRestingRitual = (lastWords: string, finalMemories: string[]) => {
+    setState((prev) => {
+      if (!prev || !prev.activeMangnon) return prev;
+      const rested: Mangnon = {
+        ...prev.activeMangnon,
+        status: 'resting',
+        restedAt: new Date().toISOString(),
+        lastWords,
+        finalMemories,
+      };
+
+      const next: AppStateData = {
+        ...prev,
+        activeMangnon: null,
+        restingMangnons: [rested, ...prev.restingMangnons],
+        villageLeaves: prev.villageLeaves + 1,
+        currentScreen: 'S06',
+      };
+      AppStore.save(next);
+      return next;
+    });
+
+    setShowRestingRitual(false);
+    setShowJourneySheet(false);
+    navigateTo('S06');
+  };
+
+  // FLOW D: Trigger Bloom on Village Tree
+  const handleTriggerBloom = () => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const next = {
+        ...prev,
+        villageLeaves: Math.max(prev.villageLeaves, prev.villageThreshold),
+        lastBloomedAt: new Date().toISOString(),
+      };
+      AppStore.save(next);
+      return next;
+    });
+  };
+
+  // FLOW H: Reset All Data (UC14)
+  const handleResetAllData = () => {
+    const fresh = AppStore.resetAll();
+    setState(fresh);
+    navigateTo('S01');
   };
 
   return (
-    <div className="relative overflow-hidden text-slate-100 pb-20">
-      {/* Hero Section */}
-      <div className="relative pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col items-center text-center">
-        {/* Glow ambient */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-emerald-500/15 rounded-full blur-[120px] pointer-events-none"></div>
-        <div className="absolute top-40 left-1/2 -translate-x-1/2 w-[350px] h-[200px] bg-amber-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-
-        {/* Tag badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-xs font-semibold mb-6 shadow-lg shadow-emerald-950/60">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>UniHack 2026 · Avalanche L1 &amp; C-Chain Prototype</span>
-        </div>
-
-        {/* Title */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-4xl text-transparent bg-clip-text bg-gradient-to-b from-white via-emerald-100 to-emerald-400">
-          MĂNG NON
-        </h1>
-        <p className="mt-4 text-base sm:text-xl text-emerald-200/90 max-w-2xl font-light leading-relaxed">
-          Sinh linh đồng hành học tập độc lập — sinh ra từ ống tre phát sáng, lớn lên cùng tri thức của bạn, nuôi dưỡng sức mạnh cộng đồng.
-        </p>
-
-        {/* Lore Hook */}
-        <div className="mt-6 max-w-xl p-4 rounded-2xl bg-slate-900/60 border border-emerald-900/50 backdrop-blur-sm text-xs sm:text-sm text-slate-300 italic">
-          &quot;Lấy cảm hứng từ truyền thuyết <strong className="text-amber-300">Thánh Gióng</strong> (sức mạnh lớn lên nhờ cộng đồng) và <strong className="text-emerald-300">Công chúa Kaguya</strong> (sinh linh kỳ diệu trong thân tre phát sáng).&quot;
-        </div>
-
-        {/* Glowing Bamboo Call to Action */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
-          <button
-            onClick={() => setShowOnboardModal(true)}
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-bamboo-500 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-base shadow-xl shadow-emerald-950 flex items-center justify-center gap-2.5 transition transform hover:-translate-y-0.5"
-          >
-            <span className="text-xl">🎋</span>
-            <span>Khởi sinh Măng Non đầu tiên</span>
-            <ArrowRight className="w-5 h-5 text-amber-300" />
-          </button>
-
-          <Link
-            href="/forest"
-            className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-emerald-800/60 text-slate-200 font-semibold text-sm transition flex items-center justify-center gap-2"
-          >
-            <Trees className="w-4 h-4 text-emerald-400" />
-            <span>Vào Rừng Tre Cổ</span>
-          </Link>
-        </div>
-
-        {/* Key Features Banner */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-5 w-full text-left">
-          {/* Feature 1 */}
-          <div className="p-5 rounded-3xl bg-slate-900/70 border border-emerald-900/40 backdrop-blur-sm hover:border-emerald-700/60 transition group">
-            <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-800/80 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-110 transition">
-              <Wand2 className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-base text-slate-100">Độc nhất do bạn tự vẽ</h3>
-            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-              Tự vẽ tay hoặc chụp ảnh sinh linh của bạn. Hệ thống animate trực tiếp nét vẽ gốc để Măng Non thở và chuyển động trước mắt bạn.
-            </p>
-          </div>
-
-          {/* Feature 2 */}
-          <div className="p-5 rounded-3xl bg-slate-900/70 border border-emerald-900/40 backdrop-blur-sm hover:border-emerald-700/60 transition group">
-            <div className="w-10 h-10 rounded-xl bg-amber-950 border border-amber-800/80 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-110 transition">
-              <Zap className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-base text-slate-100">Không phạt, không streak</h3>
-            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-              Bạn không làm nhiệm vụ hằng ngày? Măng Non chỉ &quot;ngủ&quot;, không bệnh, không chết. Khi quay lại, hai bên tiếp tục đúng nơi đã dừng.
-            </p>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="p-5 rounded-3xl bg-slate-900/70 border border-emerald-900/40 backdrop-blur-sm hover:border-emerald-700/60 transition group">
-            <div className="w-10 h-10 rounded-xl bg-teal-950 border border-teal-800/80 flex items-center justify-center text-teal-400 mb-3 group-hover:scale-110 transition">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-base text-slate-100">Avalanche On-Chain Minh Bạch</h3>
-            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-              Mầm Lực Vault hoàn vốn 100%, trích mock-yield nuôi Cây Làng. Mint NFT Hành Trình bất biến khi hoàn thành mục tiêu.
-            </p>
-          </div>
-        </div>
-
-        {/* 3 Lands Showcase */}
-        <div className="mt-20 w-full">
-          <div className="text-center mb-8">
-            <span className="text-xs uppercase font-bold tracking-widest text-emerald-400">Hành Trình Khám Phá</span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100 mt-1">3 Vùng Đất Tâm Hồn</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Land 1 */}
-            <Link
-              href="/forest"
-              className="p-6 rounded-3xl bg-gradient-to-b from-slate-900/90 to-emerald-950/40 border border-emerald-800/50 hover:border-emerald-500 transition text-left group"
+    <MobileFrame>
+      <div className="relative w-full h-full flex flex-col overflow-hidden bg-forest-abyss">
+        {/* Welcome Back Mild Toast (UC08) */}
+        {welcomeBanner && (
+          <div className="absolute top-12 left-4 right-4 z-40 p-3 rounded-2xl bg-forest-darker/95 border border-warm-amber/60 text-dongho-paper text-xs shadow-2xl flex items-center justify-between animate-fade-in">
+            <span className="italic">{welcomeBanner}</span>
+            <button
+              onClick={() => setWelcomeBanner(null)}
+              className="text-dongho-paper/60 hover:text-dongho-paper text-xs ml-2 font-bold"
             >
-              <div className="flex items-center justify-between mb-3">
-                <Trees className="w-7 h-7 text-emerald-400 group-hover:rotate-6 transition" />
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-300">
-                  Cá nhân
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-emerald-300 group-hover:text-emerald-200 transition">
-                Rừng Tre Cổ
-              </h3>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                Không gian riêng tư nơi các Măng Non lớn lên cùng bạn. Tương tác trò chuyện tự do, quiz đố vui nhẹ nhàng và bắt gặp ống nứa phát sáng ngẫu nhiên.
-              </p>
-            </Link>
-
-            {/* Land 2 */}
-            <Link
-              href="/village"
-              className="p-6 rounded-3xl bg-gradient-to-b from-slate-900/90 to-amber-950/40 border border-amber-800/50 hover:border-amber-500 transition text-left group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <Landmark className="w-7 h-7 text-amber-400 group-hover:rotate-6 transition" />
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950 border border-amber-700 text-amber-300">
-                  Cộng đồng
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-amber-300 group-hover:text-amber-200 transition">
-                Làng Phù Đổng
-              </h3>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                Nơi Cây Làng vươn cao nhờ tổng đóng góp on-chain từ mock-yield và nhà tài trợ. Khi đạt mốc, Cây Làng bùng nổ ban phước ngược lại cho mọi sinh linh.
-              </p>
-            </Link>
-
-            {/* Land 3 */}
-            <Link
-              href="/memory"
-              className="p-6 rounded-3xl bg-gradient-to-b from-slate-900/90 to-teal-950/40 border border-teal-800/50 hover:border-teal-500 transition text-left group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <Flower2 className="w-7 h-7 text-teal-400 group-hover:rotate-6 transition" />
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-950 border border-teal-700 text-teal-300">
-                  Bảo tàng NFT
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-teal-300 group-hover:text-teal-200 transition">
-                Vườn Ký Ức
-              </h3>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                Nơi những Măng Non đã hoàn thành Goal &quot;an nghỉ&quot; dưới dạng NFT hành trình chuẩn ERC-721 với đầy đủ nhật ký, chỉ số và bằng chứng on-chain vĩnh cửu.
-              </p>
-            </Link>
+              ✕
+            </button>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Onboarding Modal */}
-      {showOnboardModal && (
-        <NewGoalModal
-          onClose={() => setShowOnboardModal(false)}
-          onGoalCreated={handleGoalCreated}
+        {/* SCREEN ROUTING */}
+        <div className="flex-1 w-full h-full relative overflow-hidden">
+          {state.currentScreen === 'S01' && (
+            <S01NightForest
+              onTapBamboo={handleTapBambooS01}
+              isNightTime={timeOfDay === 'night'}
+            />
+          )}
+
+          {state.currentScreen === 'S02' && (
+            <S02OpenBamboo onComplete={handleCompleteS02} />
+          )}
+
+          {state.currentScreen === 'S03' && (
+            <S03CreateFigure onConfirm={handleConfirmFigureS03} />
+          )}
+
+          {state.currentScreen === 'S04' && (
+            <S04NamingPersonality
+              imageUri={draftImageUri}
+              onNext={handleNextNamingS04}
+            />
+          )}
+
+          {state.currentScreen === 'S05' && (
+            <S05FirstMeeting
+              name={draftName}
+              personality={draftPersonality}
+              imageUri={draftImageUri}
+              onComplete={handleCompleteFirstMeetingS05}
+            />
+          )}
+
+          {state.currentScreen === 'S06' && (
+            <S06HomeForest
+              mangnon={state.activeMangnon}
+              timeOfDay={timeOfDay}
+              season={season}
+              onOpenStoryChat={() => navigateTo('S07')}
+              onOpenJourney={() => setShowJourneySheet(true)}
+              onOpenSettings={() => navigateTo('S13')}
+              onOpenBambooStalk={() => navigateTo('S01')}
+            />
+          )}
+
+          {state.currentScreen === 'S07' && state.activeMangnon && (
+            <S07StoryChat
+              mangnon={state.activeMangnon}
+              memories={state.memories}
+              messages={state.messages}
+              onSendMessage={handleSendMessageS07}
+              onOpenMemories={() => navigateTo('S08')}
+              onBack={() => navigateTo('S06')}
+            />
+          )}
+
+          {state.currentScreen === 'S08' && state.activeMangnon && (
+            <S08Memories
+              mangnon={state.activeMangnon}
+              memories={state.memories}
+              onTogglePin={handleTogglePinMemory}
+              onForget={handleForgetMemory}
+              onBack={() => navigateTo('S07')}
+            />
+          )}
+
+          {state.currentScreen === 'S11' && (
+            <S11MemoryStream restingMangnons={state.restingMangnons} />
+          )}
+
+          {state.currentScreen === 'S12' && (
+            <S12PhuDongVillage
+              leaves={state.villageLeaves}
+              threshold={state.villageThreshold}
+              lastBloomedAt={state.lastBloomedAt}
+              onTriggerBloom={handleTriggerBloom}
+            />
+          )}
+
+          {state.currentScreen === 'S13' && (
+            <S13Settings
+              mangnon={state.activeMangnon}
+              settings={state.settings}
+              onUpdateSettings={(updater) => {
+                setState((prev) => {
+                  if (!prev) return prev;
+                  const nextSettings = updater(prev.settings);
+                  const next = { ...prev, settings: nextSettings };
+                  AppStore.save(next);
+                  return next;
+                });
+              }}
+              onRenameMangnon={(newName) => {
+                setState((prev) => {
+                  if (!prev || !prev.activeMangnon) return prev;
+                  const next = {
+                    ...prev,
+                    activeMangnon: { ...prev.activeMangnon, name: newName },
+                  };
+                  AppStore.save(next);
+                  return next;
+                });
+              }}
+              onResetAllData={handleResetAllData}
+              onBack={() => navigateTo('S06')}
+            />
+          )}
+        </div>
+
+        {/* S09 Journey Bottom Sheet Overlay */}
+        {showJourneySheet && state.activeMangnon && (
+          <S09JourneySheet
+            mangnon={state.activeMangnon}
+            onUpdateTitle={(newTitle) => {
+              setState((prev) => {
+                if (!prev || !prev.activeMangnon) return prev;
+                const next = {
+                  ...prev,
+                  activeMangnon: { ...prev.activeMangnon, goalTitle: newTitle },
+                };
+                AppStore.save(next);
+                return next;
+              });
+            }}
+            onCloseJourney={() => {
+              setShowJourneySheet(false);
+              setShowRestingRitual(true);
+            }}
+            onCloseSheet={() => setShowJourneySheet(false)}
+          />
+        )}
+
+        {/* S10 Resting Ritual Overlay */}
+        {showRestingRitual && state.activeMangnon && (
+          <div className="absolute inset-0 z-50 bg-forest-abyss">
+            <S10RestingRitual
+              mangnon={state.activeMangnon}
+              memories={state.memories}
+              onFinishRitual={handleFinishRestingRitual}
+              onCancel={() => setShowRestingRitual(false)}
+            />
+          </div>
+        )}
+
+        {/* BOTTOM NAVIGATION (3 Tabs: Rừng · Làng · Vườn) */}
+        {isBottomNavVisible && (
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-forest-darker/95 border-t border-bamboo-mid/30 backdrop-blur-md z-30 flex items-center justify-around px-4 select-none">
+            {/* Tab 1: Rừng Tre Cổ */}
+            <button
+              onClick={() => navigateTo('S06')}
+              className={`flex flex-col items-center gap-1 transition ${
+                state.currentScreen === 'S06' ? 'text-warm-glow scale-105' : 'text-dongho-paper/50 hover:text-dongho-paper'
+              }`}
+            >
+              <span className="text-base">🎋</span>
+              <span className={`text-[10px] font-bold ${state.currentScreen === 'S06' ? 'text-warm-glow' : ''}`}>
+                {content.navigation.forest}
+              </span>
+            </button>
+
+            {/* Tab 2: Làng Phù Đổng (Cây Đa) */}
+            <button
+              onClick={() => navigateTo('S12')}
+              className={`flex flex-col items-center gap-1 transition ${
+                state.currentScreen === 'S12' ? 'text-warm-amber scale-105' : 'text-dongho-paper/50 hover:text-dongho-paper'
+              }`}
+            >
+              <span className="text-base">🌳</span>
+              <span className={`text-[10px] font-bold ${state.currentScreen === 'S12' ? 'text-warm-amber' : ''}`}>
+                {content.navigation.village}
+              </span>
+            </button>
+
+            {/* Tab 3: Suối Ký Ức (Vườn) */}
+            <button
+              onClick={() => navigateTo('S11')}
+              className={`flex flex-col items-center gap-1 transition ${
+                state.currentScreen === 'S11' ? 'text-bamboo-light scale-105' : 'text-dongho-paper/50 hover:text-dongho-paper'
+              }`}
+            >
+              <span className="text-base">🌊</span>
+              <span className={`text-[10px] font-bold ${state.currentScreen === 'S11' ? 'text-bamboo-light' : ''}`}>
+                {content.navigation.memory}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* S14 Demo Control Panel Overlay (Always available when demoMode is active) */}
+        <DemoControlPanel
+          state={state}
+          onUpdateState={(updater) => {
+            setState((prev) => {
+              if (!prev) return prev;
+              const next = updater(prev);
+              AppStore.save(next);
+              return next;
+            });
+          }}
+          onNavigate={(s) => {
+            if (s === 'S10') {
+              setShowRestingRitual(true);
+            } else {
+              navigateTo(s);
+            }
+          }}
+          onTriggerBloom={handleTriggerBloom}
         />
-      )}
-    </div>
+      </div>
+    </MobileFrame>
   );
 }

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navigation from '@/components/Navigation';
 
 export const metadata: Metadata = {
   title: 'MĂNG NON — Sinh linh Đồng hành Học tập & Nuôi lớn Cộng đồng',
@@ -14,9 +13,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi" className="dark">
-      <body className="antialiased selection:bg-emerald-500 selection:text-white">
-        <Navigation />
-        <main className="min-h-[calc(100vh-4rem)]">{children}</main>
+      <body className="antialiased selection:bg-warm-amber selection:text-forest-abyss bg-[#0A1113] overflow-x-hidden">
+        <main className="min-h-screen w-full flex flex-col">{children}</main>
       </body>
     </html>
   );

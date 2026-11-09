@@ -171,3 +171,4 @@ contract GoalRegistry {
         return result;
     }
 }
+

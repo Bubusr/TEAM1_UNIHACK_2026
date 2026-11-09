@@ -76,21 +76,34 @@ Lấy cảm hứng từ hai truyền thuyết văn hóa:
 
 ## 🚀 4. Hướng Dẫn Chạy Thử (Quick Start)
 
-### 1. Khởi động Web DApp (Frontend + AI Engine)
+### 1. Khởi động Web DApp (Frontend + Interactive 2D Game World)
 ```bash
-cd web
+# Cài đặt và khởi chạy từ thư mục gốc
 npm install
 npm run dev
 ```
-Truy cập ứng dụng tại: **[http://localhost:3000](http://localhost:3000)**
+Truy cập ứng dụng tại: **[http://localhost:3000](http://localhost:3000)** (Tự động hiển thị khung điện thoại chuẩn mobile 390×844 trên desktop).
 
-### 2. Kiểm thử Smart Contracts (Hardhat)
+### 2. Kiểm thử Ràng Buộc Giọng Văn Dịu Dàng (Copy-Lint)
+```bash
+node scripts/lint-copy.js
+```
+*Kết quả:* 100% PASS — Đảm bảo hoàn toàn vắng bóng từ cấm gây áp lực (streak, phạt, điểm danh, nhiệm vụ, phần thưởng, XP, level...).
+
+### 3. Kiểm thử Smart Contracts (Hardhat)
 ```bash
 cd contracts
 npm install
 npx hardhat test
 ```
 *Kết quả:* Toàn bộ 6 bài kiểm thử đơn vị mô phỏng đầy đủ luồng Goal, Vault, Cây Làng, JourneyNFT và Trạm Tre đều pass 100%.
+
+### 4. Hướng Dẫn Thuyết Trình 3 Phút (Demo Control Panel - S14)
+- **Nút bánh răng nổi ở góc dưới phải màn hình:** Mở bảng điều khiển thuyết trình S14.
+- **Đổi giờ & mùa tức thì:** Xem nền Rừng Tre Ghibli đổi sắc màu mượt mà.
+- **Thêm 8 ký ức mẫu:** Thử tính năng liên tưởng (callback) và an ủi của Măng Non khi trò chuyện.
+- **Kích hoạt hoa gạo bùng nổ:** Chiêm ngưỡng Cây Đa Phù Đổng nở hoa đỏ rực ban phước cho toàn làng.
+- **Nhảy tới An nghỉ:** Trải nghiệm 5 nhịp cảm xúc khi Măng Non khép lại hành trình và hoá thành phiến đá suối.
 
 ### 3. Deploy lên Avalanche Fuji Testnet
 Tạo file `contracts/.env`:

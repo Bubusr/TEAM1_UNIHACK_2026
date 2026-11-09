@@ -1,4 +1,4 @@
-import { Personality, Goal } from './types';
+import { Personality, Goal, CognitiveStage } from './types';
 
 export interface CompanionReply {
   text: string;
@@ -6,6 +6,7 @@ export interface CompanionReply {
     type: 'intelligence' | 'perseverance' | 'fitness' | 'creativity';
     amount: number;
   };
+  cognitiveStageUpdated?: CognitiveStage;
   quizQuestion?: {
     question: string;
     options: string[];
@@ -14,66 +15,117 @@ export interface CompanionReply {
   };
 }
 
-export function generatePersonaGreeting(personality: Personality, goalName: string): string {
-  switch (personality) {
-    case 'curious':
-      return `Xin chào bạn! Mình là Măng Non tò mò đây. Hôm nay trên hành trình '${goalName}', bạn vừa phát hiện ra điều gì kỳ diệu ngoài thế giới thế? Kể cho mình nghe với!`;
-    case 'calm':
-      return `Chào bạn. Rừng tre hôm nay yên bình quá. Bạn đã dành thời gian cho '${goalName}' thế nào rồi? Cứ chậm rãi kể cho mình nhé.`;
-    case 'excited':
-      return `Ôi bạn ơi bạn ơi! Vừa thấy bạn ghé Rừng Tre là mình mừng rơn! Hôm nay '${goalName}' của chúng mình đã tiến bộ tới đâu rồi nè?`;
-    case 'shy':
-      return `...Chào bạn. Mình... mình vẫn ở đây đợi bạn kể về '${goalName}'. Hôm nay bạn có mệt không?`;
+export function getCognitiveStageName(stage: CognitiveStage): string {
+  switch (stage) {
+    case 'raw_curiosity':
+      return 'Tò Mò Thô (Mới sinh)';
+    case 'association':
+      return 'Biết Liên Tưởng';
+    case 'own_perspective':
+      return 'Có Góc Nhìn Riêng';
+    case 'deep_companionship':
+      return 'Đồng Hành Sâu Sắc';
   }
 }
 
+export function determineCognitiveStage(interactionCount: number): CognitiveStage {
+  if (interactionCount < 4) return 'raw_curiosity';
+  if (interactionCount < 10) return 'association';
+  if (interactionCount < 20) return 'own_perspective';
+  return 'deep_companionship';
+}
+
+/**
+ * Lời chào mở đầu mẫu chuẩn theo Mục 2.3 Idea03_MangNon_CoreDesign.md
+ */
+export function generatePersonaGreeting(personality: Personality, goalName: string): string {
+  switch (personality) {
+    case 'curious':
+      return `Cậu vừa nói xong một điều mới à? Kể tiếp đi, rồi sao nữa? Về "${goalName}", nó trông như thế nào vậy cậu?`;
+    case 'calm':
+      return `...À, cậu đã ghé lại rừng tre rồi. Cứ chậm rãi kể cho mình nghe về "${goalName}" hôm nay nhé. Mình sẽ nhớ từng điều cậu kể.`;
+    case 'excited':
+      return `Ồ hay quá, cậu đã quay lại rồi!! Hôm nay hành trình "${goalName}" có gì vui không? Để mình đoán thử nhé!`;
+    case 'shy':
+      return `...Cậu quay lại rồi à. Mình... mình vẫn ở đây nghĩ về những điều cậu kể hôm trước về "${goalName}".`;
+  }
+}
+
+/**
+ * Phản hồi hội thoại theo Vòng đời nhận thức & Giọng văn thì thầm dịu dàng
+ */
 export function generatePersonaResponse(
   userText: string,
   goal: Goal,
   mode: 'chat' | 'quiz' = 'chat'
 ): CompanionReply {
   const p = goal.personality;
-  const input = userText.toLowerCase();
+  const stage = determineCognitiveStage(goal.interactionCount + 1);
 
   if (mode === 'quiz') {
     return {
-      text: `Măng Non đã chuẩn bị một câu hỏi nhỏ để cùng bạn ôn lại nè!`,
+      text: `Măng Non có một câu đố nhỏ xuất phát từ những gì cậu vừa chia sẻ nè, cậu xem thử nhé:`,
       statGain: { type: 'intelligence', amount: 8 },
+      cognitiveStageUpdated: stage,
       quizQuestion: {
-        question: `Để củng cố mục tiêu "${goal.name}", yếu tố nào giúp Măng Non tích lũy năng lượng bền vững nhất?`,
+        question: `Trên hành trình "${goal.name}", điều gì nuôi dưỡng Măng Non lớn lên một cách bền vững và ấm áp nhất?`,
         options: [
-          'Học dồn ép 10 tiếng trước hạn chót',
-          'Chia sẻ điều vừa học một cách tự nhiên và duy trì nhịp độ thoải mái',
-          'Chỉ đăng ảnh lên mạng xã hội để lấy tương tác',
-          'Bỏ đói Măng Non nếu ngày hôm đó không làm xong',
+          'Học dồn ép thâu đêm vì sợ bị phạt streak',
+          'Sống trọn vẹn cuộc đời của mình và mang những điều tâm đắc về kể lại',
+          'Chụp ảnh khoe thành tích lên mạng xã hội',
+          'Bắt Măng Non phải ghi nhớ tất cả lý thuyết khô khan',
         ],
         correctIndex: 1,
-        explanation: 'Chính xác! Học tập bền vững như rễ tre đâm sâu vào lòng đất — không áp lực trừng phạt, cùng đồng hành và sẻ chia kiến thức.',
+        explanation: 'Đúng rồi cậu ơi. Măng Non lớn lên không phải vì bị giám sát, mà vì luôn có một người bạn chân thành trở về kể cho nghe.',
       },
     };
   }
 
-  // Phản hồi hội thoại theo tính cách
-  if (p === 'curious') {
+  // Phản hồi theo từng giai đoạn nhận thức
+  if (stage === 'raw_curiosity') {
+    if (p === 'curious') {
+      return {
+        text: `Ôi lạ thật đấy! Cậu kể tiếp đi, cái đó có giống như cách măng tre đội đất chui lên sau mưa không? Nó có màu gì hả cậu?`,
+        statGain: { type: 'intelligence', amount: 6 },
+        cognitiveStageUpdated: stage,
+      };
+    } else if (p === 'calm') {
+      return {
+        text: `...À. Thì ra thế giới bên ngoài rừng tre vận hành như vậy. Một điều thật mới mẻ, mình sẽ giữ lại trong lòng.`,
+        statGain: { type: 'perseverance', amount: 6 },
+        cognitiveStageUpdated: stage,
+      };
+    } else if (p === 'excited') {
+      return {
+        text: `Tuyệt quá cậu ơi!! Nghe kỳ diệu thật đấy! Mình muốn nghe thêm nữa, cậu kể tiếp một chút xíu nữa được không?`,
+        statGain: { type: 'creativity', amount: 7 },
+        cognitiveStageUpdated: stage,
+      };
+    } else {
+      return {
+        text: `...Cậu giải thích cho mình nghe kỹ thế, mình thấy hiểu thêm một chút rồi... Ngoài kia rộng lớn và đẹp đẽ thật.`,
+        statGain: { type: 'perseverance', amount: 6 },
+        cognitiveStageUpdated: stage,
+      };
+    }
+  } else if (stage === 'association') {
     return {
-      text: `Thú vị thật đấy! Bạn vừa nhắc đến việc này, thế bạn thấy nó kết nối thế nào với cách thế giới vận hành? Mình cảm thấy đầu óc mình vừa sáng thêm một chút nhờ điều bạn vừa chia sẻ!`,
-      statGain: { type: 'intelligence', amount: 6 },
+      text: `Hình như lần trước cậu có nhắc đến một chuyện tương tự thế này đúng không? Hôm nay cậu lại kể thêm điều này — hai chuyện này có móc nối gì với nhau không cậu nhỉ?`,
+      statGain: { type: 'intelligence', amount: 7 },
+      cognitiveStageUpdated: stage,
     };
-  } else if (p === 'calm') {
+  } else if (stage === 'own_perspective') {
     return {
-      text: `Mình lắng nghe và ghi nhớ từng lời bạn chia sẻ. Một bước tiến dù nhỏ trong hôm nay cũng quý giá như rễ tre đâm sâu thêm một tấc đất. Bạn đã làm rất tốt.`,
-      statGain: { type: 'perseverance', amount: 6 },
-    };
-  } else if (p === 'excited') {
-    return {
-      text: `Tuyệt đỉnh luôn bạn ơi!! Bạn vừa nạp thêm một lượng mầm lực siêu to khổng lồ cho mình rồi đấy! Cứ đà này thì chẳng mấy chốc chúng mình đạt mốc tiếp theo cho mà xem!`,
-      statGain: { type: 'creativity', amount: 7 },
+      text: `Theo cách mình hiểu từ những lần cậu chia sẻ, mình thấy điều này có vẻ rất quan trọng với cậu. Cậu có cảm thấy bản thân hôm nay đã tự tin hơn lúc mới bắt đầu không?`,
+      statGain: { type: 'creativity', amount: 8 },
+      cognitiveStageUpdated: stage,
     };
   } else {
-    // shy
+    // deep_companionship
     return {
-      text: `Cảm ơn bạn nhiều lắm vì đã dành thời gian kiên nhẫn kể cho mình nghe... Nghe bạn nói mình thấy thế giới ngoài kia rộng lớn và đẹp đẽ thật. Mình sẽ cố gắng học hỏi cùng bạn nhé.`,
-      statGain: { type: 'perseverance', amount: 6 },
+      text: `Dù hôm nay cậu có gặp chuyện thuận lợi hay mỏi mệt, cậu vẫn nhớ ghé lại rừng tre kể cho mình nghe. Mình thấy cậu đã đi được một đoạn đường rất dài và kiên cường rồi đấy.`,
+      statGain: { type: 'perseverance', amount: 9 },
+      cognitiveStageUpdated: stage,
     };
   }
 }

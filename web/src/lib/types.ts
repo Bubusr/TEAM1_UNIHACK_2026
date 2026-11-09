@@ -1,11 +1,14 @@
 export type Personality = 'curious' | 'calm' | 'excited' | 'shy';
 export type GoalLevel = 'beginner' | 'intermediate' | 'advanced';
 
+// 4 Vòng đời nhận thức theo Idea03_MangNon_CoreDesign.md (thay vì cấp độ số khô khan)
+export type CognitiveStage = 'raw_curiosity' | 'association' | 'own_perspective' | 'deep_companionship';
+
 export interface GoalStats {
-  intelligence: number; // Trí tuệ
-  perseverance: number; // Kiên trì
-  fitness: number;      // Thể lực
-  creativity: number;   // Sáng tạo
+  intelligence: number; // Trí tuệ (Hiểu biết thế giới)
+  perseverance: number; // Kiên trì (Rễ đâm sâu)
+  fitness: number;      // Thể lực (Sức sống)
+  creativity: number;   // Sáng tạo (Tâm hồn tự do)
 }
 
 export interface JournalEntry {
@@ -25,15 +28,16 @@ export interface Goal {
   name: string;
   level: GoalLevel;
   personality: Personality;
-  imageUri: string; // Data URL hoặc ảnh vẽ tay
+  cognitiveStage: CognitiveStage; // Giai đoạn nhận thức
+  imageUri: string; // Nét vẽ tay hoặc ảnh người chơi tải lên
   stats: GoalStats;
   interactionCount: number;
   createdAt: number;
   lastInteraction: number;
   hasVault: boolean;
-  vaultPrincipal: number; // Đơn vị AVAX
+  vaultPrincipal: number; // AVAX testnet cam kết
   mockYieldAccumulated: number;
-  isResting: boolean; // True nếu đã "an nghỉ" và chuyển vào Vườn Ký Ức
+  isResting: boolean; // True nếu đã "an nghỉ" dưới lòng Suối Ký Ức
   linkedGoalId?: string; // Nối chỉ số với Măng Non khác
   journal: JournalEntry[];
   restingAt?: number;

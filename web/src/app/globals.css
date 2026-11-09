@@ -3,24 +3,42 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 248, 250, 252;
-  --background-start-rgb: 2, 6, 23;
-  --background-end-rgb: 5, 46, 22;
+  --forest-bg: #1B2A2F;
+  --bamboo-text: #F7F2E7;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: radial-gradient(ellipse at top, #064e3b, #022c22, #020617);
+  color: var(--bamboo-text);
+  background: radial-gradient(ellipse at top, #273D44 0%, #1B2A2F 50%, #0D1619 100%);
   min-height: 100vh;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.01em;
 }
 
-/* Bamboo forest custom animations */
-@keyframes bambooWind {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(1.5deg) skewX(1deg); }
+/* Thẻ tre cuộn / Phong cách mộc bản Đông Hồ */
+.bamboo-card {
+  background: rgba(27, 42, 47, 0.85);
+  border: 1.5px solid rgba(107, 143, 113, 0.35);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
-.animate-bamboo-wind {
-  animation: bambooWind 6s ease-in-out infinite;
+.bamboo-card:hover {
+  border-color: rgba(244, 162, 89, 0.6);
+}
+
+.bamboo-scroll {
+  background: #F7F2E7;
+  color: #1B2A2F;
+  border-left: 4px solid #3E5C45;
+  border-radius: 8px;
+}
+
+/* Hiệu ứng hạt đom đóm trong rừng */
+@keyframes fireflyFloat {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
+  50% { transform: translateY(-12px) translateX(6px); opacity: 0.85; }
+}
+
+.firefly-particle {
+  animation: fireflyFloat 4s ease-in-out infinite;
 }
