@@ -111,25 +111,7 @@ const SEED_STATIONS: Station[] = [
   },
 ];
 
-const SEED_NFTS: JourneyNFT[] = [
-  {
-    tokenId: '#MN-001',
-    goalId: 'goal-legacy-1',
-    goalName: 'Nhập môn Smart Contract & Solidity cơ bản',
-    personality: 'calm',
-    imageUri: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="30" ry="40" fill="%2334d399"/><circle cx="42" cy="44" r="3" fill="%23064e3b"/><circle cx="58" cy="44" r="3" fill="%23064e3b"/><line x1="45" y1="58" x2="55" y2="58" stroke="%23064e3b" stroke-width="2"/><polygon points="50,12 38,28 62,28" fill="%23059669"/></svg>',
-    finalStats: {
-      intelligence: 100,
-      perseverance: 92,
-      fitness: 45,
-      creativity: 85,
-    },
-    interactionCount: 24,
-    completedAt: Date.now() - 86400000 * 7,
-    mockYieldContributed: 0.045,
-    txHash: '0x8f2a...b49c (Avalanche Fuji)',
-  },
-];
+const SEED_NFTS: JourneyNFT[] = [];
 
 export const StorageService = {
   getGoals(): Goal[] {

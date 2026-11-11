@@ -143,7 +143,11 @@ export default function InteractiveVillageCanvas({
           <span className="w-2.5 h-2.5 rounded-full bg-dongho-red animate-pulse"></span>
           <span><strong>Cây Đa Phù Đổng</strong> · Mùa thứ {cycle}</span>
           <span className="text-dongho-paper/50">|</span>
-          <span className="text-warm-glow">{currentEnergy}/{threshold} Mầm Lực</span>
+          <span className="text-warm-glow">
+            {Array.from({ length: Math.min(Math.round((currentEnergy / threshold) * 5), 5) }).map((_, i) => (
+              <span key={i}>🍃</span>
+            ))}
+          </span>
         </div>
 
         {currentEnergy >= threshold && (

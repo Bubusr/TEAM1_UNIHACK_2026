@@ -1,0 +1,12 @@
+{
+  "network": "fuji",
+  "chainId": "43113",
+  "contracts": {
+    "VillageTree": "0x372587d6BF5B3c3a2D267df6a22f87E3F9ebb0AA",
+    "GoalRegistry": "0x814C3450FC4ddF562411a8C820710E0D100C3264",
+    "MamLucVault": "0x7e342d6b338ecb2D1F2ed609b4554b7b1A8cBdC0",
+    "JourneyNFT": "0x7Db4Be38e24A710476916B4e576BD12c2e603a4E",
+    "TramTreCheckin": "0xAe9E327A569146e2d59F2Fa4b4749f3060591Da1"
+  },
+  "deployedAt": "2026-11-11T19:18:56.965Z"
+}

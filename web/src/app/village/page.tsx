@@ -10,9 +10,16 @@ export default function VillagePage() {
   const [treeState, setTreeState] = useState<VillageTreeState>(StorageService.getVillageTree());
   const [sponsorAmount, setSponsorAmount] = useState('50');
   const [justBlessed, setJustBlessed] = useState(false);
+  const [contractAddr, setContractAddr] = useState<string | null>(null);
 
   useEffect(() => {
     setTreeState(StorageService.getVillageTree());
+    fetch('/api/deployed-addresses')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.VillageTree) setContractAddr(data.VillageTree);
+      })
+      .catch(() => {});
   }, []);
 
   const progressPercent = Math.min(100, Math.round((treeState.currentCycleEnergy / treeState.threshold) * 100));
@@ -164,7 +171,7 @@ export default function VillagePage() {
             </div>
 
             <div className="mt-5 pt-3 border-t border-bamboo-mid/20 flex items-center justify-between text-[11px] text-dongho-paper/60 font-mono">
-              <span>Hợp đồng: 0x93F...1c7E</span>
+              <span>Hợp đồng: {contractAddr ? `${contractAddr.slice(0, 8)}...${contractAddr.slice(-6)}` : 'chưa triển khai'}</span>
               <span className="text-warm-glow">Avalanche Fuji</span>
             </div>
           </div>

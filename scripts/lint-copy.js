@@ -24,8 +24,14 @@ const BLACKLIST = [
   'goal',
 ];
 
+const screensDir = path.join(__dirname, '..', 'web', 'src', 'screens');
+const screenFiles = fs.existsSync(screensDir)
+  ? fs.readdirSync(screensDir).filter(f => f.endsWith('.tsx') || f.endsWith('.ts')).map(f => path.join(screensDir, f))
+  : [];
+
 const targetFiles = [
   path.join(__dirname, '..', 'web', 'src', 'content', 'vi.ts'),
+  ...screenFiles,
 ];
 
 console.log('=== COPY-LINT: KIỂM TRA TỪ NGỮ GÂY ÁP LỰC ===');

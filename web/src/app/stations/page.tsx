@@ -10,29 +10,93 @@ import confetti from 'canvas-confetti';
 export default function StationsPage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [checkingInId, setCheckingInId] = useState<string | null>(null);
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
   useEffect(() => {
     setStations(StorageService.getStations());
   }, []);
 
+  /** Haversine distance in meters between two GPS points */
+  function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
   const handleCheckin = (stationId: string) => {
     SoundEngine.playBambooKnock();
     setCheckingInId(stationId);
+    setGpsError(null);
 
-    setTimeout(() => {
-      const claimed = StorageService.checkinStation(stationId);
-      if (claimed) {
-        SoundEngine.playBlessingChime();
-        setStations(StorageService.getStations());
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#FFD166', '#F4A259', '#6B8F71', '#E63946'],
-        });
-      }
+    const station = stations.find((s) => s.id === stationId);
+    if (!station) {
       setCheckingInId(null);
-    }, 1200);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setGpsError('Trình duyệt không hỗ trợ định vị GPS.');
+      setCheckingInId(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const dist = haversineMeters(
+          position.coords.latitude,
+          position.coords.longitude,
+          station.lat,
+          station.lng
+        );
+
+        // Cho phép sai số trong bán kính 300m (tùy điều kiện GPS trong nhà)
+        const MAX_RADIUS_METERS = 300;
+
+        if (dist <= MAX_RADIUS_METERS) {
+          const claimed = StorageService.checkinStation(stationId);
+          if (claimed) {
+            SoundEngine.playBlessingChime();
+            setStations(StorageService.getStations());
+            confetti({
+              particleCount: 80,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#FFD166', '#F4A259', '#6B8F71', '#E63946'],
+            });
+          }
+        } else {
+          setGpsError(
+            `Cậu đang cách trạm khoảng ${Math.round(dist)}m. Cần đến gần trạm hơn (≤${MAX_RADIUS_METERS}m) để check-in nhé.`
+          );
+        }
+        setCheckingInId(null);
+      },
+      (error) => {
+        setCheckingInId(null);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setGpsError('Cậu cần cho phép truy cập vị trí để check-in. Kiểm tra cài đặt trình duyệt nhé.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setGpsError('Không xác định được vị trí. Thử lại ở nơi có tín hiệu GPS tốt hơn nhé.');
+            break;
+          case error.TIMEOUT:
+            setGpsError('Hết thời gian chờ GPS. Cậu thử lại nhé.');
+            break;
+          default:
+            setGpsError('Lỗi GPS không xác định. Cậu thử lại nhé.');
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000,
+      }
+    );
   };
 
   return (
@@ -60,6 +124,22 @@ export default function StationsPage() {
           <strong className="text-warm-glow">Tôn trọng quyền riêng tư (Privacy-first):</strong> Cơ chế check-in chỉ xác thực toạ độ tương đối tại trạm đối tác để chống gian lận voucher — tuyệt đối không theo dõi hành trình di chuyển hay lưu GPS cá nhân lên blockchain.
         </div>
       </div>
+
+      {/* GPS Error Banner */}
+      {gpsError && (
+        <div className="mt-4 p-3.5 rounded-2xl bg-dongho-red/15 border border-dongho-red/40 text-xs text-dongho-paper/90 flex items-start gap-2">
+          <MapPin className="w-4 h-4 text-dongho-red flex-shrink-0 mt-0.5" />
+          <div>
+            <span>{gpsError}</span>
+            <button
+              onClick={() => setGpsError(null)}
+              className="ml-2 text-warm-amber underline hover:text-warm-glow"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stations List */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

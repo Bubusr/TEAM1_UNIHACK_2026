@@ -9,8 +9,21 @@ interface S01NightForestProps {
   isNightTime?: boolean;
 }
 
-export default function S01NightForest({ onTapBamboo }: S01NightForestProps) {
+export default function S01NightForest({ onTapBamboo, isNightTime = true }: S01NightForestProps) {
   const [showHint, setShowHint] = useState(false);
+
+  const fireflies = React.useMemo(
+    () =>
+      Array.from({ length: 14 }, (_, i) => ({
+        size: ((i * 7) % 4) + 2,
+        top: ((i * 19 + 11) % 75) + 10,
+        left: ((i * 29 + 7) % 85) + 5,
+        opacity: 0.35 + ((i * 13) % 6) * 0.1,
+        duration: 2.2 + (i % 4) * 0.7,
+        delay: (i % 5) * 0.4,
+      })),
+    []
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -43,33 +56,34 @@ export default function S01NightForest({ onTapBamboo }: S01NightForestProps) {
 
       {/* Floating Fireflies */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(14)].map((_, i) => (
+        {fireflies.map((f, i) => (
           <div
             key={i}
             className="absolute rounded-full bg-warm-glow animate-pulse"
             style={{
-              width: `${Math.random() * 4 + 2}px`,
-              height: `${Math.random() * 4 + 2}px`,
-              top: `${Math.random() * 80 + 10}%`,
-              left: `${Math.random() * 85 + 5}%`,
-              opacity: Math.random() * 0.7 + 0.3,
+              width: `${f.size}px`,
+              height: `${f.size}px`,
+              top: `${f.top}%`,
+              left: `${f.left}%`,
+              opacity: isNightTime ? f.opacity : f.opacity * 0.45,
               boxShadow: '0 0 10px #FFD166, 0 0 20px #F4A259',
-              animationDuration: `${Math.random() * 3 + 2}s`,
-              animationDelay: `${Math.random() * 2}s`,
+              animationDuration: `${f.duration}s`,
+              animationDelay: `${f.delay}s`,
             }}
           />
         ))}
       </div>
 
-      {/* Top spacer */}
-      <div className="pt-16 z-10 text-center px-6">
-        <p className="text-xs tracking-widest uppercase font-bold text-warm-amber/80 drop-shadow">
-          {content.common.appName}
-        </p>
-      </div>
+      {/* Top quiet spacer (Không logo, không menu theo Prompt §6 S01) */}
+      <div className="pt-16 z-10" />
 
       {/* Center/Lower: Glowing Bamboo Stalk (The focal point of S01) */}
-      <div className="relative z-20 flex flex-col items-center justify-center cursor-pointer group pb-10" onClick={handleClickStalk}>
+      <button
+        type="button"
+        aria-label="Chạm vào ống nứa phát sáng"
+        className="relative z-20 flex flex-col items-center justify-center cursor-pointer group pb-10 bg-transparent border-0 focus:outline-none"
+        onClick={handleClickStalk}
+      >
         {/* Glow halo behind bamboo */}
         <div className="absolute w-44 h-72 rounded-full bg-warm-amber/25 blur-3xl animate-pulse -z-10 group-hover:bg-warm-amber/40 transition-all duration-700" />
         <div className="absolute w-28 h-48 rounded-full bg-warm-glow/30 blur-xl animate-ping opacity-25 -z-10" />
@@ -119,22 +133,8 @@ export default function S01NightForest({ onTapBamboo }: S01NightForestProps) {
           <p className={`text-xs text-warm-glow mt-1.5 transition-opacity duration-700 ${showHint ? 'opacity-100' : 'opacity-0'}`}>
             {content.s01_nightForest.hintTap}
           </p>
-
-          {/* Shortcut to Studio S03 */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (typeof window !== 'undefined') {
-                window.location.hash = '#/bat-dau/tao-hinh';
-              }
-            }}
-            className="mt-4 px-3.5 py-1.5 rounded-full bg-forest-darker/85 hover:bg-forest-deep border border-warm-amber/40 text-warm-glow text-[11px] font-semibold flex items-center gap-1.5 shadow transition hover:scale-105"
-          >
-            <span>🎨</span>
-            <span>Vào thẳng Studio Vẽ Canvas (S03)</span>
-          </button>
         </div>
-      </div>
+      </button>
 
       {/* Bottom Ground silhouette */}
       <div className="w-full relative z-10 pb-6 px-4 flex justify-center">

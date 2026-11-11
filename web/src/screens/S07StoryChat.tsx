@@ -35,7 +35,7 @@ export default function S07StoryChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isThinking]);
 
-  const handleSend = (text: string) => {
+  const handleSend = async (text: string) => {
     if (!text.trim() || isThinking) return;
     const cleanText = text.trim();
     setInputText('');
@@ -43,23 +43,52 @@ export default function S07StoryChat({
     SoundEngine.playBambooKnock();
     setAvatarBounce(true);
     setTimeout(() => setAvatarBounce(false), 800);
-
-    // Call dialogue simulation engine
-    const sim = generateReply(cleanText, mangnon, memories);
     setIsThinking(true);
 
-    setTimeout(() => {
-      setIsThinking(false);
-      SoundEngine.playWindChime();
+    let replyText = '';
+    let newMemoryCandidate: string | undefined = undefined;
 
-      if (sim.newMemory) {
-        SoundEngine.playBlessingChime();
-        setMemoryToast(content.s07_chat.memorySavedToast);
-        setTimeout(() => setMemoryToast(null), 2400);
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+
+      const res = await fetch('/api/companion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          userMessage: cleanText,
+          mangnon,
+          memories,
+        }),
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const data = await res.json();
+        replyText = data.replyText || data.reply?.text || '';
+        newMemoryCandidate = data.newMemory;
       }
+    } catch {
+      // Offline or timeout: silently fall back to local dialogue engine
+    }
 
-      onSendMessage(cleanText, sim.replyText, sim.newMemory);
-    }, sim.delayMs);
+    if (!replyText) {
+      const sim = generateReply(cleanText, mangnon, memories);
+      replyText = sim.replyText;
+      newMemoryCandidate = sim.newMemory;
+    }
+
+    setIsThinking(false);
+    SoundEngine.playWindChime();
+
+    if (newMemoryCandidate) {
+      SoundEngine.playBlessingChime();
+      setMemoryToast(content.s07_chat.memorySavedToast);
+      setTimeout(() => setMemoryToast(null), 2400);
+    }
+
+    onSendMessage(cleanText, replyText, newMemoryCandidate);
   };
 
   const handleChipClick = (chip: string) => {

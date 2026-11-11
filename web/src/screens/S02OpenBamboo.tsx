@@ -1,118 +1,142 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { content } from '@/content/vi';
 import { SoundEngine } from '@/lib/sound-engine';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
 
 interface S02OpenBambooProps {
   onComplete: () => void;
+  allowSkip?: boolean; // Từ lần thứ 2 trở đi mới có nút Bỏ qua (Prompt §6 S02)
+  reducedMotion?: boolean;
 }
 
-export default function S02OpenBamboo({ onComplete }: S02OpenBambooProps) {
+export default function S02OpenBamboo({
+  onComplete,
+  allowSkip = false,
+  reducedMotion: settingReducedMotion = false,
+}: S02OpenBambooProps) {
+  const isReducedMotion = useReducedMotion(settingReducedMotion);
   const [phase, setPhase] = useState<'shake' | 'crack' | 'open' | 'particles' | 'burst'>('shake');
   const [canSkip, setCanSkip] = useState(false);
 
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 60 }, (_, i) => {
+        const angle = (i * 137.5 * Math.PI) / 180;
+        const radius = 30 + ((i * 23) % 105);
+        return {
+          x: Math.round(Math.cos(angle) * radius),
+          y: Math.round(Math.sin(angle) * radius),
+          scale: 0.6 + (i % 5) * 0.25,
+          opacity: 0.3 + (i % 7) * 0.1,
+        };
+      }),
+    []
+  );
+
   useEffect(() => {
-    // Sound FX
     SoundEngine.playBambooKnock();
 
-    const tSkip = setTimeout(() => setCanSkip(true), 1500);
+    if (isReducedMotion) {
+      // Giảm chuyển động: crossfade ánh sáng 1.2s, không hạt (Prompt §6 S02)
+      setPhase('burst');
+      const tEnd = setTimeout(onComplete, 1200);
+      return () => clearTimeout(tEnd);
+    }
 
+    const tSkip = allowSkip ? setTimeout(() => setCanSkip(true), 1500) : null;
     const tCrack = setTimeout(() => {
       setPhase('crack');
       SoundEngine.playWindChime();
     }, 800);
-
     const tOpen = setTimeout(() => {
       setPhase('open');
       SoundEngine.playBlessingChime();
     }, 1600);
-
     const tParticles = setTimeout(() => {
       setPhase('particles');
     }, 3200);
-
     const tBurst = setTimeout(() => {
       setPhase('burst');
     }, 5000);
-
     const tEnd = setTimeout(() => {
       onComplete();
     }, 6000);
 
     return () => {
-      clearTimeout(tSkip);
+      if (tSkip) clearTimeout(tSkip);
       clearTimeout(tCrack);
       clearTimeout(tOpen);
       clearTimeout(tParticles);
       clearTimeout(tBurst);
       clearTimeout(tEnd);
     };
-  }, [onComplete]);
+  }, [onComplete, allowSkip, isReducedMotion]);
 
   return (
     <div className="relative w-full h-full bg-[#1B2A2F] overflow-hidden flex flex-col items-center justify-center select-none">
-      {/* Skip button appears after 1.5s */}
-      {canSkip && (
+      {/* Nút Bỏ qua chỉ hiện từ Măng Non thứ 2 trở đi */}
+      {allowSkip && canSkip && (
         <button
           onClick={onComplete}
+          aria-label="Bỏ qua hoạt ảnh mở ống nứa"
           className="absolute top-12 right-6 z-50 text-xs px-3 py-1.5 rounded-full bg-forest-deep/80 border border-warm-amber/30 text-dongho-paper/80 hover:text-warm-glow hover:border-warm-amber transition"
         >
           {content.s02_openBamboo.skip}
         </button>
       )}
 
-      {/* Screen White/Gold Burst overlay in final phase */}
+      {/* Lớp ánh sáng lan toả chuyển sang S03 */}
       <div
         className={`absolute inset-0 bg-gradient-to-b from-[#FFF5DC] via-[#FFE18A] to-[#F4A259] z-40 transition-opacity duration-1000 pointer-events-none ${
           phase === 'burst' ? 'opacity-95' : 'opacity-0'
         }`}
       />
 
-      {/* Full screen ambient warm glow */}
+      {/* Ánh sáng ấm nền */}
       <div
         className={`absolute inset-0 bg-warm-amber/20 blur-3xl transition-opacity duration-1000 pointer-events-none ${
           phase !== 'shake' ? 'opacity-100' : 'opacity-30'
         }`}
       />
 
-      {/* Centered Bamboo Transformation Animation */}
+      {/* Ống nứa tách đôi & hạt sáng */}
       <div
         className={`relative flex flex-col items-center justify-center transition-transform duration-1000 ${
-          phase === 'open' || phase === 'particles' ? 'scale-110' : 'scale-100'
-        } ${phase === 'shake' ? 'animate-bounce' : ''}`}
+          !isReducedMotion && (phase === 'open' || phase === 'particles') ? 'scale-110' : 'scale-100'
+        } ${!isReducedMotion && phase === 'shake' ? 'animate-bounce' : ''}`}
       >
-        {/* Particle Cloud (≤ 120 particles) */}
-        {(phase === 'particles' || phase === 'burst') && (
+        {/* Đám mây hạt sáng (≤ 60 hạt, tắt khi Reduced Motion) */}
+        {!isReducedMotion && (phase === 'particles' || phase === 'burst') && (
           <div className="absolute inset-0 w-80 h-80 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 pointer-events-none z-30">
-            {[...Array(60)].map((_, i) => (
+            {particles.map((p, i) => (
               <div
                 key={i}
                 className="absolute w-2 h-2 rounded-full bg-[#FFFDF0]"
                 style={{
                   top: '50%',
                   left: '50%',
-                  transform: `translate(${(Math.random() - 0.5) * 240}px, ${(Math.random() - 0.5) * 240}px) scale(${Math.random() * 1.5 + 0.5})`,
+                  transform: `translate(${p.x}px, ${p.y}px) scale(${p.scale})`,
                   boxShadow: '0 0 12px #FFD166, 0 0 24px #F4A259',
                   transition: 'all 2s cubic-bezier(.22, 1, .36, 1)',
-                  opacity: Math.random() * 0.9 + 0.1,
+                  opacity: p.opacity,
                 }}
               />
             ))}
           </div>
         )}
 
-        {/* Silhouette of emerging creature */}
+        {/* Hình bóng sinh linh nhỏ chớm hiện */}
         {(phase === 'particles' || phase === 'burst') && (
-          <div className="absolute z-20 flex flex-col items-center animate-pulse transition-opacity duration-1000">
+          <div className="absolute z-20 flex flex-col items-center transition-opacity duration-1000">
             <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#FFD166] to-[#FFF8E7] blur-md shadow-[0_0_50px_#FFD166]" />
             <div className="w-16 h-20 -mt-10 rounded-t-full bg-[#FFE18A]/90 blur-sm" />
           </div>
         )}
 
-        {/* Splitting Bamboo Halves */}
+        {/* Hai nửa thân nứa tách ra */}
         <div className="relative w-44 h-72 flex items-center justify-center">
-          {/* Left Half of Stalk */}
           <div
             className={`transition-all duration-1000 transform ${
               phase === 'open' || phase === 'particles' || phase === 'burst'
@@ -126,14 +150,16 @@ export default function S02OpenBamboo({ onComplete }: S02OpenBambooProps) {
             </svg>
           </div>
 
-          {/* Golden Center Bursting Light Beam */}
           <div
             className={`w-12 h-64 bg-gradient-to-b from-[#FFFDF0] via-[#FFD166] to-transparent rounded-full blur-md transition-all duration-700 ${
-              phase === 'crack' ? 'scale-y-100 opacity-80' : phase === 'open' || phase === 'particles' ? 'scale-y-125 scale-x-150 opacity-100' : 'scale-y-0 opacity-0'
+              phase === 'crack'
+                ? 'scale-y-100 opacity-80'
+                : phase === 'open' || phase === 'particles'
+                ? 'scale-y-125 scale-x-150 opacity-100'
+                : 'scale-y-0 opacity-0'
             }`}
           />
 
-          {/* Right Half of Stalk */}
           <div
             className={`transition-all duration-1000 transform ${
               phase === 'open' || phase === 'particles' || phase === 'burst'
@@ -161,4 +187,3 @@ export default function S02OpenBamboo({ onComplete }: S02OpenBambooProps) {
     </div>
   );
 }
-

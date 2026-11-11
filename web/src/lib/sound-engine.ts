@@ -1,7 +1,7 @@
 // Âm thanh tự nhiên mô phỏng bằng Web Audio API (100% tự sinh, không phụ thuộc file ngoài)
 class SoundEngineService {
   private ctx: AudioContext | null = null;
-  private isMuted: boolean = false;
+  private isMuted: boolean = true; // Tắt mặc định theo Prompt §9.7 / §6 S13
 
   private initContext() {
     if (!this.ctx && typeof window !== 'undefined') {

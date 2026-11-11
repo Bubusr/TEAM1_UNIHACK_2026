@@ -85,6 +85,7 @@ export default function S13Settings({
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
+            aria-label="Quay lại"
             className="p-1.5 rounded-xl text-dongho-paper/70 hover:text-warm-glow hover:bg-forest-deep transition"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -263,7 +264,7 @@ export default function S13Settings({
               {content.common.loreQuote}
             </p>
             <p className="text-[11px] text-dongho-paper/70 leading-relaxed">
-              Măng Non là nơi bạn trú ngụ tâm hồn, không trừng phạt, không streak. Mọi điều bạn kể đều nuôi lớn sinh linh và cùng thắp sáng Cây Đa Làng Phù Đổng.
+              Măng Non là nơi cậu trú ngụ tâm hồn, không chấm điểm, không thúc ép. Mọi điều cậu kể đều nuôi lớn sinh linh và cùng thắp sáng Cây Đa Làng Phù Đổng.
             </p>
             <button
               onClick={() => setShowLore(false)}

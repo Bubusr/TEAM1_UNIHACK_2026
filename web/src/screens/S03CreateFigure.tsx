@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { content } from '@/content/vi';
 import { SoundEngine } from '@/lib/sound-engine';
+import { SerializableFaceExpression } from '@/lib/app-state';
 import {
   generateDefaultHumanoidRig,
   generateArmlessChibiRig,
@@ -63,10 +64,16 @@ import {
   Smile,
   Zap,
   Settings,
+  Camera,
 } from 'lucide-react';
 
 interface S03CreateFigureProps {
-  onConfirm: (imageUri: string, source: 'draw' | 'photo' | 'upload' | 'sample') => void;
+  onConfirm: (
+    imageUri: string,
+    source: 'draw' | 'photo' | 'upload' | 'sample',
+    rigData?: SkeletonRig,
+    faceExpr?: SerializableFaceExpression
+  ) => void;
 }
 
 // Bảng màu 14 màu phong phú Đông Hồ & Mở Rộng
@@ -240,11 +247,15 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   // 5: Add Animation & 3D Paper World (Hoạt ảnh Meta 4 danh mục + Rối giấy 3D Teri Gumball)
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
-  // Tabs cho Bước 1
-  const [tab, setTab] = useState<'draw' | 'photo' | 'samples'>('draw');
+  // Tabs cho Bước 1: Vẽ tự do · Chụp ảnh thật · Tải ảnh · Hình mẫu
+  const [tab, setTab] = useState<'draw' | 'camera' | 'photo' | 'samples'>('draw');
   const [rawImageUri, setRawImageUri] = useState<string | null>(null);
   const [currentImageUri, setCurrentImageUri] = useState<string | null>(null);
   const [imageSource, setImageSource] = useState<'draw' | 'photo' | 'upload' | 'sample'>('draw');
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraDeniedNotice, setCameraDeniedNotice] = useState<string | null>(null);
 
   // STEP 1: Drawing State
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -753,6 +764,160 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     };
   };
 
+  const stopCamera = useCallback(() => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current = null;
+    }
+    setCameraActive(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
+  const startCamera = async () => {
+    setCameraDeniedNotice(null);
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setCameraDeniedNotice(content.s03_createFigure.cameraDenied);
+      setTab('photo');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      });
+      cameraStreamRef.current = stream;
+      setCameraActive(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          void videoRef.current.play();
+        }
+      }, 60);
+    } catch {
+      // Từ chối quyền hoặc không có camera -> chuyển mượt sang tải ảnh (UC13)
+      setCameraDeniedNotice(content.s03_createFigure.cameraDenied);
+      setTab('photo');
+    }
+  };
+
+  /**
+   * Chuẩn hóa ảnh chụp/tải lên: thu nhỏ cạnh dài ≤ 1024px (Prompt §6 S03),
+   * đặt lên khung 330x320 giữ nguyên tỉ lệ, dò bounding box và mở Bước 2.
+   */
+  const processLoadedImageElement = (
+    rawImg: HTMLImageElement | HTMLCanvasElement,
+    srcW: number,
+    srcH: number,
+    sourceType: 'photo' | 'upload'
+  ) => {
+    // Đảm bảo cạnh dài ≤ 1024px trước khi xử lý
+    let sourceForCrop: HTMLImageElement | HTMLCanvasElement = rawImg;
+    let effectiveW = srcW;
+    let effectiveH = srcH;
+    const maxEdge = Math.max(srcW, srcH);
+    if (maxEdge > 1024) {
+      const downScale = 1024 / maxEdge;
+      const resizedCanvas = document.createElement('canvas');
+      resizedCanvas.width = Math.round(srcW * downScale);
+      resizedCanvas.height = Math.round(srcH * downScale);
+      const rCtx = resizedCanvas.getContext('2d');
+      if (rCtx) {
+        rCtx.drawImage(rawImg, 0, 0, resizedCanvas.width, resizedCanvas.height);
+        sourceForCrop = resizedCanvas;
+        effectiveW = resizedCanvas.width;
+        effectiveH = resizedCanvas.height;
+      }
+    }
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 330;
+    tempCanvas.height = 320;
+    const ctx = tempCanvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, 330, 320);
+
+    const scale = Math.min(330 / effectiveW, 320 / effectiveH);
+    const dw = Math.round(effectiveW * scale);
+    const dh = Math.round(effectiveH * scale);
+    const dx = Math.round((330 - dw) / 2);
+    const dy = Math.round((320 - dh) / 2);
+
+    ctx.drawImage(sourceForCrop, dx, dy, dw, dh);
+
+    const imgData = ctx.getImageData(0, 0, 330, 320).data;
+    let minX = 330;
+    let maxX = 0;
+    let minY = 320;
+    let maxY = 0;
+    let found = false;
+
+    for (let y = 0; y < 320; y++) {
+      for (let x = 0; x < 330; x++) {
+        const idx = (y * 330 + x) * 4;
+        if (imgData[idx + 3] > 35 && (imgData[idx] < 235 || imgData[idx + 1] < 235 || imgData[idx + 2] < 235)) {
+          found = true;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (found && maxX > minX + 15 && maxY > minY + 15) {
+      const pad = 12;
+      const bx = Math.max(8, minX - pad);
+      const by = Math.max(8, minY - pad);
+      const bw = Math.min(330 - bx - 8, maxX - minX + pad * 2);
+      const bh = Math.min(320 - by - 8, maxY - minY + pad * 2);
+      setBoundingBox({ x: bx, y: by, w: bw, h: bh });
+    } else {
+      const padX = Math.max(10, Math.round(dw * 0.05));
+      const padY = Math.max(10, Math.round(dh * 0.05));
+      setBoundingBox({
+        x: Math.max(6, dx + padX),
+        y: Math.max(6, dy + padY),
+        w: Math.min(330 - dx - 12, dw - padX * 2),
+        h: Math.min(320 - dy - 12, dh - padY * 2),
+      });
+    }
+
+    const uri = tempCanvas.toDataURL('image/png');
+    setRawImageUri(uri);
+    setImageSource(sourceType);
+
+    const normImg = new Image();
+    normImg.onload = () => {
+      step2BaseImgRef.current = normImg;
+      loadedImgRef.current = normImg;
+      setStep(2);
+      SoundEngine.playBlessingChime();
+    };
+    normImg.src = uri;
+  };
+
+  const handleCapturePhoto = () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const capCanvas = document.createElement('canvas');
+    capCanvas.width = video.videoWidth;
+    capCanvas.height = video.videoHeight;
+    const cCtx = capCanvas.getContext('2d');
+    if (!cCtx) return;
+    cCtx.drawImage(video, 0, 0);
+    stopCamera();
+    processLoadedImageElement(capCanvas, capCanvas.width, capCanvas.height, 'photo');
+  };
+
   const handleUploadAndProceed = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -762,81 +927,18 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
       return;
     }
 
+    // Giới hạn tối đa 10 MB theo Prompt §6 S03
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Tấm ảnh hơi lớn (trên 10 MB). Cậu chọn ảnh gọn hơn một chút nhé.');
+      return;
+    }
+
+    setUploadError(null);
     const reader = new FileReader();
     reader.onload = (event) => {
       const rawImg = new Image();
       rawImg.onload = () => {
-        // Chuẩn hóa vào khung canvas 330x320 giữ nguyên tỉ lệ (aspect ratio) trên nền giấy trắng
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = 330;
-        tempCanvas.height = 320;
-        const ctx = tempCanvas.getContext('2d');
-        if (!ctx) return;
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, 330, 320);
-
-        const scale = Math.min(330 / rawImg.naturalWidth, 320 / rawImg.naturalHeight);
-        const dw = Math.round(rawImg.naturalWidth * scale);
-        const dh = Math.round(rawImg.naturalHeight * scale);
-        const dx = Math.round((330 - dw) / 2);
-        const dy = Math.round((320 - dh) / 2);
-
-        ctx.drawImage(rawImg, dx, dy, dw, dh);
-
-        // Tự động dò pixel nét vẽ trên ảnh tải lên để đặt khung bounding box ôm sát nhân vật
-        const imgData = ctx.getImageData(0, 0, 330, 320).data;
-        let minX = 330;
-        let maxX = 0;
-        let minY = 320;
-        let maxY = 0;
-        let found = false;
-
-        for (let y = 0; y < 320; y++) {
-          for (let x = 0; x < 330; x++) {
-            const idx = (y * 330 + x) * 4;
-            // Điểm ảnh có nét vẽ (không phải màu trắng tinh hay trong suốt)
-            if (imgData[idx + 3] > 35 && (imgData[idx] < 235 || imgData[idx + 1] < 235 || imgData[idx + 2] < 235)) {
-              found = true;
-              if (x < minX) minX = x;
-              if (x > maxX) maxX = x;
-              if (y < minY) minY = y;
-              if (y > maxY) maxY = y;
-            }
-          }
-        }
-
-        if (found && maxX > minX + 15 && maxY > minY + 15) {
-          const pad = 12;
-          const bx = Math.max(8, minX - pad);
-          const by = Math.max(8, minY - pad);
-          const bw = Math.min(330 - bx - 8, maxX - minX + pad * 2);
-          const bh = Math.min(320 - by - 8, maxY - minY + pad * 2);
-          setBoundingBox({ x: bx, y: by, w: bw, h: bh });
-        } else {
-          // Fallback: Ôm sát vùng ảnh tải lên
-          const padX = Math.max(10, Math.round(dw * 0.05));
-          const padY = Math.max(10, Math.round(dh * 0.05));
-          setBoundingBox({
-            x: Math.max(6, dx + padX),
-            y: Math.max(6, dy + padY),
-            w: Math.min(330 - dx - 12, dw - padX * 2),
-            h: Math.min(320 - dy - 12, dh - padY * 2),
-          });
-        }
-
-        const uri = tempCanvas.toDataURL('image/png');
-        setRawImageUri(uri);
-        setImageSource('upload');
-
-        const normImg = new Image();
-        normImg.onload = () => {
-          step2BaseImgRef.current = normImg;
-          loadedImgRef.current = normImg;
-          setStep(2);
-          SoundEngine.playBlessingChime();
-        };
-        normImg.src = uri;
+        processLoadedImageElement(rawImg, rawImg.naturalWidth, rawImg.naturalHeight, 'upload');
       };
       rawImg.src = event.target?.result as string;
     };
@@ -1797,17 +1899,17 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
             {step === 2 && '2. Resize Box (Định vị nhân vật)'}
             {step === 3 && '3. Separate (Tách nền & Mặt nạ)'}
             {step === 4 &&
-              (imageSource === 'upload'
+              (imageSource === 'upload' || imageSource === 'photo'
                 ? '4. Gắn Khung Xương (3 Loại Khung & Mannequin)'
                 : '2. Gắn Khung Xương (3 Loại Khung & Mannequin)')}
             {step === 5 &&
-              (imageSource === 'upload'
+              (imageSource === 'upload' || imageSource === 'photo'
                 ? '5. Thổi Hồn Hoạt Ảnh & Sân Chơi 3D'
                 : '3. Thổi Hồn Hoạt Ảnh & Sân Chơi 3D')}
           </span>
         </div>
         <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-forest-darker border border-warm-amber/40 text-warm-amber font-semibold font-mono">
-          {imageSource === 'upload'
+          {imageSource === 'upload' || imageSource === 'photo'
             ? `Bước ${step}/5`
             : step === 1
             ? 'Bước 1/3'
@@ -1818,26 +1920,46 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
       </div>
 
       {/* =========================================================================
-          BƯỚC 1: UPLOAD / DRAW (VẼ TRÊN GIẤY TRẮNG / TẢI ẢNH)
+          BƯỚC 1: VẼ TAY / CHỤP CAMERA / TẢI ẢNH / HÌNH MẪU
          ========================================================================= */}
       {step === 1 && (
         <div className="flex-1 flex flex-col items-center justify-between my-2">
           {/* Tabs */}
-          <div className="flex bg-forest-darker p-1 rounded-2xl border border-bamboo-mid/40 mb-2 text-xs font-semibold">
+          <div className="flex bg-forest-darker p-1 rounded-2xl border border-bamboo-mid/40 mb-2 text-[11px] font-semibold">
             <button
-              onClick={() => setTab('draw')}
-              className={`px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 ${
+              onClick={() => {
+                stopCamera();
+                setTab('draw');
+              }}
+              className={`px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
                 tab === 'draw'
                   ? 'bg-forest-deep text-warm-glow shadow border border-warm-amber/40'
                   : 'text-dongho-paper/60 hover:text-dongho-paper'
               }`}
             >
               <Paintbrush className="w-3.5 h-3.5" />
-              <span>Vẽ tự do</span>
+              <span>Vẽ tay</span>
             </button>
             <button
-              onClick={() => setTab('photo')}
-              className={`px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 ${
+              onClick={() => {
+                setTab('camera');
+                void startCamera();
+              }}
+              className={`px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
+                tab === 'camera'
+                  ? 'bg-forest-deep text-warm-glow shadow border border-warm-amber/40'
+                  : 'text-dongho-paper/60 hover:text-dongho-paper'
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Chụp ảnh</span>
+            </button>
+            <button
+              onClick={() => {
+                stopCamera();
+                setTab('photo');
+              }}
+              className={`px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
                 tab === 'photo'
                   ? 'bg-forest-deep text-warm-glow shadow border border-warm-amber/40'
                   : 'text-dongho-paper/60 hover:text-dongho-paper'
@@ -1847,15 +1969,18 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               <span>Tải ảnh</span>
             </button>
             <button
-              onClick={() => setTab('samples')}
-              className={`px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 ${
+              onClick={() => {
+                stopCamera();
+                setTab('samples');
+              }}
+              className={`px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
                 tab === 'samples'
                   ? 'bg-forest-deep text-warm-glow shadow border border-warm-amber/40'
                   : 'text-dongho-paper/60 hover:text-dongho-paper'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Mẫu có sẵn</span>
+              <span>Mẫu</span>
             </button>
           </div>
 
@@ -2055,9 +2180,43 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
             </div>
           )}
 
-          {/* TAB 2: UPLOAD */}
+          {/* TAB: CAMERA (Chụp trực tiếp qua getUserMedia) */}
+          {tab === 'camera' && (
+            <div className="flex flex-col items-center w-full max-w-[330px] space-y-3">
+              <div className="relative w-[330px] h-[320px] rounded-3xl overflow-hidden bg-forest-abyss border-4 border-bamboo-mid/70 shadow-2xl flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                {!cameraActive && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-forest-darker/90">
+                    <Camera className="w-8 h-8 text-warm-amber mb-2 animate-pulse" />
+                    <span className="text-xs text-dongho-paper/80">Đang xin mở ống kính máy ảnh...</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handleCapturePhoto}
+                disabled={!cameraActive}
+                className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow disabled:opacity-40 text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Chụp ảnh ngay</span>
+              </button>
+            </div>
+          )}
+
+          {/* TAB: UPLOAD */}
           {tab === 'photo' && (
-            <div className="flex flex-col items-center justify-center w-full max-w-xs py-10">
+            <div className="flex flex-col items-center justify-center w-full max-w-xs py-6">
+              {cameraDeniedNotice && (
+                <div className="w-full mb-3 p-3 rounded-2xl bg-forest-darker/90 border border-warm-amber/40 text-[11px] text-warm-glow text-center">
+                  {cameraDeniedNotice}
+                </div>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -2076,7 +2235,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                   Chọn ảnh chụp nét vẽ trên giấy trắng
                 </p>
                 <p className="text-[11px] text-dongho-paper/60 mt-1 text-center">
-                  Ảnh nhân vật rõ ràng, tay chân không che lấp thân thể
+                  Tối đa 10 MB · Tự thu gọn giữ nguyên nét vẽ
                 </p>
               </div>
               {uploadError && (

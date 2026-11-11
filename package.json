@@ -7,7 +7,9 @@
     "dev": "npm --prefix web run dev",
     "build": "npm --prefix web run build",
     "start": "npm --prefix web start",
-    "test:contracts": "npm --prefix contracts test"
+    "deploy:fuji": "npm --prefix contracts run deploy:fuji",
+    "test:contracts": "npm --prefix contracts test",
+    "lint:copy": "node scripts/lint-copy.js"
   }
 }
 

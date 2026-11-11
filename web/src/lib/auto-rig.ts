@@ -88,6 +88,19 @@ export interface FaceExpression {
   eye?: EyeShape;                // 'normal' | 'happy' | 'sad' | 'sleepy' | 'wide' | 'wink'
   mouth?: MouthShape;            // 'smile' | 'big_smile' | 'sad' | 'neutral' | 'open' | 'tongue'
   customFaceCanvas?: HTMLCanvasElement | null; // Nét mặt do người chơi tự vẽ tay
+  customFaceDataUrl?: string | null;           // Bản lưu PNG DataURL để truyền sang S06 Home
+}
+
+const customFaceImageCache = new Map<string, HTMLImageElement>();
+function getCachedCustomFaceImage(dataUrl: string): HTMLImageElement | null {
+  if (typeof window === 'undefined' || !dataUrl) return null;
+  let img = customFaceImageCache.get(dataUrl);
+  if (!img) {
+    img = new window.Image();
+    img.src = dataUrl;
+    customFaceImageCache.set(dataUrl, img);
+  }
+  return img.complete && img.naturalWidth > 0 ? img : null;
 }
 
 export type CreatureAction =
@@ -1668,14 +1681,17 @@ export function drawPaperPuppet(
     // QUAN TRỌNG: Mặc định giữ nguyên 100% nét mặt gốc của nhân vật!
     // Chỉ vẽ khi người chơi chủ động bật tùy chỉnh nét mặt (faceExpr?.enabled === true)
     if (faceExpr && faceExpr.enabled) {
-      if (faceExpr.customFaceCanvas) {
+      const customFaceDrawable =
+        faceExpr.customFaceCanvas ||
+        (faceExpr.customFaceDataUrl ? getCachedCustomFaceImage(faceExpr.customFaceDataUrl) : null);
+      if (customFaceDrawable) {
         // Nét vẽ tay tự do: di chuyển theo độ uốn của vùng đầu
         const neckDisp = computeVertexDisplacement(0.5, neckRelY);
         const faceCX = (eyeL && eyeR ? (toLocalX(eyeL.relX) + toLocalX(eyeR.relX)) / 2 : toLocalX(0.5)) + neckDisp.dx;
         const faceCY = (eyeL && eyeR && mouth ? (toLocalY(eyeL.relY) + toLocalY(mouth.relY)) / 2 : toLocalY(0.26)) + neckDisp.dy;
         const faceW = w * 0.44;
         const faceH = h * 0.34;
-        ctx.drawImage(faceExpr.customFaceCanvas, faceCX - faceW / 2, faceCY - faceH / 2, faceW, faceH);
+        ctx.drawImage(customFaceDrawable, faceCX - faceW / 2, faceCY - faceH / 2, faceW, faceH);
       } else {
         // Biểu cảm theo mẫu: tính tọa độ ĐÃ BỊ BIẾN DẠNG THEO ĐẦU để bám chặt vào mặt
         if (eyeL && eyeR) {
@@ -1841,14 +1857,16 @@ export const drawAnimatedFigure = (
   direction: 1 | -1 = 1,
   motion: CreatureAction = 'walk',
   tick = 0,
-  faceExpr?: FaceExpression
+  faceExpr?: FaceExpression,
+  rig?: SkeletonRig,
+  drawLocalShadow = true
 ) => {
-  const dummyRig = generateDefaultHumanoidRig();
+  const effectiveRig = rig && rig.joints && rig.joints.length > 0 ? rig : generateDefaultHumanoidRig();
   drawPaperPuppet(
     ctx,
     img,
     pose,
-    dummyRig,
+    effectiveRig,
     centerX,
     centerY,
     targetWidth,
@@ -1859,7 +1877,8 @@ export const drawAnimatedFigure = (
     tick,
     undefined,
     false,
-    faceExpr
+    faceExpr,
+    drawLocalShadow
   );
 };
 

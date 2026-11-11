@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MobileFrame from '@/components/MobileFrame';
 import DemoControlPanel from '@/components/DemoControlPanel';
-import { AppStore, AppStateData, Mangnon, Personality, MemoryItem, ChatMessage, AppSettings } from '@/lib/app-state';
+import { AppStore, AppStateData, Mangnon, Personality, MemoryItem, ChatMessage, AppSettings, SerializableFaceExpression } from '@/lib/app-state';
 import { content } from '@/content/vi';
 import { SoundEngine } from '@/lib/sound-engine';
+import { SkeletonRig } from '@/lib/auto-rig';
 
 // Screens
 import S01NightForest from '@/screens/S01NightForest';
@@ -62,8 +63,10 @@ export default function MangNonApp() {
   const [draftImageSource, setDraftImageSource] = useState<'draw' | 'photo' | 'upload' | 'sample'>('draw');
   const [draftName, setDraftName] = useState<string>('Măng');
   const [draftPersonality, setDraftPersonality] = useState<Personality>('haohung');
+  const [draftRigData, setDraftRigData] = useState<SkeletonRig | undefined>(undefined);
+  const [draftFaceExpr, setDraftFaceExpr] = useState<SerializableFaceExpression | undefined>(undefined);
 
-  // Load initial state
+  // Load initial state + hydrate images from IndexedDB
   useEffect(() => {
     const loaded = AppStore.load();
     const hash = window.location.hash;
@@ -87,7 +90,7 @@ export default function MangNonApp() {
     }
 
     // Update lastOpenedAt
-    const updated = {
+    const withTimestamp = {
       ...loaded,
       currentScreen: initialScreen,
       settings: {
@@ -96,14 +99,27 @@ export default function MangNonApp() {
       },
     };
 
-    setState(updated);
-    AppStore.save(updated);
+    // Sync SoundEngine muted state to saved setting (default: muted = true per §9.7)
+    SoundEngine.setMuted(!withTimestamp.settings.soundOn);
+
+    // Hydrate images from IndexedDB (async), then set state
+    AppStore.hydrateImages(withTimestamp).then((hydrated) => {
+      setState(hydrated);
+      AppStore.save(hydrated);
+    });
 
     // Sync hash
     if (SCREEN_HASH_MAP[initialScreen]) {
       window.location.hash = SCREEN_HASH_MAP[initialScreen];
     }
   }, []);
+
+  // Sync SoundEngine when soundOn setting changes after mount
+  useEffect(() => {
+    if (state) {
+      SoundEngine.setMuted(!state.settings.soundOn);
+    }
+  }, [state?.settings.soundOn]);
 
   // Listen to hash changes
   useEffect(() => {
@@ -183,9 +199,16 @@ export default function MangNonApp() {
     navigateTo('S03');
   };
 
-  const handleConfirmFigureS03 = (imageUri: string, source: 'draw' | 'photo' | 'upload' | 'sample') => {
+  const handleConfirmFigureS03 = (
+    imageUri: string,
+    source: 'draw' | 'photo' | 'upload' | 'sample',
+    rigData?: SkeletonRig,
+    faceExpr?: SerializableFaceExpression
+  ) => {
     setDraftImageUri(imageUri);
     setDraftImageSource(source);
+    if (rigData) setDraftRigData(rigData);
+    if (faceExpr) setDraftFaceExpr(faceExpr);
     navigateTo('S04');
   };
 
@@ -205,11 +228,14 @@ export default function MangNonApp() {
       imageSource: draftImageSource,
       status: 'active',
       goalTitle,
+      plannedDays: durationDays as (7 | 14 | 30 | null),
       likes: ['tiếng gió reo', 'ngắm lá rơi'],
       dislike: 'nơi ồn ào',
       sessionsCount: 1,
       activeDays: [new Date().toISOString().split('T')[0]],
       createdAt: new Date().toISOString(),
+      rigData: draftRigData,
+      faceExpr: draftFaceExpr,
     };
 
     const initialGreetingMessage: ChatMessage = {
@@ -367,7 +393,10 @@ export default function MangNonApp() {
 
   return (
     <MobileFrame>
-      <div className="relative w-full h-full flex flex-col overflow-hidden bg-forest-abyss">
+      <div
+        className="relative w-full h-full flex flex-col overflow-hidden bg-forest-abyss"
+        data-reduced-motion={state.settings.reducedMotion ? 'true' : undefined}
+      >
         {/* Welcome Back Mild Toast (UC08) */}
         {welcomeBanner && (
           <div className="absolute top-12 left-4 right-4 z-40 p-3 rounded-2xl bg-forest-darker/95 border border-warm-amber/60 text-dongho-paper text-xs shadow-2xl flex items-center justify-between animate-fade-in">
@@ -391,7 +420,7 @@ export default function MangNonApp() {
           )}
 
           {state.currentScreen === 'S02' && (
-            <S02OpenBamboo onComplete={handleCompleteS02} />
+            <S02OpenBamboo onComplete={handleCompleteS02} allowSkip={state.bambooOpened} />
           )}
 
           {state.currentScreen === 'S03' && (

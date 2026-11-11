@@ -4,12 +4,13 @@ const config: Config = {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/screens/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
-        // Bảng màu Măng Non theo Idea03_MangNon_CoreDesign.md
+        // Bảng màu Măng Non theo Idea03_MangNon_CoreDesign.md & Prompt §9.2
         forest: {
           deep: "#1B2A2F",    // Xanh đêm sâu Rừng Tre (Ghibli night)
           darker: "#132024",
@@ -30,26 +31,42 @@ const config: Config = {
           wood: "#BC6C25",    // Vàng đất / mộc bản
         },
         dongho: {
-          red: "#E63946",     // Đỏ hoa gạo / Đom đóm rợp trời Cây Đa Phù Đổng
+          red: "#C8412F",     // Đỏ Đông Hồ
           crimson: "#C1121F",
+          pink: "#E8837A",    // Hồng sen Đông Hồ
           ochre: "#DDA15E",
-          paper: "#F7F2E7",   // Màu giấy điệp mộc bản Đông Hồ
+          paper: "#F6EBD4",   // Màu giấy dó / điệp mộc bản Đông Hồ
           papermid: "#E8DEC8",
+        },
+        paper: {
+          bamboo: "#E9D8A6",  // Thẻ tre khô
+          do: "#F6EBD4",      // Giấy dó
+        },
+        ink: "#2B2118",
+        node: {
+          ring: "#B98B3E",
         },
       },
       fontFamily: {
+        sans: ["var(--font-ui)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        hand: ["var(--font-hand)", "var(--font-ui)", "cursive", "sans-serif"],
         serif: ["Merriweather", "Georgia", "serif"],
       },
+      transitionTimingFunction: {
+        soft: "cubic-bezier(.22, 1, .36, 1)",
+      },
       animation: {
-        "breathe": "breathe 4s ease-in-out infinite",
-        "sway-gentle": "swayGentle 5s ease-in-out infinite",
+        "breathe": "breathe 3.6s ease-in-out infinite",
+        "sway-gentle": "swayGentle 6s ease-in-out infinite",
         "firefly": "firefly 3s ease-in-out infinite",
         "glow-soft": "glowSoft 3s ease-in-out infinite",
+        "fade-in": "fadeIn 0.35s cubic-bezier(.22, 1, .36, 1) forwards",
+        "slide-up": "slideUp 0.4s cubic-bezier(.22, 1, .36, 1) forwards",
       },
       keyframes: {
         breathe: {
-          "0%, 100%": { transform: "scale(1)" },
-          "50%": { transform: "scale(1.03)" },
+          "0%, 100%": { transform: "scaleY(1)" },
+          "50%": { transform: "scaleY(1.02)" },
         },
         swayGentle: {
           "0%, 100%": { transform: "rotate(-1.5deg)" },
@@ -62,6 +79,14 @@ const config: Config = {
         firefly: {
           "0%, 100%": { opacity: "0.3", transform: "translateY(0px)" },
           "50%": { opacity: "0.9", transform: "translateY(-8px)" },
+        },
+        fadeIn: {
+          "0%": { opacity: "0", transform: "translateY(6px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        slideUp: {
+          "0%": { opacity: "0", transform: "translateY(32px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },
     },

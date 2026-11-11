@@ -89,17 +89,22 @@ export default function S06HomeForest({
     let animationId: number;
     let tick = 0;
 
-    // Create ambient particles (fireflies or leaves)
+    // Create ambient particles (fireflies or leaves) using deterministic positions
     const particleCount = timeOfDay === 'night' ? 24 : 16;
-    const particles = Array.from({ length: particleCount }).map(() => ({
-      x: Math.random() * 390,
-      y: Math.random() * 844,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: Math.random() * 0.3 - 0.6,
-      size: Math.random() * 2.5 + 1.5,
-      alpha: Math.random() * 0.8 + 0.2,
-      color: season === 'autumn' ? '#F4A259' : '#FFD166',
-    }));
+    const particles = Array.from({ length: particleCount }).map((_, i) => {
+      // Golden angle seeding for even distribution without Math.random()
+      const phi = (i * 137.508) % 360;
+      const r = ((i * 0.618 + 0.3) % 1);
+      return {
+        x: (phi / 360) * 390,
+        y: (r * 844),
+        vx: (((i * 7 + 3) % 10) / 10 - 0.5) * 0.4,
+        vy: (((i * 13 + 5) % 10) / 10) * 0.3 - 0.6,
+        size: ((i * 3 + 1) % 5) * 0.5 + 1.5,
+        alpha: ((i * 11 + 2) % 8) * 0.1 + 0.2,
+        color: season === 'autumn' ? '#F4A259' : '#FFD166',
+      };
+    });
 
     const render = () => {
       tick++;
@@ -224,15 +229,8 @@ export default function S06HomeForest({
 
       // Draw Creature with Articulated Humanoid Skeletal Layers
       if (mangnon && creatureImgRef.current) {
-        // Soft ground shadow under creature
-        ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-        ctx.beginPath();
-        ctx.ellipse(c.x, c.y + 40, 24 * pose.squashX, 7 * pose.stretchY, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
         // Draw character with animated Head, Torso/Clothes, Arms, Legs, Tail
+        // (drawAnimatedFigure draws its own shadow internally)
         drawAnimatedFigure(
           ctx,
           creatureImgRef.current,
@@ -393,7 +391,7 @@ export default function S06HomeForest({
               🎋
             </div>
             <p className="text-xs font-medium text-warm-glow mt-8 text-center max-w-xs px-4">
-              {content.s06_homeForest.emptyNight}
+              {timeOfDay === 'night' ? content.s06_homeForest.emptyNight : content.s06_homeForest.emptyDay}
             </p>
             <button className="mt-3 px-5 py-2 rounded-xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow">
               {content.s06_homeForest.btnOpenNow}

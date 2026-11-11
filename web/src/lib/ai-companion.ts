@@ -70,7 +70,7 @@ export function generatePersonaResponse(
       quizQuestion: {
         question: `Trên hành trình "${goal.name}", điều gì nuôi dưỡng Măng Non lớn lên một cách bền vững và ấm áp nhất?`,
         options: [
-          'Học dồn ép thâu đêm vì sợ bị phạt streak',
+          'Học dồn ép thâu đêm vì sợ bị trừ điểm hay gián đoạn',
           'Sống trọn vẹn cuộc đời của mình và mang những điều tâm đắc về kể lại',
           'Chụp ảnh khoe thành tích lên mạng xã hội',
           'Bắt Măng Non phải ghi nhớ tất cả lý thuyết khô khan',

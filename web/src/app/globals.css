@@ -3,16 +3,53 @@
 @tailwind utilities;
 
 :root {
+  /* Design tokens chuẩn Prompt §9.2 & CoreDesign */
+  --bamboo-day-1: #3E5C45;
+  --bamboo-day-2: #6B8F71;
+  --night-deep: #1B2A2F;
+  --glow-amber: #F4A259;
+  --glow-gold: #FFD166;
+  --dongho-red: #C8412F;
+  --dongho-pink: #E8837A;
+  --paper-bamboo: #E9D8A6;
+  --paper-do: #F6EBD4;
+  --ink: #2B2118;
+  --node-ring: #B98B3E;
+
+  --ease-soft: cubic-bezier(.22, 1, .36, 1);
+  --dur-short: 300ms;
+  --dur-med: 600ms;
+  --dur-long: 1200ms;
+  --breathe: 3.6s;
+  --sway: 6s;
+
+  --font-ui: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-hand: "Mali", "Be Vietnam Pro", cursive, sans-serif;
   --forest-bg: #1B2A2F;
-  --bamboo-text: #F7F2E7;
+  --bamboo-text: #F6EBD4;
 }
 
 body {
   color: var(--bamboo-text);
   background: radial-gradient(ellipse at top, #273D44 0%, #1B2A2F 50%, #0D1619 100%);
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-ui);
   letter-spacing: -0.01em;
+}
+
+.font-hand {
+  font-family: var(--font-hand);
+}
+
+/* Nút kiểu mộc bản Đông Hồ (in lệch bản nhẹ, không blur) */
+.btn-woodblock {
+  border: 2px solid #2B2118;
+  box-shadow: 2px 3px 0px #0D1619;
+  transition: transform var(--dur-short) var(--ease-soft), box-shadow var(--dur-short) var(--ease-soft);
+}
+.btn-woodblock:active {
+  transform: translate(1px, 2px);
+  box-shadow: 1px 1px 0px #0D1619;
 }
 
 /* Thẻ tre cuộn / Phong cách mộc bản Đông Hồ */
@@ -27,8 +64,8 @@ body {
 }
 
 .bamboo-scroll {
-  background: #F7F2E7;
-  color: #1B2A2F;
+  background: #F6EBD4;
+  color: #2B2118;
   border-left: 4px solid #3E5C45;
   border-radius: 8px;
 }
@@ -41,4 +78,21 @@ body {
 
 .firefly-particle {
   animation: fireflyFloat 4s ease-in-out infinite;
+}
+
+/* Tôn trọng chế độ Giảm chuyển động (Cài đặt & OS prefers-reduced-motion) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+  }
+}
+
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 150ms !important;
 }

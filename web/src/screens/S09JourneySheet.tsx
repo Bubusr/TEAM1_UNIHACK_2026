@@ -93,9 +93,12 @@ export default function S09JourneySheet({
               </span>
             </div>
             <div className="p-3 rounded-2xl bg-forest-darker/70 border border-bamboo-soft/20">
-              <span className="text-[10px] text-dongho-paper/60 block">Số buổi chuyện trò</span>
+              <span className="text-[10px] text-dongho-paper/60 block">Tính cách</span>
               <span className="font-semibold text-warm-amber mt-0.5 block">
-                {mangnon.sessionsCount} buổi kể
+                {mangnon.personality === 'tomo' ? '🌿 Trầm tư'
+                  : mangnon.personality === 'diemtinh' ? '🍃 Điềm tĩnh'
+                  : mangnon.personality === 'haohung' ? '🌻 Háo hức'
+                  : '🌸 Nhút nhát'}
               </span>
             </div>
           </div>
