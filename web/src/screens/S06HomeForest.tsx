@@ -5,8 +5,9 @@ import { Mangnon } from '@/lib/app-state';
 import { content } from '@/content/vi';
 import { SoundEngine } from '@/lib/sound-engine';
 import { calculateRigPose, drawAnimatedFigure, CreatureAction } from '@/lib/auto-rig';
-import { Settings, Sparkles, MessageSquareHeart, ScrollText, User } from 'lucide-react';
+import { Settings, Sparkles, MessageSquareHeart, ScrollText, User, Clock } from 'lucide-react';
 import UserProfileModal, { UserAccount } from '@/components/UserProfileModal';
+import FocusSessionModal from '@/components/FocusSessionModal';
 
 interface S06HomeForestProps {
   mangnon: Mangnon | null;
@@ -17,6 +18,7 @@ interface S06HomeForestProps {
   onOpenJourney: () => void;
   onOpenSettings: () => void;
   onOpenBambooStalk?: () => void;
+  onFocusReward?: (leaves: number, note: string) => void;
 }
 
 interface CreaturePosition {
@@ -41,9 +43,11 @@ export default function S06HomeForest({
   onOpenJourney,
   onOpenSettings,
   onOpenBambooStalk,
+  onFocusReward,
 }: S06HomeForestProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [speechBubble, setSpeechBubble] = useState<string | null>(null);
+  const [showFocusModal, setShowFocusModal] = useState(false);
   const creatureRef = useRef<CreaturePosition>({
     x: 195,
     y: 520,
@@ -425,16 +429,25 @@ export default function S06HomeForest({
         </div>
       </div>
 
-      {/* Hanging Bamboo Journey Slip (Under Top Bar, tap opens S09) */}
+      {/* Hanging Bamboo Journey Slip & Focus Session Button */}
       {mangnon && mangnon.goalTitle && (
-        <div className="relative z-20 px-5 mt-2.5">
+        <div className="relative z-20 px-5 mt-2.5 flex items-center gap-2">
           <div
             onClick={onOpenJourney}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-forest-darker/85 border border-warm-amber/40 text-xs text-dongho-paper/90 shadow-lg hover:border-warm-glow cursor-pointer transition"
           >
             <ScrollText className="w-3.5 h-3.5 text-warm-amber" />
-            <span className="font-medium truncate max-w-[210px]">{mangnon.goalTitle}</span>
+            <span className="font-medium truncate max-w-[140px]">{mangnon.goalTitle}</span>
           </div>
+
+          <button
+            onClick={() => setShowFocusModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-forest-darker/90 border border-warm-amber/60 text-xs text-warm-glow shadow hover:border-warm-amber hover:scale-105 transition active:scale-95"
+            title="Bắt đầu giờ tự học tĩnh lặng cùng Măng Non"
+          >
+            <Clock className="w-3.5 h-3.5 text-warm-amber" />
+            <span className="font-bold text-[11px]">Tập trung</span>
+          </button>
         </div>
       )}
 
@@ -490,6 +503,16 @@ export default function S06HomeForest({
         isOpen={showUserModal}
         onClose={() => setShowUserModal(false)}
         onUserChange={(u) => setUserAccount(u)}
+      />
+
+      {/* Focus Session Modal (Proof of Output) */}
+      <FocusSessionModal
+        isOpen={showFocusModal}
+        onClose={() => setShowFocusModal(false)}
+        mangnon={mangnon}
+        onCompleteSession={(leaves, note) => {
+          if (onFocusReward) onFocusReward(leaves, note);
+        }}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, ShieldCheck, Wallet, Copy, Check, LogOut, X, Sparkles } from 'lucide-react';
+import { User, Mail, ShieldCheck, Wallet, Copy, Check, LogOut, X, Sparkles, GraduationCap, Zap, Shield } from 'lucide-react';
 import { SoundEngine } from '@/lib/sound-engine';
 
 export interface UserAccount {
@@ -11,6 +11,10 @@ export interface UserAccount {
   embeddedAddress: string;
   provider: 'google';
   connectedAt: string;
+  isStudent?: boolean;
+  studentEmail?: string;
+  studentBoost?: number;
+  shieldsCount?: number;
 }
 
 const STORAGE_KEY_USER = 'mangnon_user_account';
@@ -39,8 +43,33 @@ export default function UserProfileModal({
 }: UserProfileModalProps) {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [customEmail, setCustomEmail] = useState('');
+  const [studentEduEmail, setStudentEduEmail] = useState('');
+  const [isVerifyingStudent, setIsVerifyingStudent] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleVerifyStudent = (sampleEdu?: string) => {
+    if (!currentUser) return;
+    setIsVerifyingStudent(true);
+    SoundEngine.playBambooKnock();
+
+    setTimeout(() => {
+      const email =
+        sampleEdu || studentEduEmail.trim() || `${currentUser.email.split('@')[0]}@hcmut.edu.vn`;
+      const updatedUser: UserAccount = {
+        ...currentUser,
+        isStudent: true,
+        studentEmail: email,
+        studentBoost: 1.5,
+        shieldsCount: 3,
+      };
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      if (onUserChange) onUserChange(updatedUser);
+      setIsVerifyingStudent(false);
+      SoundEngine.playBlessingChime();
+    }, 500);
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -173,6 +202,76 @@ export default function UserProfileModal({
                 </p>
               </div>
 
+              {/* Student Verification (.edu.vn) & Privileges */}
+              <div className="p-3.5 rounded-2xl bg-forest-darker/90 border border-warm-amber/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-warm-glow flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-warm-amber" />
+                    <span>Xác Thực Sinh Viên (.edu.vn)</span>
+                  </span>
+                  {currentUser.isStudent ? (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-bamboo-soft/20 text-bamboo-soft font-bold flex items-center gap-1">
+                      <Check className="w-2.5 h-2.5" />
+                      <span>Đã xác thực</span>
+                    </span>
+                  ) : (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-warm-amber/20 text-warm-amber font-medium">
+                      Chưa kích hoạt
+                    </span>
+                  )}
+                </div>
+
+                {currentUser.isStudent ? (
+                  <div className="space-y-2 pt-1">
+                    <div className="p-2 rounded-xl bg-forest-deep border border-bamboo-mid/30 flex items-center justify-between text-[11px]">
+                      <span className="text-dongho-paper/80 font-mono text-[10px] truncate">
+                        🎓 {currentUser.studentEmail}
+                      </span>
+                      <span className="text-[9px] text-warm-amber font-bold shrink-0">Verified</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                      <div className="p-2 rounded-xl bg-forest-deep border border-warm-amber/30 text-warm-glow flex items-center gap-1.5">
+                        <Zap className="w-3 h-3 text-warm-amber" />
+                        <div>
+                          <span className="font-bold block">Student Boost</span>
+                          <span className="text-[9px] text-dongho-paper/60">x1.5 Mầm Lực</span>
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-xl bg-forest-deep border border-bamboo-soft/30 text-bamboo-soft flex items-center gap-1.5">
+                        <Shield className="w-3 h-3 text-bamboo-soft" />
+                        <div>
+                          <span className="font-bold block">Khiên Mùa Thi</span>
+                          <span className="text-[9px] text-dongho-paper/60">3 Khiên/Tháng</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 pt-1 text-[11px]">
+                    <p className="text-[10px] text-dongho-paper/70 leading-relaxed">
+                      Nhận hệ số nhân x1.5 Mầm Lực và ưu đãi giảm 20% tại các quán cà phê Trạm Tre.
+                    </p>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="email"
+                        value={studentEduEmail}
+                        onChange={(e) => setStudentEduEmail(e.target.value)}
+                        placeholder="masv@hcmut.edu.vn"
+                        className="flex-1 px-2.5 py-1.5 rounded-xl bg-forest-deep border border-bamboo-mid/40 text-[11px] text-dongho-paper placeholder:text-dongho-paper/40 focus:outline-none focus:border-warm-amber"
+                      />
+                      <button
+                        onClick={() => handleVerifyStudent(studentEduEmail)}
+                        disabled={isVerifyingStudent}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-[10px] transition shrink-0"
+                      >
+                        {isVerifyingStudent ? '...' : 'Xác thực'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Sign out */}
               <button
                 onClick={handleLogout}
@@ -266,3 +365,4 @@ export default function UserProfileModal({
     </div>
   );
 }
+

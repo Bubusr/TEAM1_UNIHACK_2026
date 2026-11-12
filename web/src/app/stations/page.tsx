@@ -4,13 +4,37 @@ import React, { useState, useEffect } from 'react';
 import { StorageService } from '@/lib/storage';
 import { Station } from '@/lib/types';
 import { SoundEngine } from '@/lib/sound-engine';
-import { Coffee, MapPin, CheckCircle2, Ticket, ShieldCheck, Sparkles } from 'lucide-react';
+import { Coffee, MapPin, CheckCircle2, Ticket, ShieldCheck, Sparkles, Gift, BookOpen, HeartHandshake, Award } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function StationsPage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [checkingInId, setCheckingInId] = useState<string | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const [donatedAmount, setDonatedAmount] = useState<number>(350);
+  const [claimedVouchers, setClaimedVouchers] = useState<Record<string, boolean>>({});
+
+  const handleClaimReward = (rewardId: string, title: string) => {
+    SoundEngine.playBlessingChime();
+    setClaimedVouchers((prev) => ({ ...prev, [rewardId]: true }));
+    confetti({
+      particleCount: 60,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#FFD166', '#E8837A', '#6B8F71'],
+    });
+  };
+
+  const handleDonateScholarship = () => {
+    SoundEngine.playBlessingChime();
+    setDonatedAmount((prev) => prev + 10);
+    confetti({
+      particleCount: 80,
+      spread: 90,
+      origin: { y: 0.5 },
+      colors: ['#FFD166', '#F4A259', '#34A853'],
+    });
+  };
 
   useEffect(() => {
     setStations(StorageService.getStations());
@@ -207,6 +231,119 @@ export default function StationsPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* STUDENT REWARDS & COMMUNITY SCHOLARSHIP FUND (B2B WIN-WIN-WIN) */}
+      <div className="mt-14 pt-8 border-t border-bamboo-mid/30 space-y-6">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <span className="text-2xl">🎁</span>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-warm-glow">
+              Gian Đổi Quà Học Tập &amp; Quỹ Khuyến Học Sinh Viên
+            </h2>
+            <span className="text-xs px-2.5 py-0.5 rounded-md bg-forest-deep border border-warm-amber/40 text-warm-amber font-semibold">
+              B2B Sponsor Pool
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-dongho-paper/70 mt-1 italic">
+            Quy đổi thành quả giờ học tập trung thành ưu đãi thực tế và đóng góp trực tiếp vào quỹ học bổng cộng đồng trên Avalanche.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: F&B Voucher */}
+          <div className="p-6 rounded-3xl bg-forest-deep/90 border border-warm-amber/40 shadow-xl flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-forest-darker text-warm-amber flex items-center gap-1">
+                  <Coffee className="w-3.5 h-3.5 text-warm-amber" />
+                  Voucher Cà Phê
+                </span>
+                <span className="text-xs font-mono font-bold text-warm-glow">10 Mầm Lực</span>
+              </div>
+              <h3 className="font-bold text-base text-dongho-paper">Giảm 20% Highlands &amp; The Coffee House</h3>
+              <p className="text-xs text-dongho-paper/70 mt-2 leading-relaxed">
+                Áp dụng tại mọi chi nhánh quanh các trường đại học khi chạy deadline hoặc học nhóm.
+              </p>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-bamboo-mid/20">
+              {claimedVouchers['fb-voucher'] ? (
+                <div className="p-2.5 rounded-xl bg-forest-darker border border-bamboo-soft/40 text-center font-mono text-xs text-warm-glow font-bold">
+                  Mã: MN-STUDY-FNB20
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleClaimReward('fb-voucher', 'Voucher Cà Phê')}
+                  className="w-full py-2.5 rounded-xl bg-warm-amber hover:bg-warm-glow text-forest-abyss font-bold text-xs shadow transition flex items-center justify-center gap-1.5"
+                >
+                  <Gift className="w-4 h-4" />
+                  <span>Đổi Voucher Ưu Đãi</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Card 2: Book / Stationery */}
+          <div className="p-6 rounded-3xl bg-forest-deep/90 border border-warm-amber/40 shadow-xl flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-forest-darker text-bamboo-soft flex items-center gap-1">
+                  <BookOpen className="w-3.5 h-3.5 text-bamboo-soft" />
+                  Sách &amp; Giáo Trình
+                </span>
+                <span className="text-xs font-mono font-bold text-warm-glow">25 Mầm Lực</span>
+              </div>
+              <h3 className="font-bold text-base text-dongho-paper">Bộ Sách &amp; Học Liệu Fahasa / Coursera</h3>
+              <p className="text-xs text-dongho-paper/70 mt-2 leading-relaxed">
+                Tài trợ từ đối tác giáo dục dành cho những bạn có ít nhất 10 giờ học tập trung được xác thực.
+              </p>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-bamboo-mid/20">
+              {claimedVouchers['book-voucher'] ? (
+                <div className="p-2.5 rounded-xl bg-forest-darker border border-bamboo-soft/40 text-center font-mono text-xs text-bamboo-soft font-bold">
+                  Mã: MN-FAHASA-EDU50
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleClaimReward('book-voucher', 'Bộ Sách Fahasa')}
+                  className="w-full py-2.5 rounded-xl bg-forest-darker hover:bg-forest-mist border border-warm-amber/50 text-warm-glow font-bold text-xs shadow transition flex items-center justify-center gap-1.5"
+                >
+                  <Award className="w-4 h-4 text-warm-amber" />
+                  <span>Nhận Học Liệu Tài Trợ</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Card 3: Community Scholarship Fund */}
+          <div className="p-6 rounded-3xl bg-forest-deep/90 border border-bamboo-soft/50 shadow-xl flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-bamboo-soft/20 text-bamboo-soft flex items-center gap-1">
+                  <HeartHandshake className="w-3.5 h-3.5 text-bamboo-soft" />
+                  Quỹ Khuyến Học
+                </span>
+                <span className="text-xs font-mono font-bold text-warm-glow">{donatedAmount} Mầm Lực</span>
+              </div>
+              <h3 className="font-bold text-base text-dongho-paper">Góp Quỹ Khuyến Học Làng Phù Đổng</h3>
+              <p className="text-xs text-dongho-paper/70 mt-2 leading-relaxed">
+                Mỗi 10 Mầm Lực đóng góp được doanh nghiệp bảo trợ quy đổi thành 50.000đ tài trợ học bổng vượt khó cho sinh viên nghèo.
+              </p>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-bamboo-mid/20">
+              <button
+                onClick={handleDonateScholarship}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-bamboo-deep to-forest-darker hover:brightness-110 border border-bamboo-soft/50 text-warm-glow font-bold text-xs shadow transition flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-4 h-4 text-warm-amber" />
+                <span>Quyên Góp +10 Mầm Lực</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

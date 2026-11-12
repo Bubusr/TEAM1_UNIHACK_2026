@@ -454,6 +454,26 @@ export default function MangNonApp() {
               onOpenJourney={() => setShowJourneySheet(true)}
               onOpenSettings={() => navigateTo('S13')}
               onOpenBambooStalk={() => navigateTo('S01')}
+              onFocusReward={(leaves, note) => {
+                setState((prev) => {
+                  if (!prev) return prev;
+                  const memItem = {
+                    id: `mem-${Date.now()}`,
+                    mangnonId: prev.activeMangnon?.id || 'mn-default',
+                    text: `Cậu kể: Vừa hoàn thành phiên tự học (${note || 'Tập trung sâu'})`,
+                    pinned: false,
+                    forgotten: false,
+                    createdAt: new Date().toISOString(),
+                  };
+                  const next: AppStateData = {
+                    ...prev,
+                    villageLeaves: prev.villageLeaves + leaves,
+                    memories: [memItem, ...prev.memories],
+                  };
+                  AppStore.save(next);
+                  return next;
+                });
+              }}
             />
           )}
 
