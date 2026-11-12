@@ -116,13 +116,25 @@ export default function S11MemoryStream({ restingMangnons }: S11MemoryStreamProp
                 <p className="text-xs font-semibold text-dongho-paper/90 mt-0.5">
                   {selectedCompanion.goalTitle}
                 </p>
-                <p className="text-[10px] text-dongho-paper/60 mt-1 flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-warm-amber" />
-                  <span>
-                    Đồng hành: {new Date(selectedCompanion.createdAt).toLocaleDateString('vi-VN')}
-                    {selectedCompanion.restedAt && ` — ${new Date(selectedCompanion.restedAt).toLocaleDateString('vi-VN')}`}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-forest-darker border border-warm-amber/30 text-warm-amber font-medium">
+                    {selectedCompanion.personality === 'tomo'
+                      ? 'Tò mò'
+                      : selectedCompanion.personality === 'diemtinh'
+                      ? 'Điềm tĩnh'
+                      : selectedCompanion.personality === 'haohung'
+                      ? 'Hào hứng'
+                      : 'Nhút nhát'}
                   </span>
-                </p>
+                  <span className="text-[9px] text-dongho-paper/60 flex items-center gap-1">
+                    <Calendar className="w-2.5 h-2.5 text-warm-amber" />
+                    <span>
+                      {new Date(selectedCompanion.createdAt).toLocaleDateString('vi-VN')}
+                      {selectedCompanion.restedAt &&
+                        ` — ${new Date(selectedCompanion.restedAt).toLocaleDateString('vi-VN')}`}
+                    </span>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -150,6 +162,24 @@ export default function S11MemoryStream({ restingMangnons }: S11MemoryStreamProp
                     <span className="text-dongho-paper/85">{mem}</span>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Avalanche On-chain Badge */}
+            {selectedCompanion.nftTxHash && (
+              <div className="mt-4 p-3 rounded-2xl bg-forest-darker border border-warm-amber/40 text-[10px] space-y-1">
+                <div className="flex items-center gap-1.5 text-warm-glow font-bold">
+                  <span>⛓️</span>
+                  <span>Đã khắc dấu vĩnh cửu trên Avalanche Fuji</span>
+                </div>
+                <a
+                  href={`https://testnet.snowtrace.io/tx/${selectedCompanion.nftTxHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-warm-amber underline truncate block font-mono text-[9px] hover:brightness-110"
+                >
+                  TX: {selectedCompanion.nftTxHash.slice(0, 16)}...{selectedCompanion.nftTxHash.slice(-8)}
+                </a>
               </div>
             )}
 

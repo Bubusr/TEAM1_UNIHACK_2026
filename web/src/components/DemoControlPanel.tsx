@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AppStateData } from '@/lib/app-state';
-import { Settings2, X, Sun, Moon, Sparkles, RefreshCw, FastForward, Heart, Flower2 } from 'lucide-react';
+import { AppStateData, Mangnon } from '@/lib/app-state';
+import { Settings2, X, Sun, Moon, Sparkles, RefreshCw, FastForward, Heart, Flower2, Waves, Leaf } from 'lucide-react';
 
 interface DemoControlPanelProps {
   state: AppStateData;
@@ -51,15 +51,108 @@ export default function DemoControlPanel({
     });
   };
 
-  const handleSimulate7Days = () => {
+  const handleSimulateDays = (days: number) => {
     onUpdateState((prev) => ({
       ...prev,
       settings: {
         ...prev.settings,
-        lastOpenedAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+        lastOpenedAt: new Date(Date.now() - days * 86400000).toISOString(),
       },
     }));
     onNavigate('S06');
+    setIsOpen(false);
+  };
+
+  const handleSeedRestingMangnons = () => {
+    onUpdateState((prev) => {
+      const seedResting: Mangnon[] = [
+        {
+          id: 'rested-1',
+          name: 'Trúc Vàng',
+          personality: 'diemtinh',
+          stage: 4,
+          imageUri: '/presets/figure1.png',
+          imageSource: 'sample',
+          status: 'resting',
+          goalTitle: 'Đọc xong 12 cuốn sách văn học',
+          likes: ['Đọc sách', 'Gió mát'],
+          dislike: null,
+          sessionsCount: 36,
+          activeDays: ['2026-10-01', '2026-10-15', '2026-11-01'],
+          createdAt: new Date(Date.now() - 45 * 86400000).toISOString(),
+          restedAt: new Date(Date.now() - 15 * 86400000).toISOString(),
+          lastWords: 'Cảm ơn cậu vì đã luôn kiên nhẫn. Mọi điều cậu kể đều đọng lại như những giọt sương mai.',
+          finalMemories: [
+            'Cậu kể: Buổi chiều đọc sách bên ban công ngắm mưa rơi',
+            'Cậu kể: Vừa hoàn thành chương cuối của cuốn sách yêu thích',
+            'Cậu kể: Thấy lòng bình yên như dòng suối chảy qua phiến đá',
+          ],
+          nftTxHash: '0x7db4be38e24a710476916b4e576bd12c2e603a4eb9237ff449d21ecd304407d9',
+        },
+        {
+          id: 'rested-2',
+          name: 'Búp Non',
+          personality: 'haohung',
+          stage: 3,
+          imageUri: '/presets/figure2.png',
+          imageSource: 'sample',
+          status: 'resting',
+          goalTitle: 'Chạy bộ 5km mỗi sáng quanh hồ',
+          likes: ['Chạy bộ', 'Bình minh'],
+          dislike: null,
+          sessionsCount: 18,
+          activeDays: ['2026-10-12', '2026-10-25', '2026-11-05'],
+          createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
+          restedAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+          lastWords: 'Khoảng thời gian bên cậu vui ơi là vui!! Dù có ngủ dưới lòng suối, mình vẫn luôn nhớ nụ cười của cậu!',
+          finalMemories: [
+            'Cậu kể: Buổi sáng đầu tiên thức dậy chạy đón bình minh',
+            'Cậu kể: Vượt qua mệt mỏi để hoàn thành 5km',
+            'Cậu kể: Gió sớm thổi qua tán lá làm lòng nhẹ bẫng',
+          ],
+          nftTxHash: '0xae9e327a569146e2d59f2fa4b4749f3060591da1c05de09a4af5eda0b5e191a1',
+        },
+        {
+          id: 'rested-3',
+          name: 'Mầm Xanh',
+          personality: 'tomo',
+          stage: 2,
+          imageUri: '/presets/figure3.png',
+          imageSource: 'sample',
+          status: 'resting',
+          goalTitle: 'Học 50 từ vựng tiếng Anh mỗi tuần',
+          likes: ['Từ vựng mới', 'Kể chuyện'],
+          dislike: null,
+          sessionsCount: 8,
+          activeDays: ['2026-10-20', '2026-11-02'],
+          createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
+          restedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+          lastWords: 'Đi cùng cậu, mình đã biết thế giới bên ngoài bao la và đẹp đẽ đến nhường nào.',
+          finalMemories: [
+            'Cậu kể: Học được một từ mới nghe rất thơ',
+            'Cậu kể: Tự tin nói một câu trọn vẹn với bạn bè',
+            'Cậu kể: Nhớ lại cảm giác lần đầu tiên dám cất lời',
+          ],
+        },
+      ];
+
+      return {
+        ...prev,
+        restingMangnons: [
+          ...seedResting,
+          ...prev.restingMangnons.filter((r) => !r.id.startsWith('rested-')),
+        ],
+      };
+    });
+    onNavigate('S11');
+    setIsOpen(false);
+  };
+
+  const handleAddLeaves = (count: number) => {
+    onUpdateState((prev) => ({
+      ...prev,
+      villageLeaves: prev.villageLeaves + count,
+    }));
   };
 
   return (
@@ -338,12 +431,62 @@ export default function DemoControlPanel({
                   <Sparkles className="w-3.5 h-3.5 text-warm-amber" />
                 </button>
 
+                {/* Mô phỏng thời gian vắng mặt (Luồng E) */}
+                <div>
+                  <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
+                    Mô phỏng thời gian vắng mặt (Luồng E):
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+                    <button
+                      onClick={() => handleSimulateDays(1)}
+                      className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-bamboo-mid/30 text-dongho-paper font-medium"
+                    >
+                      1 Ngày
+                    </button>
+                    <button
+                      onClick={() => handleSimulateDays(7)}
+                      className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-bamboo-mid/30 text-warm-glow font-bold"
+                    >
+                      7 Ngày (Ấm áp)
+                    </button>
+                    <button
+                      onClick={() => handleSimulateDays(30)}
+                      className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-bamboo-mid/30 text-bamboo-soft font-medium"
+                    >
+                      30 Ngày
+                    </button>
+                  </div>
+                </div>
+
+                {/* Đóng góp Cây Đa (Làng Phù Đổng) */}
+                <div>
+                  <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
+                    Đóng góp Cây Đa (Làng):
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                    <button
+                      onClick={() => handleAddLeaves(1)}
+                      className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-warm-amber/40 text-warm-glow flex items-center justify-center gap-1 font-semibold"
+                    >
+                      <Leaf className="w-3 h-3 text-bamboo-soft" />
+                      <span>+1 Lá sáng</span>
+                    </button>
+                    <button
+                      onClick={() => handleAddLeaves(10)}
+                      className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-warm-amber/40 text-warm-amber flex items-center justify-center gap-1 font-bold"
+                    >
+                      <Sparkles className="w-3 h-3 text-warm-amber" />
+                      <span>+10 Lá sáng</span>
+                    </button>
+                  </div>
+                </div>
+
                 <button
-                  onClick={handleSimulate7Days}
-                  className="w-full py-2 px-3 rounded-xl bg-forest-darker hover:bg-forest-mist border border-bamboo-soft/40 text-left font-medium text-bamboo-light flex items-center justify-between"
+                  onClick={handleSeedRestingMangnons}
+                  className="w-full py-2 px-3 rounded-xl bg-forest-darker hover:bg-forest-mist border border-warm-amber/40 text-left font-bold text-warm-glow flex items-center justify-between"
                 >
-                  <span>🌙 Mô phỏng quay lại sau 7 ngày</span>
-                  <FastForward className="w-3.5 h-3.5 text-bamboo-light" />
+                  <span>🌊 Tạo 3 Măng Non an nghỉ mẫu ở Suối</span>
+                  <Waves className="w-3.5 h-3.5 text-warm-glow" />
                 </button>
 
                 <button

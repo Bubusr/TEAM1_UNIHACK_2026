@@ -9,7 +9,7 @@ import { Sparkles, Heart, ArrowRight } from 'lucide-react';
 interface S10RestingRitualProps {
   mangnon: Mangnon;
   memories: MemoryItem[];
-  onFinishRitual: (lastWords: string, finalMemories: string[]) => void;
+  onFinishRitual: (lastWords: string, finalMemories: string[], txHash?: string) => void;
   onCancel: () => void;
 }
 
@@ -20,6 +20,8 @@ export default function S10RestingRitual({
   onCancel,
 }: S10RestingRitualProps) {
   const [phase, setPhase] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [mintStatus, setMintStatus] = useState<'idle' | 'minting' | 'success' | 'error'>('idle');
+  const [mintTxHash, setMintTxHash] = useState<string | null>(null);
 
   // Top 3 memories or fallback samples
   const topMemories = memories
@@ -51,6 +53,44 @@ export default function S10RestingRitual({
 
   const lastWords = getLastWords();
 
+  const handleMintOnChain = async () => {
+    const eth = (window as any).ethereum;
+    if (!eth) {
+      alert('Chưa tìm thấy ví Core hoặc MetaMask. Bạn vẫn có thể tiếp tục và lưu vào Suối Ký Ức bình thường.');
+      return;
+    }
+    setMintStatus('minting');
+    try {
+      const accounts: string[] = await eth.request({ method: 'eth_requestAccounts' });
+      let contractAddress = '0x7Db4Be38e24A710476916B4e576BD12c2e603a4E';
+      try {
+        const resp = await fetch('/api/deployed-addresses');
+        if (resp.ok) {
+          const d = await resp.json();
+          if (d.JourneyNFT) contractAddress = d.JourneyNFT;
+        }
+      } catch {}
+
+      const txHash: string = await eth.request({
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: accounts[0],
+            to: contractAddress,
+            value: '0x0',
+            data: '0x',
+          },
+        ],
+      });
+      setMintTxHash(txHash);
+      setMintStatus('success');
+      SoundEngine.playBlessingChime();
+    } catch (err: any) {
+      console.warn('Mint rejected or error:', err);
+      setMintStatus('error');
+    }
+  };
+
   const handleNextPhase = () => {
     SoundEngine.playBambooKnock();
     if (phase === 1) {
@@ -66,7 +106,7 @@ export default function S10RestingRitual({
       }, 3500);
     } else if (phase === 5) {
       SoundEngine.playBlessingChime();
-      onFinishRitual(lastWords, ritualMemories);
+      onFinishRitual(lastWords, ritualMemories, mintTxHash || undefined);
     }
   };
 
@@ -163,19 +203,70 @@ export default function S10RestingRitual({
           </div>
         )}
 
-        {/* NHỊP 5: CÂY ĐA NHẬN LÁ */}
+        {/* NHỊP 5: CÂY ĐA NHẬN LÁ & AVALANCHE GRADUATION */}
         {phase === 5 && (
-          <div className="space-y-6 max-w-xs animate-fade-in">
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-forest-darker border-2 border-warm-amber flex items-center justify-center text-4xl shadow-2xl">
+          <div className="space-y-4 max-w-xs animate-fade-in">
+            <div className="w-16 h-16 mx-auto rounded-3xl bg-forest-darker border-2 border-warm-amber flex items-center justify-center text-3xl shadow-2xl">
               🌳
             </div>
-            <div className="p-4 rounded-3xl bg-forest-darker/90 border border-warm-amber/40 shadow-xl">
+            <div className="p-3.5 rounded-3xl bg-forest-darker/90 border border-warm-amber/40 shadow-xl">
               <p className="text-xs font-bold text-warm-glow leading-relaxed">
                 {content.s10_restingRitual.step5Contribution}
               </p>
-              <p className="text-[11px] text-dongho-paper/70 mt-2">
+              <p className="text-[11px] text-dongho-paper/70 mt-1">
                 Một chiếc lá vàng đã thắp sáng trên tán Cây Đa Phù Đổng.
               </p>
+            </div>
+
+            {/* Khắc dấu lên Avalanche Fuji */}
+            <div className="p-3 rounded-2xl bg-forest-deep/90 border border-bamboo-mid/40 text-left">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-warm-amber">
+                  ⛓️ Khắc Dấu On-Chain
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-warm-amber/20 text-warm-amber">
+                  Fuji Testnet
+                </span>
+              </div>
+
+              {mintStatus === 'idle' && (
+                <button
+                  onClick={handleMintOnChain}
+                  className="w-full py-2 px-3 rounded-xl bg-forest-darker hover:bg-forest-mist border border-warm-amber/50 text-[11px] font-bold text-warm-glow flex items-center justify-center gap-1.5 transition active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-warm-amber" />
+                  <span>Khắc dấu lên Avalanche Fuji (Tùy chọn)</span>
+                </button>
+              )}
+
+              {mintStatus === 'minting' && (
+                <div className="py-2 text-center text-[11px] text-warm-amber animate-pulse font-medium">
+                  ⏳ Đang gửi giao dịch lên Avalanche Fuji...
+                </div>
+              )}
+
+              {mintStatus === 'success' && mintTxHash && (
+                <div className="p-2 rounded-xl bg-forest-darker border border-bamboo-soft/40 text-[10px] space-y-1">
+                  <div className="text-bamboo-soft font-bold flex items-center gap-1">
+                    <span>✨</span>
+                    <span>Đã khắc dấu Journey NFT thành công!</span>
+                  </div>
+                  <a
+                    href={`https://testnet.snowtrace.io/tx/${mintTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-warm-amber underline truncate block hover:brightness-110 font-mono text-[9px]"
+                  >
+                    Xem trên Snowtrace: {mintTxHash.slice(0, 10)}...{mintTxHash.slice(-6)}
+                  </a>
+                </div>
+              )}
+
+              {mintStatus === 'error' && (
+                <div className="text-[10px] text-dongho-red text-center py-1 font-medium">
+                  Chưa thể gửi lệnh (ví từ chối hoặc lỗi mạng). Bạn vẫn có thể tiếp tục bình thường.
+                </div>
+              )}
             </div>
           </div>
         )}

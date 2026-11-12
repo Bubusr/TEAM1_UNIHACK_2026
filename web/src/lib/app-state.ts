@@ -28,6 +28,7 @@ export interface Mangnon {
   finalMemories?: string[];
   rigData?: SkeletonRig;
   faceExpr?: SerializableFaceExpression;
+  nftTxHash?: string;
 }
 
 export interface MemoryItem {
@@ -54,6 +55,7 @@ export interface OnboardingDraft {
   personality?: Personality;
   rigData?: SkeletonRig;
   faceExpr?: SerializableFaceExpression;
+  nftTxHash?: string;
 }
 
 export interface AppSettings {

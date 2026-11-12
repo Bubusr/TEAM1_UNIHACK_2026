@@ -343,7 +343,7 @@ export default function MangNonApp() {
   };
 
   // FLOW C: Resting Ritual (S10)
-  const handleFinishRestingRitual = (lastWords: string, finalMemories: string[]) => {
+  const handleFinishRestingRitual = (lastWords: string, finalMemories: string[], txHash?: string) => {
     setState((prev) => {
       if (!prev || !prev.activeMangnon) return prev;
       const rested: Mangnon = {
@@ -352,6 +352,7 @@ export default function MangNonApp() {
         restedAt: new Date().toISOString(),
         lastWords,
         finalMemories,
+        nftTxHash: txHash,
       };
 
       const next: AppStateData = {
@@ -448,6 +449,7 @@ export default function MangNonApp() {
               mangnon={state.activeMangnon}
               timeOfDay={timeOfDay}
               season={season}
+              lastOpenedAt={state.settings.lastOpenedAt}
               onOpenStoryChat={() => navigateTo('S07')}
               onOpenJourney={() => setShowJourneySheet(true)}
               onOpenSettings={() => navigateTo('S13')}

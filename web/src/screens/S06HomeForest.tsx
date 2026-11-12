@@ -11,6 +11,7 @@ interface S06HomeForestProps {
   mangnon: Mangnon | null;
   timeOfDay: 'morning' | 'noon' | 'dusk' | 'night';
   season: 'spring' | 'summer' | 'autumn' | 'winter';
+  lastOpenedAt?: string;
   onOpenStoryChat: () => void;
   onOpenJourney: () => void;
   onOpenSettings: () => void;
@@ -34,6 +35,7 @@ export default function S06HomeForest({
   mangnon,
   timeOfDay,
   season,
+  lastOpenedAt,
   onOpenStoryChat,
   onOpenJourney,
   onOpenSettings,
@@ -54,6 +56,31 @@ export default function S06HomeForest({
   });
 
   const creatureImgRef = useRef<HTMLImageElement | null>(null);
+
+  // UC08: Lời chào khi quay lại sau nhiều ngày (Luồng E)
+  useEffect(() => {
+    if (lastOpenedAt && mangnon) {
+      const elapsedMs = Date.now() - new Date(lastOpenedAt).getTime();
+      const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24);
+      if (elapsedDays >= 7) {
+        let greeting = 'Lâu rồi mới gặp. Không cần kể gì cũng được, ngồi cạnh mình một lát cũng tốt.';
+        if (mangnon.personality === 'haohung') {
+          greeting = 'Cậu về rồi! Mình chờ cậu mãi, ngồi xuống đây với mình nhé!';
+        } else if (mangnon.personality === 'diemtinh') {
+          greeting = 'Lâu rồi mới gặp. Rừng tre vẫn êm đềm như ngày cậu đi. Cậu ngồi nghỉ một lát nhé.';
+        } else if (mangnon.personality === 'nhutnhat') {
+          greeting = '...Cậu về rồi. Mình nhớ cậu lắm...';
+        }
+        setSpeechBubble(greeting);
+        const timer = setTimeout(() => setSpeechBubble(null), 6000);
+        return () => clearTimeout(timer);
+      } else if (elapsedDays >= 3) {
+        setSpeechBubble('Cậu về rồi. Mình vẫn ở đây.');
+        const timer = setTimeout(() => setSpeechBubble(null), 5000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [lastOpenedAt, mangnon?.personality]);
 
   // Load creature image
   useEffect(() => {
