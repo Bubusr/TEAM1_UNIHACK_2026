@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Trees, Landmark, Waves, Coffee, Wallet, Sparkles } from 'lucide-react';
+import { Trees, Landmark, Waves, Coffee, Wallet, Sparkles, User } from 'lucide-react';
+import UserProfileModal, { UserAccount } from '@/components/UserProfileModal';
 
 /** Helper: truncate ethereum address */
 function truncAddr(addr: string): string {
@@ -17,10 +18,19 @@ export default function Navigation() {
   const [walletAddress, setWalletAddress] = useState('');
   const [balance, setBalance] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
 
-  // Restore wallet connection on mount
+  // Restore wallet & google user on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const storedUser = localStorage.getItem('mangnon_user_account');
+    if (storedUser) {
+      try {
+        setUserAccount(JSON.parse(storedUser));
+      } catch {}
+    }
+
     const eth = (window as any).ethereum;
     if (!eth) return;
 
@@ -155,9 +165,54 @@ export default function Navigation() {
           })}
         </nav>
 
-        {/* Wallet & Avalanche Fuji Badge */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-dongho-crimson/20 border border-dongho-red/40 text-dongho-paper text-xs font-medium">
+        {/* Wallet, Google & Avalanche Fuji Badge */}
+        <div className="flex items-center gap-2.5">
+          {/* Google Profile Button */}
+          {userAccount ? (
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-forest-deep border border-warm-amber/50 text-xs font-semibold hover:border-warm-amber transition shadow"
+              title="Xem Hồ sơ Google"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={userAccount.avatarUrl}
+                alt={userAccount.name}
+                className="w-5 h-5 rounded-full border border-warm-amber"
+              />
+              <span className="hidden sm:inline text-warm-glow truncate max-w-[90px]">
+                {userAccount.name}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-gray-800 text-xs font-bold shadow transition active:scale-95"
+              title="Đăng nhập Google"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Google</span>
+            </button>
+          )}
+
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-dongho-crimson/20 border border-dongho-red/40 text-dongho-paper text-xs font-medium">
             <span className="w-2 h-2 rounded-full bg-dongho-red animate-pulse"></span>
             Avalanche Fuji
           </div>
@@ -180,11 +235,18 @@ export default function Navigation() {
                 {balance && <span className="text-warm-light font-semibold">({balance})</span>}
               </div>
             ) : (
-              'Kết nối ví Core'
+              'Ví Core'
             )}
           </button>
         </div>
       </div>
+
+      {/* Google User Profile Modal */}
+      <UserProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onUserChange={(u) => setUserAccount(u)}
+      />
     </header>
   );
 }

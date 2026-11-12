@@ -16,7 +16,9 @@ import {
   Info,
   ShieldAlert,
   PlaySquare,
+  User,
 } from 'lucide-react';
+import UserProfileModal, { UserAccount } from '@/components/UserProfileModal';
 
 interface S13SettingsProps {
   mangnon: Mangnon | null;
@@ -38,6 +40,18 @@ export default function S13Settings({
   const [isRenaming, setIsRenaming] = useState(false);
   const [nameInput, setNameInput] = useState(mangnon?.name || 'Măng');
   const [showLore, setShowLore] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem('mangnon_user_account');
+    if (stored) {
+      try {
+        setUserAccount(JSON.parse(stored));
+      } catch {}
+    }
+  }, []);
 
   // Two-step reset state
   const [resetStep, setResetStep] = useState<0 | 1 | 2>(0);
@@ -98,6 +112,41 @@ export default function S13Settings({
 
       {/* Main Settings List */}
       <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+        {/* Google User Profile Card */}
+        <div className="p-4 rounded-2xl bg-forest-darker/90 border border-warm-amber/40 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {userAccount ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={userAccount.avatarUrl}
+                  alt={userAccount.name}
+                  className="w-10 h-10 rounded-full border border-warm-amber bg-forest-deep p-0.5"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-forest-deep border border-bamboo-soft/40 flex items-center justify-center text-lg">
+                  👤
+                </div>
+              )}
+              <div>
+                <span className="text-xs font-bold text-warm-glow block">
+                  {userAccount ? userAccount.name : 'Tài khoản Google'}
+                </span>
+                <span className="text-[10px] text-dongho-paper/60 block">
+                  {userAccount ? userAccount.email : 'Chưa liên kết Gmail'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowUserModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-forest-deep hover:bg-forest-mist border border-warm-amber/40 text-warm-glow text-xs font-semibold transition"
+            >
+              {userAccount ? 'Quản lý' : 'Đăng nhập'}
+            </button>
+          </div>
+        </div>
+
         {/* Rename section */}
         {mangnon && (
           <div className="p-4 rounded-2xl bg-forest-darker/90 border border-bamboo-soft/30">
@@ -343,6 +392,12 @@ export default function S13Settings({
           </div>
         </div>
       )}
+      {/* User Profile / Google Modal */}
+      <UserProfileModal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        onUserChange={(u) => setUserAccount(u)}
+      />
     </div>
   );
 }
