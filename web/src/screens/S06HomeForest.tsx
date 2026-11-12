@@ -430,15 +430,17 @@ export default function S06HomeForest({
       </div>
 
       {/* Hanging Bamboo Journey Slip & Focus Session Button */}
-      {mangnon && mangnon.goalTitle && (
+      {mangnon && (
         <div className="relative z-20 px-5 mt-2.5 flex items-center gap-2">
-          <div
-            onClick={onOpenJourney}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-forest-darker/85 border border-warm-amber/40 text-xs text-dongho-paper/90 shadow-lg hover:border-warm-glow cursor-pointer transition"
-          >
-            <ScrollText className="w-3.5 h-3.5 text-warm-amber" />
-            <span className="font-medium truncate max-w-[140px]">{mangnon.goalTitle}</span>
-          </div>
+          {mangnon.goalTitle && (
+            <div
+              onClick={onOpenJourney}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-forest-darker/85 border border-warm-amber/40 text-xs text-dongho-paper/90 shadow-lg hover:border-warm-glow cursor-pointer transition"
+            >
+              <ScrollText className="w-3.5 h-3.5 text-warm-amber" />
+              <span className="font-medium truncate max-w-[140px]">{mangnon.goalTitle}</span>
+            </div>
+          )}
 
           <button
             onClick={() => setShowFocusModal(true)}
