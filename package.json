@@ -4,6 +4,7 @@
   "private": true,
   "description": "Mang Non - UniHack 2026 Prototype on Avalanche",
   "scripts": {
+    "postinstall": "npm --prefix web install",
     "dev": "npm --prefix web run dev",
     "build": "npm --prefix web run build",
     "start": "npm --prefix web start",
