@@ -68,39 +68,45 @@ Prototype này dùng để **demo trước ban giám khảo trong ~3 phút** và
 |---|---|---|
 | **Măng Non** | Sinh linh do người dùng tạo hình, nhận thức lớn dần theo những gì được kể | Không bao giờ gọi là "pet", "bot", "AI", "nhân vật" trong UI |
 | **Ống nứa phát sáng** | Cánh cửa mở ra đúng một Măng Non, dùng một lần rồi trở lại bình thường [KHOÁ] | Ánh sáng vàng cam, đẹp nhất toàn game |
-| **Hành trình** (Goal) | **[ĐỀ XUẤT]** Một điều người dùng muốn "lớn lên cùng" (học một thứ, giữ một thói quen, vượt một giai đoạn). Do người dùng tự đặt và tự khép lại | UI dùng "hành trình", không dùng "Goal"/"mục tiêu"/"nhiệm vụ" |
-| **Buổi kể** | **[ĐỀ XUẤT]** Một lần trò chuyện có ≥ 2 tin nhắn của người dùng | Chỉ dùng nội bộ để tính giai đoạn, không hiển thị con số |
-| **Giai đoạn nhận thức** | 4 giai đoạn thay cho level [KHOÁ]: Tò Mò Thô → Liên Tưởng → Có Góc Nhìn Riêng → Đồng Hành Sâu | Hiển thị bằng ấn "lá" (1–4 lá), không có thanh %/XP |
-| **Rừng Tre Cổ** | Không gian riêng tư tuyệt đối của người dùng, không NPC [KHOÁ] | Màn Home |
-| **Làng Phù Đổng / Cây Đa** | Hiện thân cộng đồng; Cây Đa bùng nổ khi đạt ngưỡng đóng góp [KHOÁ] | Không tên người, không bảng xếp hạng |
-| **Chiếc lá** | **[ĐỀ XUẤT]** Đơn vị đóng góp vào Cây Đa. Mỗi hành trình khép lại góp 1 lá; mỗi 5 buổi kể góp 1 lá nhỏ | Hiển thị như lá phát sáng trên cây, không hiển thị "điểm" |
-| **Vườn Ký Ức / Suối** | Nơi các Măng Non đã an nghỉ, mỗi bạn là một phiến đá dưới suối [KHOÁ] | Màn lưu giữ |
-| **An nghỉ** | Khép lại một hành trình; Măng Non nói lời cảm ơn rồi "ngủ" ở Vườn [KHOÁ] | Không dùng "mất", "chết", "kết thúc game" |
+| **Hành trình** (Goal) | Một điều người dùng muốn "lớn lên cùng" (học một môn, làm đồ án, vượt qua kỳ thi). Do người dùng tự đặt và tự khép lại | UI dùng "hành trình", không dùng từ ngữ gây áp lực |
+| **Phiên tập trung** | Khoảng thời gian yên ắng (15/25/45m) để người học tập trung sâu mà không bị thông báo làm phiền | Đồng hồ cát tĩnh lặng, êm đềm |
+| **Show-and-Tell** | Người học chụp ảnh bài tập, đoạn code mới viết sau giờ học để chia sẻ cùng Măng Non | Minh chứng nỗ lực (Proof of Output) không phán xét, không rình rập |
+| **Hồ sơ Sinh viên** | Xác thực qua email trường `.edu.vn` để nhận huy hiệu Sinh Viên và x1.5 Mầm Lực | Đi kèm 3 khiên bảo vệ mùa thi |
+| **Trạm Tre (Station)** | Quán cà phê học tập đối tác quanh trường (The Coffee House, Highlands...) | Check-in GPS nhận ưu đãi giảm 15-20% đồ uống |
+| **Giai đoạn nhận thức** | 4 giai đoạn: Tò Mò Thô → Liên Tưởng → Có Góc Nhìn Riêng → Đồng Hành Sâu | Hiển thị bằng ấn "lá" (1–4 lá), không có thanh % hay con số điểm |
+| **Rừng Tre Cổ** | Không gian tự học riêng tư của người dùng, bàn học nhìn ra rừng tre [KHOÁ] | Màn Home |
+| **Làng Phù Đổng / Cây Đa Tri Thức** | Hiện thân cộng đồng học tập; Cây Đa bùng nổ khi đạt ngưỡng đóng góp [KHOÁ] | Tích hợp Quỹ Khuyến Học Làng Phù Đổng |
+| **Quỹ Khuyến Học** | Nơi Mầm Lực cộng đồng kết hợp nguồn tài trợ CSR để cấp học bổng thực tế cho sinh viên hiếu học | Minh bạch on-chain trên Avalanche Fuji |
+| **Vườn Ký Ức / Suối** | Nơi các Măng Non đã an nghỉ, mỗi bạn là một phiến đá nhẵn dưới suối [KHOÁ] | Màn lưu giữ kỷ niệm |
+| **An nghỉ** | Khép lại một hành trình; Măng Non nói lời cảm ơn, mint JourneyNFT rồi "ngủ" ở Vườn [KHOÁ] | Không dùng từ ngữ mang tính tiêu cực |
 
 ## 4. Người dùng và Use cases
 
-**Người dùng chính [ĐỀ XUẤT]:** người trẻ Việt 18–28 tuổi, dùng điện thoại là chính, muốn sống đều đặn hơn hoặc muốn có chỗ nói ra suy nghĩ, nhưng **ghét** app nhắc nhở, điểm danh, streak. Họ cần một nơi không ai chấm điểm.
+**Người dùng chính [ĐỀ XUẤT]:** Sinh viên và người trẻ Việt 18–28 tuổi, thích không gian tự học ấm áp, muốn tập trung sâu cho việc học và đồ án mà không bị các app theo dõi rình rập hay đe dọa bằng chuỗi ngày. Họ cần một người bạn đồng hành thấu hiểu bên bàn học.
 
-**Thiết bị chính:** điện thoại Android tầm trung, Chrome, dọc (portrait). Desktop chỉ hiển thị khung điện thoại ở giữa màn hình.
+**Thiết bị chính:** điện thoại di động, Chrome, Safari, giao diện dọc (portrait). Desktop hiển thị khung mobile mô phỏng ấm cúng.
 
 ### 4.1 Danh sách use case (đồng thời là test case cho agent)
 
 | ID | Use case | Điều kiện kiểm tra đạt | Cảm xúc đích |
 |---|---|---|---|
-| UC01 | Lần đầu mở app, tìm thấy ống nứa | Vào thẳng S01 (rừng đêm), không popup/đăng ký/xin quyền nào chặn | Tò mò, hơi kỳ diệu |
+| UC01 | Lần đầu mở app, tìm thấy ống nứa | Vào thẳng S01 (rừng đêm), không popup chặn | Tò mò, hơi kỳ diệu |
 | UC02 | Tạo hình bằng **vẽ tay** | Vẽ, xoá, hoàn tác, xác nhận; hình ra đúng nét vẽ, nền trong suốt, có chuyển động nhẹ | Hào hứng được tạo ra |
-| UC03 | Tạo hình bằng **ảnh chụp/ảnh tải lên** | Tách nền chạy được; nếu tách nền thất bại vẫn có phương án dự phòng (cắt khung mềm); hình **không bị vẽ lại** | Tin tưởng: hình mình được giữ nguyên |
-| UC04 | Chưa muốn vẽ, dùng **hình mẫu** | Chọn 1 trong 3 hình mẫu có nét vẽ trẻ con khác nhau, đi tiếp bình thường | Không bị ép |
+| UC03 | Tạo hình bằng **ảnh chụp/ảnh tải lên** | Tách nền chạy được; nếu lỗi có phương án dự phòng (cắt khung mềm); hình **không bị vẽ lại** | Tin tưởng: hình mình được giữ nguyên |
+| UC04 | Dùng **hình mẫu** có sẵn | Chọn 1 trong 3 hình mẫu nét vẽ trẻ con, đi tiếp bình thường | Nhẹ nhàng, không bị ép |
 | UC05 | Đặt tên, chọn tính cách, gặp lần đầu, đặt hành trình | Đủ 3 lượt trò chuyện có kịch bản; cho phép bỏ qua đặt hành trình ("để sau") | Dịu dàng, thân mật |
-| UC06 | Kể chuyện hằng ngày | Gửi tin → Măng Non phản hồi đúng tính cách và giai đoạn; hình Măng Non phản ứng; không có thông báo "bạn chưa kể hôm nay" | Gắn bó, nhẹ nhàng |
+| UC06 | Kể chuyện hằng ngày | Gửi tin → Măng Non phản hồi đúng tính cách và giai đoạn; hình Măng Non phản ứng | Gắn bó, nhẹ nhàng |
 | UC07 | Xem Măng Non nhớ gì, quên một điều | Danh sách điều đã nhớ; "quên" có xác nhận; sau khi quên không còn xuất hiện ở lời callback | Riêng tư, kiểm soát được |
-| UC08 | Quay lại sau nhiều ngày | Không hiển thị "đã X ngày", không giọng trách; Măng Non chào ấm áp | Được đón về |
-| UC09 | Khép hành trình, Măng Non an nghỉ | Đủ 5 nhịp của nghi thức (mục 7.3); kết thúc ở Vườn có phiến đá mới | Tự hào nhẹ, hoài niệm, không buồn bã |
-| UC10 | Dạo Vườn Ký Ức, xem lại một bạn đã an nghỉ | Chạm phiến đá mở thẻ: hình, tên, tính cách, thời gian đồng hành, lời cuối, vài điều đã nhớ | Hoài niệm |
-| UC11 | Ghé Làng Phù Đổng, thấy Cây Đa bùng nổ | Cây Đa phát sáng theo mức đóng góp; sự kiện bùng nổ chạy được kể cả khi người dùng không có mặt lúc xảy ra (hiện thẻ "xem lại") | Thuộc về điều lớn hơn |
-| UC12 | Cảnh đổi theo giờ thật và mùa thật | Sáng/chiều/đêm và 4 mùa đổi palette và hiệu ứng đúng quy tắc mục 9.4 | Rừng "sống" |
-| UC13 | Mất mạng / lỗi tách nền / lỗi LLM | Có thông báo dịu dàng + phương án dự phòng, không văng lỗi kỹ thuật ra màn hình | Yên tâm |
-| UC14 | Xoá toàn bộ dữ liệu | Hai bước xác nhận, sau đó về lại S01 như người mới | Kiểm soát |
+| UC08 | Quay lại sau nhiều ngày | Không hiển thị số ngày vắng, không giọng trách; Măng Non chào đón ấm áp | Được đón về bình yên |
+| UC09 | Khép hành trình, Măng Non an nghỉ | Đủ 5 nhịp của nghi thức (mục 7.3); mint JourneyNFT trên Fuji; hoá phiến đá ở Vườn | Tự hào nhẹ, hoài niệm, không buồn bã |
+| UC10 | Dạo Vườn Ký Ức, xem lại một bạn đã an nghỉ | Chạm phiến đá mở thẻ: hình, tên, tính cách, thời gian đồng hành, lời cuối, link tx Fuji | Hoài niệm sâu lắng |
+| UC11 | Ghé Làng Phù Đổng, thấy Cây Đa bùng nổ | Cây Đa phát sáng theo mức đóng góp; sự kiện bùng nổ chạy mượt mà | Thuộc về điều lớn hơn |
+| UC12 | Cảnh đổi theo giờ thật và mùa thật | Sáng/chiều/đêm và 4 mùa đổi palette và hiệu ứng đúng quy tắc | Rừng "sống" tự nhiên |
+| UC13 | Mất mạng / lỗi kỹ thuật | Có thông báo dịu dàng + phương án dự phòng, không văng lỗi kỹ thuật | Yên tâm |
+| UC14 | Xoá toàn bộ dữ liệu | Hai bước xác nhận, sau đó về lại S01 như mới | Kiểm soát trọn vẹn |
+| UC15 | **Phiên Tập Trung & Show-and-Tell** | Chọn 15/25/45m, đồng hồ cát đếm ngược tĩnh lặng; chụp/tải ảnh bài tập/code; Măng Non tò mò ngắm nhìn, nhận Mầm Lực | Tập trung sâu, tự hào thành quả |
+| UC16 | **Hồ sơ Sinh viên & Student Boost** | Đăng nhập Google, nhập email `.edu.vn` nhận huy hiệu Verified Student và hệ số x1.5 Mầm Lực | Được công nhận và khích lệ |
+| UC17 | **Check-in Trạm Tre & Ưu đãi F&B** | GPS xác thực quán cà phê đối tác ≤ 300m, nhận voucher giảm 15-20%, đóng góp Quỹ Khuyến Học | Thực tế, tiện lợi cho sinh viên |
 
 ## 5. Bản đồ màn hình và điều hướng
 
@@ -184,14 +190,14 @@ flowchart TD
 - **Mục tiêu thời lượng toàn onboarding (S01 → S06): ~3 phút.** Nhịp cảm xúc: 0:00 tò mò → 0:20 kỳ diệu (S02) → 1:30 trao hình → 2:00 gặp gỡ → 3:00 an trú ở rừng.
 
 ### S06 — Rừng Tre Cổ (Home) 
-- **Mục đích:** Chốn quay về. **Không có việc phải làm**; nó là nơi để ở.
+- **Mục đích:** Chốn quay về và không gian tự học tĩnh lặng.
 - **Bố cục (trên xuống dưới):**
-  - Thanh trên (safe-area): trái là **tên Măng Non + ấn giai đoạn** (1–4 lá, kiểu con dấu); phải là biểu tượng cài đặt.
+  - Thanh trên (safe-area): trái là **tên Măng Non + ấn giai đoạn** (1–4 lá, kiểu con dấu); giữa là nút **Hồ sơ Sinh viên** (Google Profile / Verified Badge `.edu.vn`); phải là nút **Phiên Tập Trung** (Đồng hồ cát) và biểu tượng cài đặt.
   - **Thẻ hành trình** (dạng thẻ tre treo) ngay dưới thanh trên, trái: tên hành trình (cắt bớt nếu dài). Chạm mở S09.
   - **Cảnh** toàn màn: 3 lớp parallax; Măng Non đứng khoảng 62% chiều cao, giữa màn, có bóng nhẹ dưới chân; thời tiết/ánh sáng theo giờ và mùa (mục 9.4).
-  - **CTA chính** phía dưới (trên thanh điều hướng): thẻ tre nút *"Kể cho Măng Non nghe"*, ánh vàng nhẹ. Không có badge đỏ, không có số, không có đếm ngược.
+  - **CTA chính** phía dưới: hai nút gỗ tre hài hòa: nút *"Phiên Tập Trung"* (mở modal Focus 15/25/45m + Show-and-Tell nỗ lực học tập) và nút *"Kể cho Măng Non nghe"*, ánh vàng ấm áp.
   - **Thanh điều hướng dưới:** Rừng · Làng · Vườn (ấn mộc bản; tab đang chọn là ấn đặc).
-- **Tương tác:** Chạm Măng Non → phản ứng (nghiêng, rung nhẹ) + một câu ngắn không áp lực (kho câu "idle" theo tính cách, ví dụ *"Mình đang ngắm lá."*). Chạm thẻ hành trình → S09. Chạm CTA → S07.
+- **Tương tác:** Chạm Măng Non → phản ứng (nghiêng, rung nhẹ) + câu thoại ngây thơ bên bàn học. Chạm nút Phiên Tập Trung → đếm ngược tĩnh lặng, hoàn thành phiên có thể chụp ảnh vở/code và nhận Mầm Lực x1.5 (nếu là Verified Student).
 - **Trạng thái rỗng (đã an nghỉ, chưa có bạn mới):** Cảnh trống, có một ống nứa mờ. Ban đêm ống sáng rõ, chạm → S02. Ban ngày chạm hiện thẻ: *"Ống nứa sáng rõ nhất vào ban đêm. Nhưng nếu cậu sẵn sàng, mình mở sớm cũng được."* + nút *"Mở thôi"*.
 - **Khi mở app sau nhiều ngày:** xem UC08/mục 7.5. Chỉ là một câu chào, không có số ngày.
 - **Nhiều Măng Non cùng lúc:** mô hình dữ liệu hỗ trợ mảng, nhưng **UI MVP chỉ cần 1 Măng Non đang đồng hành** [ĐỀ XUẤT].
@@ -208,37 +214,40 @@ flowchart TD
 - **Đếm buổi kể:** một buổi kể được tính khi có ≥ 2 tin của người dùng (nội bộ).
 
 ### S08 — Điều Măng Non nhớ (và nó đang ở giai đoạn nào)
-- **Phần trên:** hình Măng Non, tên, **giai đoạn hiện tại** dạng chữ và ấn lá, kèm 1 câu mô tả thơ (ví dụ giai đoạn 2: *"Mình đang học nối những điều cậu kể với nhau."*). **Không** thanh phần trăm, **không** số buổi, **không** "còn X nữa lên cấp".
+- **Phần trên:** hình Măng Non, tên, **giai đoạn hiện tại** dạng chữ và ấn lá, kèm 1 câu mô tả thơ (ví dụ giai đoạn 2: *"Mình đang học nối những điều cậu kể với nhau."*). **Không** thanh phần trăm, **không** số buổi.
 - **Phần dưới:** dòng thời gian các **thẻ ký ức**. Mỗi thẻ: ngày, nội dung ngắn, hành động *"Giữ thật lâu"* (ghim) và *"Quên điều này"*.
 - **"Quên điều này"** → hộp xác nhận dịu: *"Quên rồi thì Măng Non sẽ không nhắc lại nữa. Cậu chắc nhé?"* (Làm theo UC07: sau khi quên, không còn callback tới nội dung đó.)
 - **Trạng thái rỗng:** *"Mình chưa nhớ gì nhiều. Cậu kể mình nghe nhé, khi nào cậu muốn."*
 
 ### S09 — Hành trình (bottom sheet)
 - Mở từ thẻ hành trình ở S06. Nội dung: tên hành trình (sửa được), lý do (tuỳ chọn), thời gian dự kiến (hoặc "tự báo khi xong"), ngày bắt đầu, nút **Khép lại hành trình** (nút phụ, không nổi bật).
-- Khi đến thời hạn dự kiến (nếu có): chỉ hiện **một dòng mời** trong sheet và một câu thì thầm của Măng Non ở S06, không popup chặn: *"Hình như hành trình đang ở chỗ nghỉ chân. Cậu thấy sao?"* với hai lựa chọn *"Khép lại thôi"* / *"Đi tiếp thêm"* (chọn gia hạn 7/14/30 ngày hoặc không hạn).
+- Khi đến thời hạn dự kiến (nếu có): chỉ hiện **một dòng mời** trong sheet và một câu thì thầm của Măng Non ở S06, không popup chặn: *"Hình như hành trình đang ở chỗ nghỉ chân. Cậu thấy sao?"* với hai lựa chọn *"Khép lại thôi"* / *"Đi tiếp thêm"*.
 - *"Khép lại"* → hộp xác nhận dịu → S10.
 
-### S10 — An nghỉ (nghi thức, hi-fi)
-Đây là **khoảnh khắc cảm xúc thứ hai** sau S02, thiết kế 5 nhịp (chi tiết mục 7.3). Không bottom nav, không nút thoát ngang. Có nút *"Để sau"* ở nhịp 1 nếu người dùng bấm nhầm (quay về S06, hành trình giữ nguyên).
+### S10 — An nghỉ & Đúc kết NFT (nghi thức, hi-fi)
+Đây là **khoảnh khắc cảm xúc thứ hai** sau S02, thiết kế 5 nhịp (chi tiết mục 7.3). Không bottom nav, không nút thoát ngang:
+1. Mở lời cảm ơn chân thành từ Măng Non.
+2. Nhìn lại 3 ký ức đẹp nhất trong suốt hành trình học tập.
+3. Lời nhắn gửi cuối cùng trước khi an nghỉ.
+4. Hóa thân thành phiến đá tri thức dưới dòng Suối Ký Ức.
+5. **Đúc kết JourneyNFT & Gửi lá về Cây Đa**: Giao diện cung cấp nút mint Soulbound NFT lên Avalanche Fuji C-Chain (hiện Tx Hash Snowtrace minh bạch), đồng thời chuyển Mầm Lực đóng góp vào Quỹ Khuyến Học Làng Phù Đổng.
 
-### S11 — Vườn Ký Ức · Suối
-- **Cảnh:** dòng suối trong vắt chạy dọc màn hình, cuộn dọc; mỗi Măng Non đã an nghỉ là **một phiến đá nhẵn** dưới lòng suối, khắc hình mờ (silhouette từ hình gốc: đơn sắc, làm mờ nhẹ) [KHOÁ]. Nước chảy qua nhưng đá không mòn.
-- **Chạm phiến đá:** mở bottom sheet: hình gốc (còn thở nhẹ), tên, tính cách, "Đồng hành từ … đến …" (ngày tháng, **không** "X ngày"), tên hành trình, **lời cuối** của Măng Non, 3 điều Măng Non nhớ nhất.
-- **Trạng thái rỗng:** suối trong, chưa có đá: *"Chỗ này đang chờ một người bạn đầu tiên."* (không bi luỵ).
-- **Âm thanh (tuỳ chọn):** tiếng nước nhẹ.
+### S11 — Vườn Ký Ức · Suối Ký Ức
+- **Cảnh:** dòng suối trong vắt chạy dọc màn hình, cuộn dọc; mỗi Măng Non đã an nghỉ là **một phiến đá nhẵn** dưới lòng suối, khắc hình mờ. Nước chảy qua nhưng đá không mòn.
+- **Chạm phiến đá:** mở bottom sheet: hình gốc (còn thở nhẹ), tên, tính cách, thời gian đồng hành, tên hành trình, **lời cuối** của Măng Non, 3 điều nhớ nhất, kèm **Huy hiệu On-chain & Link Snowtrace Fuji** xác thực tính bất biến.
+- **Trạng thái rỗng:** suối trong, chưa có đá: *"Chỗ này đang chờ một người bạn đầu tiên."*
 
-### S12 — Làng Phù Đổng · Cây Đa (hi-fi)
-- **Cảnh:** làng nhỏ ở rìa rừng, mái nhà và luống rau tượng trưng cho cộng đồng người chơi (không tên, không avatar). Trung tâm là **Cây Đa** (khác hẳn tre) [KHOÁ].
-- **Mức đóng góp:** thể hiện bằng **số lá phát sáng trên tán Cây Đa**, không có số điểm, không "X/Y", không thanh tiến độ, không bảng xếp hạng. **Dữ liệu cộng đồng là giả lập** [ĐỀ XUẤT]: một mức nền (ví dụ 62% ngưỡng), cộng thêm đóng góp thật của người dùng.
-- **Khi đạt ngưỡng → "bùng nổ" [KHOÁ]:** hoa gạo nở đỏ rực hoặc đom đóm bay rợp trời (~8 s). Khi bùng nổ xảy ra lúc người dùng **không có mặt**, lần ghé Làng kế tiếp hiện thẻ *"Đêm qua Cây Đa đã nở hoa"* + nút *"Xem lại"* (phát lại sự kiện).
-- **Màu đỏ/hồng Đông Hồ** chỉ dùng ở đây (và viền trang trí làng), dùng tiết chế.
-- **Không có hành động bắt buộc** ở Làng. Người dùng chỉ ngắm, nhận ra mình thuộc về điều lớn hơn.
+### S12 — Làng Phù Đổng · Cây Đa Tri Thức & Quỹ Khuyến Học
+- **Cảnh:** ngôi làng hiền hòa của cộng đồng sinh viên và người tự học. Trung tâm là **Cây Đa Tri Thức**.
+- **Mức đóng góp:** thể hiện bằng số lá phát sáng trên tán Cây Đa, tiếp nhận năng lượng từ các phiên tập trung thực tế khắp nơi.
+- **Quỹ Khuyến Học Làng Phù Đổng**: Khu vực hiển thị số Mầm Lực đã tích lũy và nút đóng góp vào Quỹ Khuyến Học cộng đồng (hợp tác cùng các nhà tài trợ trao học bổng thật cho sinh viên hiếu học).
+- **Khi đạt ngưỡng → "bùng nổ" [KHOÁ]:** hoa gạo nở đỏ rực hoặc đom đóm bay rợp trời (~8 s). Sau bùng nổ, có thẻ *"Đêm qua Cây Đa đã nở hoa"* + nút *"Xem lại"*.
 
 ### S13 — Cài đặt (nhẹ)
-Đổi tên Măng Non · Nhắc nhẹ (**mặc định tắt**, bật là opt-in; nếu bật thì tối đa 1 lần/ngày, ngôn ngữ mời gọi) · Giảm chuyển động · Âm thanh bật/tắt (mặc định tắt) · Giới thiệu thế giới (thẻ lore ngắn) · **Xoá toàn bộ dữ liệu** (hai bước xác nhận) · **Chế độ trình diễn** (công tắc, ẩn hơi sâu) mở S14.
+Đổi tên Măng Non · Hồ sơ Sinh viên Google login · Trạm Tre (quán cà phê F&B đối tác) · Nhắc nhẹ (mặc định tắt) · Giảm chuyển động · Âm thanh bật/tắt · Giới thiệu thế giới · **Xoá toàn bộ dữ liệu** · **Chế độ trình diễn** mở S14.
 
 ### S14 — Demo Control Panel (overlay, chỉ khi bật chế độ trình diễn)
-Tay cầm nhỏ ở góc, mở ra bảng điều khiển: xem mục 12.
+Bảng điều khiển chuyên sâu phục vụ thuyết trình và demo trước giám khảo hackathon (xem mục 12).
 
 ## 7. Luồng trải nghiệm (flows)
 
@@ -510,13 +519,13 @@ Làm tuần tự, **không dừng hỏi** giữa các phase. Cuối mỗi phase 
 - [ ] Phần "điểm mắt nhìn vào" ở mỗi màn là vàng cam, không bị hình khác "đè".
 - [ ] `docs/ASSUMPTIONS.md` liệt kê mọi quyết định tự đưa ra.
 
-### 14.2 Kịch bản demo 3 phút (dùng Demo panel)
-1. **0:00–0:30** — S01 → chạm ống nứa → S02 (khoảnh khắc đẹp nhất).
-2. **0:30–1:10** — S03 vẽ nhanh (hoặc hình mẫu) → "thổi hồn" → S04 chọn *Hào hứng* hoặc *Nhút nhát* để thấy khác biệt.
-3. **1:10–1:40** — S05 đặt hành trình, vào S06; Demo panel đặt **Đêm** + **Thu** để thấy chất rừng.
-4. **1:40–2:10** — S07 kể 2–3 tin; Demo panel *Giai đoạn 3* + *Thêm ký ức mẫu* → kể tiếp để thấy callback; mở S08.
-5. **2:10–2:35** — *Nhảy tới hoàn thành* → S10 (5 nhịp) → phiến đá ở S11.
-6. **2:35–3:00** — S12: *Kích hoạt bùng nổ* → hoa gạo/đom đóm; kết bằng câu thông điệp.
+### 14.2 Kịch bản demo 3 phút (dùng Demo panel & các tính năng thực chiến)
+1. **0:00–0:30** — S01 → chạm ống nứa → S02 (mở ống nứa ánh sáng rực rỡ).
+2. **0:30–1:00** — S03 vẽ nhanh (hoặc hình mẫu) → "thổi hồn" → S04 chọn *Hào hứng* hoặc *Nhút nhát* để thấy khác biệt phản ứng.
+3. **1:00–1:30** — S05 đặt hành trình, vào S06; mở **Hồ sơ Sinh viên** đăng nhập Google + nhập `.edu.vn` để kích hoạt huy hiệu Verified Student và hệ số nhân Student Boost (x1.5).
+4. **1:30–2:00** — Trải nghiệm **Phiên Tập Trung (Focus Session)**: bật đếm ngược (nút "10 giây thử nhanh" cho giám khảo), hoàn thành và chụp ảnh Show-and-Tell trang vở/code. Măng Non tò mò ngợi khen, nạp Mầm Lực vào cây.
+5. **2:00–2:30** — S07 kể chuyện nhanh → S08 xem ký ức. Sau đó chuyển qua S10 thực hiện nghi thức An Nghỉ (5 nhịp), bấm mint **JourneyNFT trực tiếp lên Avalanche Fuji C-Chain** (mở Snowtrace xác thực).
+6. **2:30–3:00** — S12 Làng Phù Đổng: ngắm Cây Đa Tri Thức và Quỹ Khuyến Học Làng Phù Đổng (bấm nút đóng góp Mầm Lực vào Quỹ học bổng cộng đồng) → kết thúc bằng thông điệp nhân văn.
 
 ## 15. Vùng tự do và vùng khoá
 

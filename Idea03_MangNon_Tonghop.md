@@ -19,92 +19,89 @@ Lấy cảm hứng từ truyền thuyết **Thánh Gióng** (sức mạnh đư�
 
 **3 vùng đất, 3 vai trò khác nhau trong vòng lặp cảm xúc:**
 
-- **Rừng Tre Cổ** — không gian **riêng tư** của từng người chơi, nơi Măng Non được sinh ra và lớn lên. Cảnh vật đổi theo thời gian thực ngoài đời (sáng/tối, mùa) để tạo cảm giác đây là nơi đang *sống*, không phải màn hình tĩnh. "Ống nứa phát sáng" rải rác trong rừng, thỉnh thoảng phát sáng báo hiệu điều gì mới (một ký ức cũ được nhắc lại, một câu hỏi mới, hoặc dịp hiếm nhận nuôi thêm 1 sinh linh phụ) — hoàn toàn ngẫu nhiên, không theo lịch, để tránh cảm giác bị nhắc nhở.
-- **Làng Phù Đổng** — không gian **chung**, nơi người chơi nhìn thấy dấu vết đóng góp của cả cộng đồng qua "Cây Làng" — lớn lên theo tổng đóng góp của tất cả mọi người, ghi nhận minh bạch on-chain. Khi đạt mốc, Cây Làng "bùng nổ" ban phước ngược lại cho mọi Măng Non đang sống, rồi bắt đầu một "mùa" mới — đúng vòng lặp cho-nhận của Thánh Gióng (dân nuôi Gióng lớn, Gióng đánh giặc xong để lại dấu tích rồi về trời).
-- **Vườn Ký Ức** — nơi lưu giữ các Măng Non đã **"an nghỉ"** (hoàn thành Goal) dưới dạng một "bảo tàng" cá nhân — không biến mất, không bị xoá, chỉ chuyển sang trạng thái tĩnh, thỉnh thoảng "nhắc lại kỷ niệm" khi người chơi ghé qua. Đây cũng là nơi khoảnh khắc mint NFT hành trình diễn ra — một cột mốc "tốt nghiệp" có ý nghĩa, không phải thao tác kỹ thuật khô khan.
+- **Rừng Tre Cổ** — không gian **riêng tư** của từng người học, nơi Măng Non được sinh ra và lớn lên cùng bàn học ấm áp. Cảnh vật đổi theo thời gian thực ngoài đời (sáng/tối, mùa) để tạo cảm giác đây là nơi đang *sống*, không phải màn hình tĩnh. "Ống nứa phát sáng" rải rác trong rừng, thỉnh thoảng phát sáng báo hiệu điều gì mới. Nơi đây diễn ra các **Phiên Tập Trung tĩnh lặng (15/25/45m)** với tính năng **Show-and-Tell (Proof of Output)**: sau giờ học, người học chụp lại trang vở mới viết hay màn hình code để Măng Non tò mò ngắm nhìn, nhận Mầm Lực nạp vào cây.
+- **Làng Phù Đổng** — không gian **chung**, nơi người học nhìn thấy dấu vết nỗ lực của cả cộng đồng qua "Cây Đa Tri Thức" — lớn lên theo tổng đóng góp của tất cả mọi người, ghi nhận minh bạch on-chain. Tại đây tích hợp **Quỹ Khuyến Học Làng Phù Đổng**: nơi Mầm Lực tích lũy từ các giờ học được gom lại cùng nguồn tài trợ CSR của doanh nghiệp để tài trợ các suất học bổng thực tế và sách vở cho sinh viên hiếu học. Khi đạt mốc, Cây Đa "bùng nổ" hoa gạo ban phước lộc ngược lại cho mọi Măng Non đang sống.
+- **Vườn Ký Ức** — nơi lưu giữ các Măng Non đã **"an nghỉ"** (hoàn thành đồ án/môn học) dưới dạng một "bảo tàng" tri thức cá nhân — không biến mất, chỉ chuyển sang trạng thái tĩnh dưới dạng phiến đá nhẵn dưới lòng suối. Đây cũng là nơi diễn ra nghi thức mint **JourneyNFT (ERC-721)** trên Avalanche Fuji — một cột mốc "tốt nghiệp" có ý nghĩa minh chứng năng lực học tập vĩnh cửu.
 
 **Bản chất của Măng Non (không phải "cái cây có mắt"):**
 
-Măng Non là một **sinh linh độc lập**, có tính cách riêng — tò mò, biết vui, biết sợ, dần học cách khám phá thế giới. Ngày đầu gặp, nó chỉ biết nhìn những chiếc lá bay và hỏi "Tại sao lá lại rơi xuống nhỉ?". Người chơi học được điều gì mới ngoài đời, có thể chia sẻ lại cho nó — Măng Non dần hiểu thêm về thế giới, lớn lên **trong cách hiểu thế giới** chứ không chỉ về ngoại hình, giống chính người chơi đang trưởng thành song song với nó.
+Măng Non là một **sinh linh độc lập**, có tính cách riêng — tò mò, biết vui, biết sợ, dần học cách khám phá thế giới. Ngày đầu gặp, nó chỉ biết nhìn những chiếc lá bay và hỏi "Tại sao lá lại rơi xuống nhỉ?". Khi người học chia sẻ một định lý mới, một trang sách hay một dòng code sau phiên tập trung, Măng Non dần hiểu thêm về thế giới, lớn lên **trong cách hiểu thế giới** chứ không chỉ về ngoại hình, giống chính người học đang trưởng thành song song với nó.
 
-Quan trọng nhất: **việc học không bị biến thành nhiệm vụ hằng ngày**. Không tương tác, Măng Non không buồn, không bệnh, không chết — khi người chơi quay lại, hai bên tiếp tục đúng từ nơi đã dừng, như một người bạn thật sự chứ không phải một hệ thống nhắc nhở.
+Quan trọng nhất: **việc học không bị biến thành áp lực hay sự giám sát**. Không tương tác, Măng Non không buồn, không bệnh, không chết — khi người học quay lại, hai bên tiếp tục đúng từ nơi đã dừng, như một người bạn thật sự bên bàn học.
 
 ## 2. Vấn đề — Giải pháp — Use case & Impact
 
-**Vấn đề:** Các công cụ "học tập có thưởng" hiện tại (Forest, Duolingo streak, habit tracker...) thường biến việc tự phát triển bản thân thành nhiệm vụ bị giám sát — dễ tạo cảm giác gò bó, áp lực "sợ mất streak", và người dùng bỏ cuộc/xoá app sau vài tuần.
+**Vấn đề:** 
+1. Các công cụ học tập hiện tại (Forest, Duolingo streak...) biến việc tự học thành nhiệm vụ bị giám sát — gây áp lực "sợ mất chuỗi ngày", khiến người dùng stress và dễ bỏ cuộc.
+2. Vấn nạn "học ảo" và gian lận AI (copy-paste prompt đối phó) khiến sinh viên mất thói quen tư duy sâu.
+3. Sinh viên thiếu động lực tự thân và không gian chạy deadline lý tưởng, trong khi các quán cà phê học tập (F&B) thiếu cơ chế giữ chân sinh viên gắn bó dài lâu.
 
-**Giải pháp:** Một người bạn đồng hành ảo (Măng Non), gắn với từng mục tiêu cá nhân (Goal), được "dạy" thay vì "chấm điểm" — không lịch trình ép buộc, không chết/bệnh nếu bỏ bê. Hành trình nuôi dưỡng được ghi lại vĩnh viễn trên chain, và một phần giá trị đó góp vào sức mạnh cộng đồng chung.
+**Giải pháp:** 
+- Một người bạn đồng hành ảo (Măng Non), gắn với từng hành trình học tập, được "dạy" và cùng ngắm thành quả thay vì "chấm điểm" — không lịch trình ép buộc, không chết/bệnh nếu vắng mặt.
+- **Phiên Tập Trung & Show-and-Tell (Proof of Output)**: Thời gian học tĩnh lặng tuyệt đối (Silence Mode), sau đó chủ động chụp lại thành quả thực tế (trang sách, dòng code) để Măng Non cùng chiêm ngưỡng.
+- **Hệ thống Xác thực Sinh viên (.edu.vn / Thẻ Sinh Viên)**: Nhận ngay huy hiệu Verified Student, mở khóa **Student Boost (x1.5 Mầm Lực)** và tặng sẵn 3 khiên bảo vệ mùa thi cử.
+- **Mô hình Trạm Tre & Quỹ Khuyến Học**: Đổi Mầm Lực và lượt ghé Trạm Tre thành voucher ưu đãi 15-20% tại các quán cà phê đối tác, cùng nhau đóng góp vào Quỹ Khuyến Học Làng Phù Đổng.
 
 **Use case:**
-- Cá nhân muốn theo đuổi mục tiêu (học ngoại ngữ, tập thể thao, đọc sách...) nhưng ngán cảm giác bị nhắc nhở/giám sát.
-- Cộng đồng/trường học muốn một công cụ khuyến khích học tập mang tính gắn kết, không áp lực.
-- Quán cà phê/trung tâm muốn tăng lượng khách ngồi học lâu, quay lại thường xuyên.
+- Sinh viên đại học / người tự học muốn rèn luyện khả năng tập trung sâu khi học bài, làm đồ án, ôn thi mà không muốn bị app theo dõi làm phiền.
+- Nhóm bạn sinh viên ghé các Trạm Tre (quán cà phê học tập quanh trường) chạy deadline, check-in nhận ưu đãi đồ uống và cùng nhau học tập.
+- Doanh nghiệp, nhà sách (Fahasa), trường học đóng góp tài trợ CSR vào Quỹ Khuyến Học Làng Phù Đổng để cấp học bổng cho sinh viên xuất sắc vượt khó.
 
-**Impact:** Khuyến khích thói quen tự học/tự phát triển bền vững hơn (vì không dựa trên sợ hãi), đồng thời tạo một mô hình "thành tựu cá nhân nuôi dưỡng cộng đồng" có thể mở rộng sang giáo dục, CSR doanh nghiệp.
+**Impact:** Khuyến khích thói quen tự học và tập trung sâu bền vững; đồng thời xây dựng một hệ sinh thái Web3 giáo dục nhân văn: thành tựu học tập cá nhân nuôi lớn Quỹ Khuyến Học cộng đồng.
 
 ## 3. Độ mới / Sáng tạo — Mấu chốt giữ người chơi
 
 **So với sản phẩm đã có (Forest, Duolingo, Tamagotchi, Pokémon GO):**
-- Đảo vai trò: **người chơi dạy AI**, không phải AI dạy/giám sát người chơi.
-- Hình hài Măng Non do chính người dùng **tự vẽ/chụp/tải ảnh** — AI chỉ tách nền + animate giữ nguyên hình gốc (như cơ chế "cá giấy bơi vào bể" tại các triển lãm tương tác), không generate hộ — mỗi sinh vật độc nhất thật sự, không chọn từ bộ có sẵn.
-- 1 Goal = 1 sinh vật riêng, có thể **liên kết chỉ số** giữa các Goal liên quan — tạo một "mạng lưới mục tiêu" trực quan, không có ở các app khác.
-- Vòng lặp cảm xúc "cho – nhận": thành tựu cá nhân nuôi lớn sức mạnh cộng đồng (Cây Làng), cộng đồng đạt mốc thì "ban phước" ngược lại cho mọi người — tạo lý do quay lại vì *muốn đóng góp*, không phải vì sợ mất.
+- Đảo vai trò: **người học dạy AI**, không phải AI dạy/giám sát người học.
+- Hình hài Măng Non do chính người dùng **tự vẽ/chụp/tải ảnh** — AI chỉ tách nền + animate giữ nguyên hình gốc (như cơ chế "cá giấy bơi vào bể"), không generate hộ — mỗi sinh vật độc nhất thật sự.
+- **Proof of Output (Show-and-Tell)**: Nhẹ nhàng, tôn trọng quyền riêng tư (không bật camera rình rập, không giật mình giữa giờ), kích thích niềm tự hào khi hoàn thành bài vở.
+- Vòng lặp cảm xúc "cho – nhận": nỗ lực học tập cá nhân nuôi lớn sức mạnh Cây Đa Tri Thức và Quỹ Khuyến Học, cộng đồng đạt mốc thì "ban phước" ngược lại cho mọi người — tạo lý do gắn bó vì *muốn đóng góp*, không phải vì sợ mất.
 
 **Mấu chốt giữ chân:**
-- Gắn bó cảm xúc với một "nhân vật" có trí nhớ về những gì mình từng chia sẻ (khác với con số streak vô cảm).
-- Không trừng phạt khi vắng mặt (chỉ "ngủ", không chết) → giảm nguyên nhân phổ biến nhất khiến user xoá app.
-- Yếu tố bất ngờ (Ống nứa phát sáng, sự kiện cộng đồng) thay vì lịch trình cố định → tò mò tự nhiên thay vì nghĩa vụ.
+- Gắn bó cảm xúc với một "người bạn nhỏ" bên bàn học có trí nhớ về những trang sách mình từng đọc.
+- Không trừng phạt khi vắng mặt (chỉ "ngủ", không chết) → xóa bỏ hoàn toàn nỗi sợ mất chuỗi ngày.
+- Quyền lợi sinh viên thực tế: giảm 15-20% hóa đơn cà phê chạy deadline và cơ hội nhận học bổng từ Quỹ Khuyến Học.
 
 ## 4. Why On-chain? Why Avalanche? Nguồn tiền/yield đến từ đâu?
 
 *(3 câu hỏi bắt buộc theo khung chấm của ban tổ chức — trả lời rõ ràng từng câu, không gộp chung.)*
 
-### Cơ chế lõi cần hiểu trước: Mầm Lực Vault
-Để Măng Non không chỉ là "NFT trang trí" mà có **DeFi thật đứng sau**, mỗi Goal khi tạo ra đi kèm một lựa chọn (không bắt buộc, nhưng khuyến khích): người chơi **gửi một khoản nhỏ token testnet (AVAX/USDC Fuji, lấy free từ faucet)** vào "Mầm Lực Vault" như một lời cam kết với chính mình.
-- **Giữ vị thế càng lâu → chỉ số Măng Non càng mạnh** (vault sinh mock-yield cộng dồn theo thời gian nắm giữ — tương tự "holding a position for long makes you stronger" ở các vault DeFi thật).
-- **Rút sớm → chỉ số giảm** — đây là cách "stake" tượng trưng cho cam kết, giống hệt áp lực tài chính nhẹ mà một vị thế DeFi thật tạo ra, nhưng không có rủi ro tiền thật (chỉ dùng testnet).
-- Đây là lớp giúp Măng Non **không còn thuần là "web2 dán NFT"** mà có hành vi DeFi thật (deposit/withdraw/accrue) đứng sau mỗi chỉ số.
+### 5 Smart Contracts cốt lõi đã triển khai trên Avalanche Fuji (Chain ID 43113):
+1. **`VillageTree` (`0x372587...`)**: Quản lý Cây Đa Tri Thức & Quỹ Khuyến Học Làng Phù Đổng, tiếp nhận lá tri thức và phân phối năng lượng cộng đồng.
+2. **`GoalRegistry` (`0x814C34...`)**: Đăng ký các hành trình học tập (Goal), ghi nhận mốc bắt đầu và trạng thái an nghỉ.
+3. **`MamLucVault` (`0x7e342d...`)**: ERC-4626 Vault lưu giữ cam kết Mầm Lực (AVAX/USDC testnet), sinh yield tượng trưng theo thời gian giữ cam kết học tập.
+4. **`JourneyNFT` (`0x7Db4Be...`)**: ERC-721 Soulbound/Tốt nghiệp mint trực tiếp lên Avalanche Fuji khi hoàn thành hành trình học tập, lưu giữ hash ảnh gốc và nhận thức vĩnh viễn.
+5. **`TramTreCheckin` (`0xAe9E32...`)**: Xác thực GPS check-in tại các Trạm Tre đối tác, bảo đảm tính xác thực và chống gian lận voucher.
 
 ### Why on-chain?
-- **Mầm Lực Vault là tài sản thật, cần minh bạch tuyệt đối**: số dư, thời gian giữ, mock-yield tích luỹ — không ai (kể cả dev) chỉnh sửa được, người chơi tự kiểm tra ví của mình bất cứ lúc nào.
-- **NFT hành trình** là bằng chứng không thể giả mạo của quá trình trưởng thành cá nhân (hash ảnh gốc + mốc thời gian + lịch sử vault đi kèm) — giá trị nằm ở tính xác thực/sở hữu vĩnh viễn.
-- **Cây Làng** (quỹ cộng đồng) cần minh bạch: tổng đóng góp thật, mốc đạt thật, phần thưởng chia công bằng.
-- **Voucher đối tác (Trạm Tre)** dùng cơ chế chống xài 2 lần — use case on-chain kinh điển.
+- **Minh bạch Quỹ Khuyến Học & Cây Tri Thức**: Đóng góp từ các giờ học và nhà tài trợ được ghi nhận minh bạch 100% trên blockchain, không ai có thể can thiệp hay sửa đổi.
+- **Chứng nhận Tốt nghiệp NFT không thể giả mạo**: Mỗi Măng Non khi an nghỉ trở thành một chứng chỉ Soulbound NFT ghi nhận nỗ lực học tập thực tế của sinh viên.
+- **Bảo mật & Chống gian lận voucher F&B**: Sử dụng smart contract để cấp và ghi nhận việc sử dụng voucher tại các trạm cà phê, ngăn chặn hoàn toàn việc chụp lại hoặc dùng voucher 2 lần.
 
 ### Why Avalanche (không phải chain khác)?
-- **Tách 2 tầng rõ ràng, đúng mô hình Avalanche khuyến khích:**
-  - **Game L1 riêng** (Subnet-EVM, dựng bằng Avalanche CLI): chịu toàn bộ giao dịch tần suất cao — mỗi lượt trò chuyện, mỗi lần chỉ số nhích lên, animation state — gas gần 0, không nghẽn/không tốn phí trên chain chính.
-  - **C-Chain**: giữ tài sản giá trị thật — Mầm Lực Vault, NFT hành trình, voucher — cần tương thích ví/chuẩn ERC-721/ERC-20 phổ biến, thanh khoản thật.
-- **ICM (Teleporter)** nối 2 tầng theo 2 chiều — đây là phần kỹ thuật cốt lõi chứng minh tích hợp Avalanche sâu chứ không phải chỉ "mint NFT cho có":
-  1. User deposit vào Mầm Lực Vault (C-Chain) → message ICM gửi sang Game L1 → cập nhật chỉ số Măng Non tương ứng.
-  2. Goal "an nghỉ" (trigger trên Game L1, dựa trên tương tác/chỉ số tích luỹ) → ICM gửi sang C-Chain → mint NFT hành trình + rút một phần mock-yield (không đụng vốn gốc) chuyển vào Cây Làng.
-  3. Cây Làng đạt ngưỡng (C-Chain) → ICM gửi ngược lại Game L1 → mọi Măng Non đang hoạt động nhận hiệu ứng "được ban phước".
-- Tách game state khỏi tiền thật là thiết kế đúng, và chỉ Avalanche làm việc này "sạch" (rẻ, nhanh, L1 tuỳ biến riêng) mà vẫn giữ tài sản thật an toàn trên C-Chain.
+- **Tốc độ xử lý cực nhanh (Sub-second finality)**: Avalanche Fuji xác nhận giao dịch check-in và gửi mầm lực chỉ trong dưới 1 giây, mang lại trải nghiệm mượt mà không độ trễ cho sinh viên.
+- **Phí giao dịch siêu rẻ**: Phí gas gần như bằng không, phù hợp với đối tượng sinh viên và tần suất tương tác học tập đều đặn.
+- **Khả năng mở rộng qua Avalanche L1 (Subnet)**: Sẵn sàng tách riêng Game L1 chuyên trách cho các tương tác hội thoại AI tần suất cao, kết nối bằng ICM (Teleporter) về C-Chain để lưu trữ tài sản giá trị thật (Mầm Lực Vault, JourneyNFT).
 
 ### Nguồn tiền/yield đến từ đâu?
-- **Chủ yếu từ chính người chơi**: mỗi người tự gửi một khoản testnet nhỏ vào Mầm Lực Vault của Goal mình tạo — đây là "tiền" của chính họ, mock-yield là phần thưởng mô phỏng cho việc giữ cam kết lâu dài (không phải tiền sinh ra từ đâu khác).
-- **Một phần nhỏ (từ mock-yield, không đụng vốn gốc)** chảy vào Cây Làng khi Goal hoàn thành — đúng tinh thần "góp phần nhỏ nuôi sức mạnh chung", không rút cạn tài sản cá nhân của ai.
-- **Sponsor pool (tuỳ chọn, giống Trạm Tre)**: nhà tài trợ có thể bơm thêm testnet token vào Cây Làng hoặc trực tiếp vào Mầm Lực Vault của một nhóm Goal liên quan đến họ (CSR) — minh bạch, có thể kiểm tra on-chain.
-- Trong MVP demo: toàn bộ là **testnet Fuji**, không có tiền thật, không rủi ro tài chính — nói rõ điều này với giám khảo để tránh hiểu nhầm là sản phẩm tài chính thật.
+- **Mô hình B2B Win-Win-Win với Trạm Tre (F&B & Coworking Space)**: Các quán cà phê quanh trường đại học tài trợ voucher giảm 15-20% đồ uống. Đổi lại, quán có lượng sinh viên đông đảo đến ngồi học chạy deadline vào các khung giờ vắng khách và quay lại thường xuyên.
+- **Tài trợ CSR từ Doanh nghiệp & Nhà xuất bản (Fahasa)**: Doanh nghiệp bơm vốn tài trợ vào Quỹ Khuyến Học Làng Phù Đổng dưới dạng học bổng và sách vở để nhận quyền ghi danh danh dự trên Cây Đa Tri Thức.
+- **Cam kết học tập cá nhân (Mầm Lực Vault)**: Sinh viên stake một khoản nhỏ testnet token làm cam kết học tập, sinh ra mock-yield Mầm Lực theo thời gian giữ cam kết.
+- **Tuân thủ pháp lý 100%**: Tuyệt đối không quy đổi trực tiếp điểm trong game thành tiền mặt (tránh vi phạm luật phòng chống đánh bạc). Toàn bộ giá trị được hợp pháp hóa thành ưu đãi tiêu dùng thực tế (voucher cà phê, sách giáo trình) và các suất học bổng khuyến học CSR minh bạch.
 
-## 5. Nhà tài trợ — Số lượng, chất lượng, giữ chân
+## 5. Nhà tài trợ — Trạm Tre & Quỹ Khuyến Học
 
-**2 lớp tài trợ:**
-1. **Cấp cá nhân (Trạm Tre):** Quán cà phê/trung tâm đối tác trở thành không gian đặc biệt trong game (check-in GPS → Măng Non có phản ứng riêng, Ống nứa phát sáng đặc biệt). Đổi lại, khi Măng Non "tốt nghiệp" liên quan đến chủ đề của đối tác (vd: trung tâm Anh ngữ, phòng gym), user nhận voucher thật.
-2. **Cấp cộng đồng (Làng Phù Đổng):** Doanh nghiệp/trường học tài trợ thêm năng lượng cho Cây Làng (CSR) → tên xuất hiện trong sự kiện "bùng nổ" cộng đồng — mô hình "khắc tên vào truyền thuyết" thay vì quảng cáo trực tiếp.
+**2 tầng tài trợ:**
+1. **Cấp cá nhân (Trạm Tre - F&B Station):** Các quán cà phê học tập (The Coffee House, Highlands, Cheese Coffee gần trường đại học) tích hợp GPS check-in. Sinh viên đến học nhận voucher giảm giá 15-20%, quà tặng sách Fahasa khi Măng Non trưởng thành.
+2. **Cấp cộng đồng (Quỹ Khuyến Học Làng Phù Đổng):** Doanh nghiệp công nghệ và giáo dục tài trợ các gói học bổng tiền mặt/khóa học được giải ngân trực tiếp cho các sinh viên có nhiều giờ tập trung và hoàn thành hành trình xuất sắc.
 
-**Giữ chân nhà cung cấp:** khách ngồi lâu hơn, có lý do quay lại thường xuyên (nội dung mới ở Trạm Tre), dữ liệu lượt ghé minh bạch qua on-chain check-in.
+## 6. Cơ chế xác thực (Chính xác, tôn trọng riêng tư)
 
-**Giữ chân người chơi:** voucher là "quà bất ngờ khi tốt nghiệp", không phải lý do bắt đầu — tránh biến relationship thành "làm để lấy thưởng".
-
-**MVP tài trợ:** demo với 1 nhà tài trợ giả định (ghi rõ mô phỏng), không cần chốt đối tác thật trước hạn nộp.
-
-## 6. Cơ chế xác thực (giám sát ở mức tối thiểu, đúng chỗ)
-
-| Tầng | Mục đích | Mức xác thực |
+| Tầng | Mục đích | Cơ chế xác thực |
 |---|---|---|
-| Core loop (trò chuyện hằng ngày) | Trải nghiệm cảm xúc | Không giám sát — AI chỉ lắng nghe/phản hồi |
-| Check-in Trạm Tre (khi nhận ưu đãi) | Chống gian lận voucher | GPS check-in + xác nhận nhẹ, không ghi chi tiết thời gian (tôn trọng privacy, theo đúng cách BusQuest đã làm) |
+| Xác thực Sinh viên | Cấp quyền Student Boost x1.5 & Khiên thi cử | Xác thực qua Email trường đuôi `.edu.vn` (OTP tự động) hoặc quét AI ảnh thẻ sinh viên |
+| Phiên Tập Trung | Ghi nhận nỗ lực thực tế ("Proof of Output") | Đồng hồ cát Silence Mode tĩnh lặng + Show-and-Tell: chụp ảnh trang vở/code sau giờ học |
+| Trạm Tre Đối tác | Nhận ưu đãi voucher F&B | GPS Haversine check-in (bán kính ≤ 300m) + Smart Contract ghi nhận chống lặp |
 
 ## 7. MVP → Mở rộng
 
