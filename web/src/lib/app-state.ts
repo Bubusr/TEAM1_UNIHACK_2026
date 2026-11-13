@@ -112,11 +112,76 @@ export interface AppStateData {
   draftOnboarding?: OnboardingDraft;
 }
 
+export const DEFAULT_MANGNON: Mangnon = {
+  id: 'mn-starter-default',
+  name: 'Măng Non',
+  personality: 'haohung',
+  stage: 5,
+  imageSource: 'sample',
+  imageUri: '',
+  status: 'active',
+  goalTitle: 'Nuôi dưỡng thói quen tự học mỗi ngày',
+  goalWhy: 'Để rèn luyện tâm trí kiên định như tre ngàn năm',
+  plannedDays: 30,
+  likes: ['sách hay', 'tiếng suối reo', 'giọt sương mai'],
+  dislike: 'sự trì hoãn',
+  sessionsCount: 6,
+  activeDays: ['2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13'],
+  createdAt: '2026-11-10',
+  growthLevel: 1,
+  stats: {
+    intelligence: 18,
+    perseverance: 24,
+    fitness: 16,
+    creativity: 22,
+  },
+};
+
 const DEFAULT_STATE: AppStateData = {
   currentScreen: 'S01',
-  activeMangnon: null,
-  restingMangnons: [],
-  memories: [],
+  activeMangnon: DEFAULT_MANGNON,
+  restingMangnons: [
+    {
+      id: 'mn-seed-1',
+      name: 'Mầm Xanh',
+      personality: 'diemtinh',
+      stage: 4,
+      imageUri: '',
+      imageSource: 'sample',
+      status: 'resting',
+      goalTitle: 'Đọc 12 cuốn sách văn học',
+      likes: ['tiếng mưa', 'trang sách cũ'],
+      dislike: 'nơi ồn ào',
+      sessionsCount: 38,
+      activeDays: ['2026-10-12', '2026-10-25'],
+      createdAt: '2026-10-01',
+      restedAt: '2026-11-02',
+      lastWords: 'Cảm ơn cậu vì đã luôn kiên nhẫn. Giờ mình chìm vào giấc ngủ bên dòng suối trong vắt này nhé...',
+      finalMemories: [
+        'Cậu kể: Vừa đọc xong cuốn Hoàng Tử Bé lúc trời mưa rào',
+        'Cậu kể: Thấy một chiếc lá phong vàng rơi trên bậc thềm',
+        'Cậu kể: Hôm nay trong lòng cảm thấy nhẹ nhõm hơn nhiều',
+      ],
+    },
+  ],
+  memories: [
+    {
+      id: 'mem-seed-1',
+      mangnonId: 'mn-starter-default',
+      text: 'Bạn chia sẻ: Tìm thấy góc bàn học yên tĩnh nhìn ra vạt tre xanh',
+      pinned: true,
+      forgotten: false,
+      createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    },
+    {
+      id: 'mem-seed-2',
+      mangnonId: 'mn-starter-default',
+      text: 'Bạn chia sẻ: Hoàn thành phiên đọc sách 25 phút tĩnh tại cùng Măng Non',
+      pinned: false,
+      forgotten: false,
+      createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+    },
+  ],
   messages: [],
   villageLeaves: 310, // Mức nền 62% cộng đồng giả lập
   villageThreshold: 500,
@@ -130,7 +195,7 @@ const DEFAULT_STATE: AppStateData = {
     reminderOn: false,
     lastOpenedAt: new Date().toISOString(),
   },
-  bambooOpened: false,
+  bambooOpened: true,
 };
 
 function persistBigImage(id: string, uri?: string): { imageId?: string; compactUri: string } {
@@ -168,9 +233,20 @@ export const AppStore = {
         return DEFAULT_STATE;
       }
       const parsed = JSON.parse(saved) as AppStateData;
+      const activeMangnon = parsed.activeMangnon || DEFAULT_MANGNON;
+      const restingMangnons = parsed.restingMangnons && parsed.restingMangnons.length > 0
+        ? parsed.restingMangnons
+        : DEFAULT_STATE.restingMangnons;
+      const memories = parsed.memories && parsed.memories.length > 0
+        ? parsed.memories
+        : DEFAULT_STATE.memories;
+
       return {
         ...DEFAULT_STATE,
         ...parsed,
+        activeMangnon,
+        restingMangnons,
+        memories,
         dewdrops: typeof parsed.dewdrops === 'number' ? parsed.dewdrops : 100,
         settings: {
           ...DEFAULT_STATE.settings,

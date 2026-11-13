@@ -170,14 +170,34 @@ export default function MangNonApp() {
         setUserAccount(parsedUser);
       } catch {}
     } else {
-      setShowWelcomeLogin(true);
+      // Tự động khởi tạo phiên Học Giả Măng Non (+100 Giọt Sương) để trải nghiệm liền mạch
+      const guestUser: UserAccount = {
+        email: 'hoc.gia.khach@mangnon.vn',
+        name: 'Học Giả Măng Non',
+        avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=mangnon_guest',
+        embeddedAddress: '0x372587d6BF5B3c3a2D267df6a22f87E3F9ebb0AA',
+        walletType: 'embedded',
+        provider: 'embedded',
+        connectedAt: new Date().toISOString(),
+        dewdrops: 100,
+        isStudent: false,
+      };
+      parsedUser = guestUser;
+      setUserAccount(guestUser);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mangnon_user_account', JSON.stringify(guestUser));
+      }
     }
 
-    // Yêu cầu: Không khôi phục màn hình cũ khi người chơi thoát ra;
-    // Mặc định: Nếu đã đăng nhập thì luôn khởi đầu ở Trang Chủ (S06 Home Forest);
-    // Nếu chưa đăng nhập thì ở màn hình chào đầu S01.
+    // Kiểm tra nếu người chơi mở trực tiếp đường dẫn URL có hash (ví dụ: http://localhost:3000/#/rung)
+    const currentHash = typeof window !== 'undefined' ? window.location.hash : '';
+    const hashTargetScreen = HASH_SCREEN_MAP[currentHash];
+
+    // Ưu tiên:
+    // 1. Hash người chơi chủ động gõ trên thanh URL (e.g. #/rung -> S06)
+    // 2. Mặc định: S06 nếu đã đăng nhập / có tài khoản, S01 nếu chưa
     const isLoggedIn = !!parsedUser || !!loaded.userProfile?.walletAddress;
-    const initialScreen = isLoggedIn ? 'S06' : 'S01';
+    const initialScreen = hashTargetScreen || (isLoggedIn ? 'S06' : 'S01');
 
     // Check Welcome Back (UC08)
     if (loaded.activeMangnon && loaded.settings.lastOpenedAt) {
@@ -189,7 +209,7 @@ export default function MangNonApp() {
       }
     }
 
-    // Update lastOpenedAt & reset currentScreen to initialScreen (không dùng màn hình cũ khi thoát)
+    // Update lastOpenedAt & reset currentScreen to initialScreen
     const withTimestamp = {
       ...loaded,
       currentScreen: initialScreen,
@@ -208,8 +228,8 @@ export default function MangNonApp() {
       AppStore.save(hydrated);
     });
 
-    // Sync hash to initialScreen
-    if (SCREEN_HASH_MAP[initialScreen]) {
+    // Chỉ đồng bộ hash nếu hash hiện tại chưa khớp với màn hình khởi động
+    if (SCREEN_HASH_MAP[initialScreen] && window.location.hash !== SCREEN_HASH_MAP[initialScreen]) {
       window.location.hash = SCREEN_HASH_MAP[initialScreen];
     }
   }, []);

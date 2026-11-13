@@ -68,8 +68,8 @@ export default function S06HomeForest({
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showStatsPopover, setShowStatsPopover] = useState(false);
-  // 5 Giai đoạn tăng trưởng của Thánh Khí Tre Măng Non
-  const [currentStage, setCurrentStage] = useState<number>(mangnon?.stage || 1);
+  // 5 Giai đoạn tăng trưởng của Thánh Khí Tre Măng Non (Mặc định GĐ 5 khi vào Rừng để hiển thị đầy đủ linh hồn & dock)
+  const [currentStage, setCurrentStage] = useState<number>(mangnon?.stage || 5);
   const [growingTimeLeft, setGrowingTimeLeft] = useState<number>(() => {
     if (mangnon?.incubationStartedAt) {
       const elapsed = Math.floor((Date.now() - mangnon.incubationStartedAt) / 1000);
@@ -464,6 +464,18 @@ export default function S06HomeForest({
             mangnon?.faceExpr,
             mangnon?.rigData,
             true
+          );
+        } else {
+          // Fallback khi ảnh chưa tải xong hoặc đang dùng linh hồn mẫu: Vẽ nhân vật mộc bản Đông Hồ 2D doodle
+          drawSolidShootCutout(
+            ctx,
+            c.x,
+            c.y,
+            110,
+            120,
+            c.direction,
+            tick,
+            c.action
           );
         }
 
@@ -965,12 +977,26 @@ export default function S06HomeForest({
       </div>
       )}
 
-      {/* TOP RIGHT ICONS (Tối đa 2 nút tròn nhỏ w-8 h-8: Sổ Hành Trình & Cài Đặt) */}
-      <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+      {/* TOP RIGHT ICONS (Hành trình, Cài đặt & Nút chuyển đổi Giai đoạn 1..5) */}
+      <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5">
+        {/* Nút bấm chuyển nhanh 5 Giai đoạn để kiểm thử & khám phá */}
+        <button
+          onClick={() => {
+            const nextStage = ((currentStage % 5) + 1) as 1 | 2 | 3 | 4 | 5;
+            changeStage(nextStage);
+            SoundEngine.playBambooKnock();
+          }}
+          className="h-7 px-2 rounded-full bg-[#F4EEDD] text-[#26292B] border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] flex items-center justify-center gap-0.5 text-[10px] font-black transition hover:scale-105 active:translate-y-0.5"
+          title={`Giai đoạn ${currentStage}/5 (Nhấn để chuyển sang GĐ ${((currentStage % 5) + 1)})`}
+        >
+          <span>🌱</span>
+          <span>{currentStage}/5</span>
+        </button>
+
         {mangnon?.goalTitle && (
           <button
             onClick={onOpenJourney}
-            className="w-8 h-8 rounded-full bg-[#F4EEDD] text-[#26292B] border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] flex items-center justify-center text-sm transition hover:scale-105 active:translate-y-0.5"
+            className="w-7 h-7 rounded-full bg-[#F4EEDD] text-[#26292B] border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] flex items-center justify-center text-xs transition hover:scale-105 active:translate-y-0.5"
             title={`Sổ Hành Trình: ${mangnon.goalTitle}`}
           >
             📜
@@ -978,7 +1004,7 @@ export default function S06HomeForest({
         )}
         <button
           onClick={onOpenSettings}
-          className="w-8 h-8 rounded-full bg-[#F4EEDD] text-[#26292B] border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] flex items-center justify-center text-sm transition hover:scale-105 active:translate-y-0.5"
+          className="w-7 h-7 rounded-full bg-[#F4EEDD] text-[#26292B] border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] flex items-center justify-center text-xs transition hover:scale-105 active:translate-y-0.5"
           title="Cài đặt"
         >
           ⚙️
