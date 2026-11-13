@@ -18,7 +18,7 @@ export default function GlowingBambooModal({ onClose, onClaimBonus }: GlowingBam
       particleCount: 80,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#FFD166', '#F4A259', '#6B8F71', '#E63946'],
+      colors: ['#CFA85B', '#5C4D43', '#7E9A85', '#A84D3D'],
     });
     onClaimBonus();
   };

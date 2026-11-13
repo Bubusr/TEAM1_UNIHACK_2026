@@ -116,21 +116,19 @@ export default function Navigation() {
   };
 
   const navLinks = [
-    { href: '/forest', label: 'Rừng Tre Cổ', icon: Trees },
-    { href: '/village', label: 'Làng Phù Đổng', icon: Landmark },
-    { href: '/memory', label: 'Suối Ký Ức', icon: Waves },
-    { href: '/stations', label: 'Trạm Tre', icon: Coffee },
+    { href: '/forest', label: 'Bamboo Grove', icon: Trees },
+    { href: '/village', label: 'Village Tree', icon: Landmark },
+    { href: '/memory', label: 'Stream of Memories', icon: Waves },
+    { href: '/stations', label: 'Study Stations', icon: Coffee },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-forest-darker/90 backdrop-blur-md border-b border-bamboo-mid/30 text-dongho-paper">
+    <header className="sticky top-0 z-50 bg-[#1A2426] border-b-2 border-[#26292B] text-dongho-paper">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-bamboo-deep via-bamboo-mid to-warm-glow p-[1.5px] shadow-lg shadow-forest-abyss">
-            <div className="w-full h-full bg-forest-abyss rounded-[10px] flex items-center justify-center">
-              <span className="text-xl">🎋</span>
-            </div>
+          <div className="w-10 h-10 rounded-xl bg-[#F4EEDD] border-2 border-[#26292B] shadow-[3px_3px_0px_#26292B] group-hover:animate-wiggle-2d flex items-center justify-center">
+            <span className="text-xl">🎋</span>
           </div>
           <div>
             <div className="font-bold text-lg tracking-wide flex items-center gap-2 text-warm-glow group-hover:text-warm-light transition">
@@ -139,12 +137,12 @@ export default function Navigation() {
                 Avalanche L1 &amp; C-Chain
               </span>
             </div>
-            <p className="text-[11px] text-bamboo-light/70 italic">Vùng đất giữa ký ức và cổ tích</p>
+            <p className="text-[11px] text-bamboo-light/70 italic">A quiet sanctuary between memory and folklore</p>
           </div>
         </Link>
 
         {/* Navigation links */}
-        <nav className="hidden md:flex items-center gap-1.5">
+        <nav className="hidden md:flex items-center gap-2">
           {navLinks.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -152,13 +150,13 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-transform hover:animate-wiggle-2d ${
                   isActive
-                    ? 'bg-bamboo-deep/70 text-warm-glow border border-warm-amber/40 shadow-inner'
-                    : 'text-dongho-paper/80 hover:text-warm-glow hover:bg-forest-deep/50'
+                    ? 'bg-[#F4EEDD] text-[#26292B] border-2 border-[#26292B] shadow-[3px_3px_0px_#26292B]'
+                    : 'text-dongho-paper/80 hover:text-warm-glow hover:bg-forest-deep/60 border border-transparent'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-warm-glow' : 'text-bamboo-light/70'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[#A84D3D]' : 'text-bamboo-light/70'}`} />
                 {item.label}
               </Link>
             );
@@ -171,8 +169,8 @@ export default function Navigation() {
           {userAccount ? (
             <button
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-forest-deep border border-warm-amber/50 text-xs font-semibold hover:border-warm-amber transition shadow"
-              title="Xem Hồ sơ Google"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-forest-deep border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B] text-xs font-semibold hover:animate-wiggle-2d transition"
+              title="Google & Student Profile"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -187,8 +185,8 @@ export default function Navigation() {
           ) : (
             <button
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-gray-800 text-xs font-bold shadow transition active:scale-95"
-              title="Đăng nhập Google"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-gray-900 border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B] text-xs font-bold hover:animate-wiggle-2d active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
+              title="Sign in with Google"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
                 <path
@@ -212,7 +210,7 @@ export default function Navigation() {
             </button>
           )}
 
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-dongho-crimson/20 border border-dongho-red/40 text-dongho-paper text-xs font-medium">
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-dongho-crimson/20 border-2 border-[#26292B] text-dongho-paper text-xs font-bold">
             <span className="w-2 h-2 rounded-full bg-dongho-red animate-pulse"></span>
             Avalanche Fuji
           </div>
@@ -220,22 +218,22 @@ export default function Navigation() {
           <button
             onClick={toggleWallet}
             disabled={connecting}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium border transition-all ${
+            className={`btn-woodblock px-3.5 py-1.5 text-xs sm:text-sm font-bold ${
               walletConnected
-                ? 'bg-forest-deep border-bamboo-soft/50 text-warm-glow'
-                : 'bg-warm-amber hover:bg-warm-glow border-warm-amber text-forest-abyss font-bold shadow-md shadow-warm-amber/20'
+                ? 'bg-[#F4EEDD] text-[#26292B]'
+                : 'bg-[#CFA85B] text-[#26292B]'
             } ${connecting ? 'opacity-60 cursor-wait' : ''}`}
           >
-            <Wallet className="w-4 h-4" />
+            <Wallet className="w-4 h-4 text-[#26292B]" />
             {connecting ? (
-              'Đang kết nối...'
+              'Connecting...'
             ) : walletConnected ? (
               <div className="flex items-center gap-1.5">
                 <span>{truncAddr(walletAddress)}</span>
-                {balance && <span className="text-warm-light font-semibold">({balance})</span>}
+                {balance && <span className="text-forest-abyss font-semibold">({balance})</span>}
               </div>
             ) : (
-              'Ví Core'
+              'Core Wallet'
             )}
           </button>
         </div>

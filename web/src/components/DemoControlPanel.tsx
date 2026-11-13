@@ -23,14 +23,14 @@ export default function DemoControlPanel({
 
   const handleSeedMemories = () => {
     const seedTexts = [
-      'Cậu kể: Hôm nay vừa tìm thấy một quán cà phê nhỏ ngập nắng',
-      'Cậu kể: Bắt đầu học bài học đầu tiên về thuật toán',
-      'Cậu kể: Thấy một chú mèo mướp nằm ngủ trên bờ tường',
-      'Cậu kể: Cảm thấy hơi đuối sức sau một ngày dài',
-      'Cậu kể: Tự thưởng một ly trà hoa cúc ấm',
-      'Cậu kể: Đã hoàn thành 5 trang viết đầu tiên',
-      'Cậu kể: Nhớ lại kỷ niệm chuyến đi biển cùng gia đình',
-      'Cậu kể: Thấy lòng nhẹ nhõm khi nói ra được suy nghĩ',
+      'You shared: Found a quiet sunlit cafe around the corner',
+      'You shared: Started my first lesson on algorithms',
+      'You shared: Watched a gentle tabby cat dozing on a stone wall',
+      'You shared: Felt a bit exhausted after a long day of classes',
+      'You shared: Brewed a warm cup of chamomile tea',
+      'You shared: Wrote the first 5 pages of my story draft',
+      'You shared: Remembered a peaceful childhood beach trip',
+      'You shared: Felt at peace after speaking my mind honestly',
     ];
 
     onUpdateState((prev) => {
@@ -68,70 +68,70 @@ export default function DemoControlPanel({
       const seedResting: Mangnon[] = [
         {
           id: 'rested-1',
-          name: 'Trúc Vàng',
+          name: 'Golden Bamboo',
           personality: 'diemtinh',
           stage: 4,
           imageUri: '/presets/figure1.png',
           imageSource: 'sample',
           status: 'resting',
-          goalTitle: 'Đọc xong 12 cuốn sách văn học',
-          likes: ['Đọc sách', 'Gió mát'],
+          goalTitle: 'Read 12 classic literature books',
+          likes: ['Reading', 'Cool breeze'],
           dislike: null,
           sessionsCount: 36,
           activeDays: ['2026-10-01', '2026-10-15', '2026-11-01'],
           createdAt: new Date(Date.now() - 45 * 86400000).toISOString(),
           restedAt: new Date(Date.now() - 15 * 86400000).toISOString(),
-          lastWords: 'Cảm ơn cậu vì đã luôn kiên nhẫn. Mọi điều cậu kể đều đọng lại như những giọt sương mai.',
+          lastWords: 'Thank you for your steady patience. Everything you shared lingers like morning dew.',
           finalMemories: [
-            'Cậu kể: Buổi chiều đọc sách bên ban công ngắm mưa rơi',
-            'Cậu kể: Vừa hoàn thành chương cuối của cuốn sách yêu thích',
-            'Cậu kể: Thấy lòng bình yên như dòng suối chảy qua phiến đá',
+            'You shared: Reading by the balcony listening to rain',
+            'You shared: Finished the last chapter of my favorite book',
+            'You shared: Felt calm like water flowing over river stones',
           ],
           nftTxHash: '0x7db4be38e24a710476916b4e576bd12c2e603a4eb9237ff449d21ecd304407d9',
         },
         {
           id: 'rested-2',
-          name: 'Búp Non',
+          name: 'Green Bud',
           personality: 'haohung',
           stage: 3,
           imageUri: '/presets/figure2.png',
           imageSource: 'sample',
           status: 'resting',
-          goalTitle: 'Chạy bộ 5km mỗi sáng quanh hồ',
-          likes: ['Chạy bộ', 'Bình minh'],
+          goalTitle: 'Morning 5km run around the lake',
+          likes: ['Running', 'Sunrise'],
           dislike: null,
           sessionsCount: 18,
           activeDays: ['2026-10-12', '2026-10-25', '2026-11-05'],
           createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
           restedAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-          lastWords: 'Khoảng thời gian bên cậu vui ơi là vui!! Dù có ngủ dưới lòng suối, mình vẫn luôn nhớ nụ cười của cậu!',
+          lastWords: 'Our time together was so wonderful!! Even resting by the river stones, I cherish your smile!',
           finalMemories: [
-            'Cậu kể: Buổi sáng đầu tiên thức dậy chạy đón bình minh',
-            'Cậu kể: Vượt qua mệt mỏi để hoàn thành 5km',
-            'Cậu kể: Gió sớm thổi qua tán lá làm lòng nhẹ bẫng',
+            'You shared: Woke up early to greet the golden sunrise',
+            'You shared: Pushed through tiredness to finish 5km',
+            'You shared: Morning breeze through bamboo made my heart light',
           ],
           nftTxHash: '0xae9e327a569146e2d59f2fa4b4749f3060591da1c05de09a4af5eda0b5e191a1',
         },
         {
           id: 'rested-3',
-          name: 'Mầm Xanh',
+          name: 'Emerald Sprout',
           personality: 'tomo',
           stage: 2,
           imageUri: '/presets/figure3.png',
           imageSource: 'sample',
           status: 'resting',
-          goalTitle: 'Học 50 từ vựng tiếng Anh mỗi tuần',
-          likes: ['Từ vựng mới', 'Kể chuyện'],
+          goalTitle: 'Learn 50 new vocabulary words weekly',
+          likes: ['New words', 'Storytelling'],
           dislike: null,
           sessionsCount: 8,
           activeDays: ['2026-10-20', '2026-11-02'],
           createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
           restedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-          lastWords: 'Đi cùng cậu, mình đã biết thế giới bên ngoài bao la và đẹp đẽ đến nhường nào.',
+          lastWords: 'Walking with you, I learned how vast and gentle this world can be.',
           finalMemories: [
-            'Cậu kể: Học được một từ mới nghe rất thơ',
-            'Cậu kể: Tự tin nói một câu trọn vẹn với bạn bè',
-            'Cậu kể: Nhớ lại cảm giác lần đầu tiên dám cất lời',
+            'You shared: Learned a poetic new word today',
+            'You shared: Spoke with friends with quiet confidence',
+            'You shared: Remembered the flutter of first taking courage',
           ],
         },
       ];
@@ -157,10 +157,10 @@ export default function DemoControlPanel({
 
   return (
     <>
-      {/* Nút bật Demo Control Panel nổi ở góc */}
+      {/* Floating Demo Control Panel Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        title="Bảng điều khiển thuyết trình 3 phút"
+        title="3-Minute Demo Control Panel"
         className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 p-2.5 rounded-full bg-warm-amber text-forest-abyss font-bold shadow-2xl hover:scale-110 transition border border-forest-abyss"
       >
         <Settings2 className="w-5 h-5 text-forest-abyss" />
@@ -173,7 +173,7 @@ export default function DemoControlPanel({
             <div className="flex justify-between items-center pb-3 border-b border-bamboo-mid/30">
               <div className="flex items-center gap-2 font-bold text-warm-glow text-sm">
                 <Sparkles className="w-4 h-4 text-warm-amber" />
-                Demo Control Panel (3 Phút)
+                Demo Control Panel (3-Minute Tour)
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -184,18 +184,18 @@ export default function DemoControlPanel({
             </div>
 
             <div className="mt-4 space-y-4">
-              {/* CHUYỂN NHANH MÀN HÌNH (SCREEN SWITCHER) */}
+              {/* SCREEN SWITCHER */}
               <div className="p-2.5 rounded-2xl bg-forest-darker/90 border border-warm-amber/50 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-warm-glow uppercase tracking-wider">
-                    📍 Chuyển Nhanh Màn Hình
+                    📍 Screen Switcher
                   </span>
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-warm-amber/20 text-warm-amber font-mono">
-                    Hiện tại: {state.currentScreen}
+                    Current: {state.currentScreen}
                   </span>
                 </div>
 
-                {/* 2 Nút Canvas chính to rõ */}
+                {/* 2 Main Canvas Buttons */}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => {
@@ -210,10 +210,10 @@ export default function DemoControlPanel({
                   >
                     <div className="flex items-center gap-1.5 font-bold text-[11px]">
                       <span>🎨</span>
-                      <span>Studio Vẽ (S03)</span>
+                      <span>Studio (S03)</span>
                     </div>
                     <span className="text-[9px] opacity-80 mt-1">
-                      Nền trắng, 4 cọ, đổ màu, gắn xương
+                      Canvas, 4 pigments, rigging
                     </span>
                   </button>
 
@@ -230,26 +230,26 @@ export default function DemoControlPanel({
                   >
                     <div className="flex items-center gap-1.5 font-bold text-[11px]">
                       <span>🎋</span>
-                      <span>Rừng Tre (S06)</span>
+                      <span>Grove (S06)</span>
                     </div>
                     <span className="text-[9px] opacity-80 mt-1">
-                      Game canvas tương tác 2D Ghibli
+                      Interactive 2D Ghibli canvas
                     </span>
                   </button>
                 </div>
 
-                {/* Grid các màn hình còn lại */}
+                {/* Grid for other screens */}
                 <div className="grid grid-cols-3 gap-1 pt-1 text-[10px]">
                   {[
-                    { id: 'S01', name: 'Ống nứa' },
-                    { id: 'S02', name: 'Tách nứa' },
-                    { id: 'S04', name: 'Đặt tên' },
-                    { id: 'S05', name: 'Gặp đầu' },
-                    { id: 'S07', name: 'Kể chuyện' },
-                    { id: 'S08', name: 'Kỷ niệm' },
-                    { id: 'S11', name: 'Suối ký ức' },
-                    { id: 'S12', name: 'Cây Đa Làng' },
-                    { id: 'S13', name: 'Cài đặt' },
+                    { id: 'S01', name: 'Bamboo Stalk' },
+                    { id: 'S02', name: 'Crack Open' },
+                    { id: 'S04', name: 'Name & Trait' },
+                    { id: 'S05', name: 'First Meet' },
+                    { id: 'S07', name: 'Story Chat' },
+                    { id: 'S08', name: 'Memories' },
+                    { id: 'S11', name: 'Stream' },
+                    { id: 'S12', name: 'Village Tree' },
+                    { id: 'S13', name: 'Settings' },
                   ].map((scr) => (
                     <button
                       key={scr.id}
@@ -269,10 +269,10 @@ export default function DemoControlPanel({
                 </div>
               </div>
 
-              {/* Giờ trong ngày */}
+              {/* Time of Day */}
               <div>
                 <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
-                  Giờ trong ngày:
+                  Time of Day:
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['real', 'morning', 'dusk', 'night'] as const).map((t) => (
@@ -290,16 +290,16 @@ export default function DemoControlPanel({
                           : 'bg-forest-darker border-bamboo-mid/30 text-dongho-paper/70'
                       }`}
                     >
-                      {t === 'real' ? 'Thật' : t === 'morning' ? 'Sáng' : t === 'dusk' ? 'Chiều' : 'Đêm'}
+                      {t === 'real' ? 'Real' : t === 'morning' ? 'Morning' : t === 'dusk' ? 'Dusk' : 'Night'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Mùa trong năm */}
+              {/* Seasons */}
               <div>
                 <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
-                  Mùa trong năm:
+                  Season:
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['spring', 'summer', 'autumn', 'winter'] as const).map((s) => (
@@ -317,16 +317,16 @@ export default function DemoControlPanel({
                           : 'bg-forest-darker border-bamboo-mid/30 text-dongho-paper/70'
                       }`}
                     >
-                      {s === 'spring' ? 'Xuân' : s === 'summer' ? 'Hạ' : s === 'autumn' ? 'Thu' : 'Đông'}
+                      {s === 'spring' ? 'Spring' : s === 'summer' ? 'Summer' : s === 'autumn' ? 'Autumn' : 'Winter'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Giai đoạn nhận thức (1 - 4 lá) */}
+              {/* Cognitive Stage */}
               <div>
                 <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
-                  Giai đoạn nhận thức Măng Non:
+                  Companion Cognitive Stage:
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {([1, 2, 3, 4] as const).map((lvl) => (
@@ -347,16 +347,16 @@ export default function DemoControlPanel({
                           : 'bg-forest-darker border-bamboo-mid/30 text-dongho-paper/70'
                       }`}
                     >
-                      {lvl} Lá
+                      {lvl} Leaf
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Tính cách (chỉ demo) */}
+              {/* Personality */}
               <div>
                 <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
-                  Tính cách (Demo):
+                  Personality (Demo):
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['tomo', 'diemtinh', 'haohung', 'nhutnhat'] as const).map((pers) => (
@@ -377,31 +377,31 @@ export default function DemoControlPanel({
                           : 'bg-forest-darker border-bamboo-mid/30 text-dongho-paper/70'
                       }`}
                     >
-                      {pers === 'tomo' ? 'Tò mò' : pers === 'diemtinh' ? 'Điềm tĩnh' : pers === 'haohung' ? 'Hào hứng' : 'Nhút nhát'}
+                      {pers === 'tomo' ? 'Curious' : pers === 'diemtinh' ? 'Tranquil' : pers === 'haohung' ? 'Playful' : 'Shy'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Động tác sinh vật hình người chuẩn Meta Demo Lab & Teri Gumball */}
+              {/* Meta Demo Lab & Teri Paper Puppet Kinematics */}
               <div>
                 <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
-                  Động tác Meta Demo Lab &amp; Gấu giấy Teri (Gumball):
+                  Meta Demo Lab &amp; Teri Paper Puppet Kinematics:
                 </label>
                 <div className="grid grid-cols-3 gap-1.5 text-[10px]">
                   {[
-                    { label: '🚶 Đi bộ', action: 'walk' },
-                    { label: '🏃 Chạy bộ', action: 'run' },
-                    { label: '🤫 Rón rén', action: 'sneak' },
-                    { label: '🎉 Nhảy vui', action: 'happy_jump' },
-                    { label: '🍃 Bay lơ lửng', action: 'paper_flutter' },
-                    { label: '🦘 Lò cò', action: 'hop' },
-                    { label: '💃 Múa lượn', action: 'dance' },
-                    { label: '👋 Vẫy tay', action: 'wave' },
-                    { label: '💫 Xoay tròn', action: 'spin' },
-                    { label: '😱 Gấu Teri', action: 'teri_panic' },
-                    { label: '😔 Ủ rũ', action: 'sad' },
-                    { label: '😴 Gấp giấy', action: 'sleep' },
+                    { label: '🚶 Walk', action: 'walk' },
+                    { label: '🏃 Run', action: 'run' },
+                    { label: '🤫 Sneak', action: 'sneak' },
+                    { label: '🎉 Happy Jump', action: 'happy_jump' },
+                    { label: '🍃 Flutter', action: 'paper_flutter' },
+                    { label: '🦘 Hop', action: 'hop' },
+                    { label: '💃 Dance', action: 'dance' },
+                    { label: '👋 Wave', action: 'wave' },
+                    { label: '💫 Spin', action: 'spin' },
+                    { label: '😱 Teri Panic', action: 'teri_panic' },
+                    { label: '😔 Melancholy', action: 'sad' },
+                    { label: '😴 Sleep', action: 'sleep' },
                   ].map((act) => (
                     <button
                       key={act.action}
@@ -421,47 +421,47 @@ export default function DemoControlPanel({
                 </div>
               </div>
 
-              {/* Các nút bấm thao tác nhanh thuyết trình */}
+              {/* Quick Actions */}
               <div className="pt-2 border-t border-bamboo-mid/30 space-y-2">
                 <button
                   onClick={handleSeedMemories}
                   className="w-full py-2 px-3 rounded-xl bg-forest-darker hover:bg-forest-mist border border-bamboo-soft/40 text-left font-medium text-warm-glow flex items-center justify-between"
                 >
-                  <span>🌱 Thêm 8 ký ức mẫu để thấy callback</span>
+                  <span>🌱 Seed 8 sample memories for callbacks</span>
                   <Sparkles className="w-3.5 h-3.5 text-warm-amber" />
                 </button>
 
-                {/* Mô phỏng thời gian vắng mặt (Luồng E) */}
+                {/* Simulate Absence */}
                 <div>
                   <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
-                    Mô phỏng thời gian vắng mặt (Luồng E):
+                    Simulate Absence (Flow E):
                   </label>
                   <div className="grid grid-cols-3 gap-1.5 text-[10px]">
                     <button
                       onClick={() => handleSimulateDays(1)}
                       className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-bamboo-mid/30 text-dongho-paper font-medium"
                     >
-                      1 Ngày
+                      1 Day
                     </button>
                     <button
                       onClick={() => handleSimulateDays(7)}
                       className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-bamboo-mid/30 text-warm-glow font-bold"
                     >
-                      7 Ngày (Ấm áp)
+                      7 Days (Warm)
                     </button>
                     <button
                       onClick={() => handleSimulateDays(30)}
                       className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-bamboo-mid/30 text-bamboo-soft font-medium"
                     >
-                      30 Ngày
+                      30 Days
                     </button>
                   </div>
                 </div>
 
-                {/* Đóng góp Cây Đa (Làng Phù Đổng) */}
+                {/* Village Tree Contribution */}
                 <div>
                   <label className="block text-[11px] text-dongho-paper/70 font-semibold mb-1">
-                    Đóng góp Cây Đa (Làng):
+                    Village Tree Energy:
                   </label>
                   <div className="grid grid-cols-2 gap-1.5 text-[10px]">
                     <button
@@ -469,14 +469,14 @@ export default function DemoControlPanel({
                       className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-warm-amber/40 text-warm-glow flex items-center justify-center gap-1 font-semibold"
                     >
                       <Leaf className="w-3 h-3 text-bamboo-soft" />
-                      <span>+1 Lá sáng</span>
+                      <span>+1 Glowing Leaf</span>
                     </button>
                     <button
                       onClick={() => handleAddLeaves(10)}
                       className="py-1.5 rounded-lg bg-forest-darker hover:bg-forest-deep border border-warm-amber/40 text-warm-amber flex items-center justify-center gap-1 font-bold"
                     >
                       <Sparkles className="w-3 h-3 text-warm-amber" />
-                      <span>+10 Lá sáng</span>
+                      <span>+10 Glowing Leaves</span>
                     </button>
                   </div>
                 </div>
@@ -485,7 +485,7 @@ export default function DemoControlPanel({
                   onClick={handleSeedRestingMangnons}
                   className="w-full py-2 px-3 rounded-xl bg-forest-darker hover:bg-forest-mist border border-warm-amber/40 text-left font-bold text-warm-glow flex items-center justify-between"
                 >
-                  <span>🌊 Tạo 3 Măng Non an nghỉ mẫu ở Suối</span>
+                  <span>🌊 Seed 3 resting companions in Stream</span>
                   <Waves className="w-3.5 h-3.5 text-warm-glow" />
                 </button>
 
@@ -497,7 +497,7 @@ export default function DemoControlPanel({
                   }}
                   className="w-full py-2 px-3 rounded-xl bg-dongho-red/30 hover:bg-dongho-red/50 border border-dongho-red/60 text-left font-bold text-dongho-paper flex items-center justify-between"
                 >
-                  <span>🌸 Kích hoạt hoa gạo bùng nổ Cây Đa</span>
+                  <span>🌸 Trigger Village Tree Crimson Blossom</span>
                   <Flower2 className="w-3.5 h-3.5 text-dongho-red" />
                 </button>
 
@@ -508,7 +508,7 @@ export default function DemoControlPanel({
                   }}
                   className="w-full py-2 px-3 rounded-xl bg-warm-wood/30 hover:bg-warm-wood/50 border border-warm-amber/60 text-left font-semibold text-warm-glow flex items-center justify-between"
                 >
-                  <span>🌊 Nhảy tới Nghi thức An nghỉ (S10)</span>
+                  <span>🌊 Jump to Resting Ritual (S10)</span>
                   <Heart className="w-3.5 h-3.5 text-warm-glow" />
                 </button>
 
@@ -525,7 +525,7 @@ export default function DemoControlPanel({
                   }}
                   className="w-full py-2 px-3 rounded-xl bg-forest-abyss hover:bg-forest-darker border border-bamboo-mid/30 text-left font-medium text-dongho-paper/60 hover:text-dongho-red flex items-center justify-between"
                 >
-                  <span>🔄 Đặt lại từ đầu (Về S01)</span>
+                  <span>🔄 Reset to New Grove (S01)</span>
                   <RefreshCw className="w-3.5 h-3.5" />
                 </button>
               </div>

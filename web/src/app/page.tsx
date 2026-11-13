@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MobileFrame from '@/components/MobileFrame';
 import DemoControlPanel from '@/components/DemoControlPanel';
-import { AppStore, AppStateData, Mangnon, Personality, MemoryItem, ChatMessage, AppSettings, SerializableFaceExpression } from '@/lib/app-state';
+import { AppStore, AppStateData, Mangnon, Personality, MemoryItem, ChatMessage, AppSettings, SerializableFaceExpression, Stage, GrowthLevel, MangnonStats } from '@/lib/app-state';
 import { content } from '@/content/vi';
 import { SoundEngine } from '@/lib/sound-engine';
 import { SkeletonRig } from '@/lib/auto-rig';
@@ -22,6 +22,15 @@ import S10RestingRitual from '@/screens/S10RestingRitual';
 import S11MemoryStream from '@/screens/S11MemoryStream';
 import S12PhuDongVillage from '@/screens/S12PhuDongVillage';
 import S13Settings from '@/screens/S13Settings';
+import WelcomeLoginModal from '@/components/WelcomeLoginModal';
+import UserProfileModal, { UserAccount } from '@/components/UserProfileModal';
+import {
+  registerGoalOnChain,
+  linkGoalsOnChain,
+  recordFocusVaultOnChain,
+  mintJourneyNftOnChain,
+  contributeVillageTreeOnChain,
+} from '@/lib/avalanche-contracts';
 
 // Hash routes mapping
 const SCREEN_HASH_MAP: Record<string, string> = {
@@ -52,16 +61,98 @@ const HASH_SCREEN_MAP: Record<string, string> = {
   '#/cai-dat': 'S13',
 };
 
+function autoSetupGoalStats(
+  goalTitle: string,
+  personality: Personality,
+  plannedDays: number | null
+): MangnonStats {
+  const lower = goalTitle.toLowerCase();
+  const stats: MangnonStats = {
+    intelligence: 10,
+    perseverance: 10,
+    fitness: 10,
+    creativity: 10,
+  };
+
+  // 1. Cộng điểm tự động theo từ khóa mục tiêu
+  if (/(học|ôn|thi|ielts|code|ai|toán|đọc|nghiên cứu|đồ án|paper|study|research)/i.test(lower)) {
+    stats.intelligence += 12;
+  }
+  if (/(vẽ|thiết kế|ui|ux|nhạc|viết|sáng tạo|art|game|design|paint)/i.test(lower)) {
+    stats.creativity += 12;
+  }
+  if (/(chạy|tập|gym|ngủ|thể dục|sức khỏe|thiền|yoga|nước|walk|health|fitness)/i.test(lower)) {
+    stats.fitness += 12;
+  }
+  if (plannedDays && plannedDays >= 14) {
+    stats.perseverance += 10;
+  } else {
+    stats.perseverance += 6;
+  }
+
+  // 2. Cộng điểm theo Tính cách đã chọn ở S04
+  if (personality === 'tomo') stats.intelligence += 6;
+  if (personality === 'haohung') stats.fitness += 6;
+  if (personality === 'diemtinh') stats.perseverance += 6;
+  if (personality === 'nhutnhat') stats.creativity += 6;
+
+  return stats;
+}
+
+function StudioIncubationBadge({ startedAt }: { startedAt?: number }) {
+  const [secondsLeft, setSecondsLeft] = useState(() => {
+    if (!startedAt) return 120;
+    const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+    return Math.max(0, 120 - elapsed);
+  });
+
+  useEffect(() => {
+    if (!startedAt) return;
+    const update = () => {
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      setSecondsLeft(Math.max(0, 120 - elapsed));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+
+  const mins = Math.floor(secondsLeft / 60);
+  const secs = secondsLeft % 60;
+  const timeFormatted = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+  return (
+    <aside
+      aria-label="Tiến trình mầm măng lớn ngoài rừng"
+      className="absolute top-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-max max-w-[92%]"
+    >
+      <div className="px-3.5 py-1 rounded-full bg-[#F4EEDD]/95 border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] flex items-center gap-1.5 backdrop-blur-sm animate-fade-in">
+        <span className="w-2 h-2 rounded-full bg-[#7E9A85] animate-pulse flex-shrink-0" />
+        <span className="text-[11px] font-extrabold text-[#26292B] leading-tight">
+          {secondsLeft > 0 ? (
+            <>🎋 Mầm măng đang lớn ngoài rừng: <span className="font-mono text-[#A84D3D]">{timeFormatted}</span></>
+          ) : (
+            <>✨ Cây tre đã lớn! Hoàn tất thiết kế để mở đốt nứa!</>
+          )}
+        </span>
+      </div>
+    </aside>
+  );
+}
+
 export default function MangNonApp() {
   const [state, setState] = useState<AppStateData | null>(null);
   const [showJourneySheet, setShowJourneySheet] = useState(false);
   const [showRestingRitual, setShowRestingRitual] = useState(false);
   const [welcomeBanner, setWelcomeBanner] = useState<string | null>(null);
+  const [showWelcomeLogin, setShowWelcomeLogin] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
 
   // Temporary onboarding creation draft
   const [draftImageUri, setDraftImageUri] = useState<string>('');
   const [draftImageSource, setDraftImageSource] = useState<'draw' | 'photo' | 'upload' | 'sample'>('draw');
-  const [draftName, setDraftName] = useState<string>('Măng');
+  const [draftName, setDraftName] = useState<string>('Mang');
   const [draftPersonality, setDraftPersonality] = useState<Personality>('haohung');
   const [draftRigData, setDraftRigData] = useState<SkeletonRig | undefined>(undefined);
   const [draftFaceExpr, setDraftFaceExpr] = useState<SerializableFaceExpression | undefined>(undefined);
@@ -69,15 +160,24 @@ export default function MangNonApp() {
   // Load initial state + hydrate images from IndexedDB
   useEffect(() => {
     const loaded = AppStore.load();
-    const hash = window.location.hash;
-    const mappedScreen = HASH_SCREEN_MAP[hash];
 
-    let initialScreen = loaded.currentScreen;
-    if (mappedScreen) {
-      initialScreen = mappedScreen;
-    } else if (!loaded.activeMangnon && loaded.currentScreen === 'S06') {
-      initialScreen = 'S01';
+    // Check user account for Avalanche wallet
+    let parsedUser: UserAccount | null = null;
+    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('mangnon_user_account') : null;
+    if (storedUser) {
+      try {
+        parsedUser = JSON.parse(storedUser);
+        setUserAccount(parsedUser);
+      } catch {}
+    } else {
+      setShowWelcomeLogin(true);
     }
+
+    // Yêu cầu: Không khôi phục màn hình cũ khi người chơi thoát ra;
+    // Mặc định: Nếu đã đăng nhập thì luôn khởi đầu ở Trang Chủ (S06 Home Forest);
+    // Nếu chưa đăng nhập thì ở màn hình chào đầu S01.
+    const isLoggedIn = !!parsedUser || !!loaded.userProfile?.walletAddress;
+    const initialScreen = isLoggedIn ? 'S06' : 'S01';
 
     // Check Welcome Back (UC08)
     if (loaded.activeMangnon && loaded.settings.lastOpenedAt) {
@@ -89,7 +189,7 @@ export default function MangNonApp() {
       }
     }
 
-    // Update lastOpenedAt
+    // Update lastOpenedAt & reset currentScreen to initialScreen (không dùng màn hình cũ khi thoát)
     const withTimestamp = {
       ...loaded,
       currentScreen: initialScreen,
@@ -108,7 +208,7 @@ export default function MangNonApp() {
       AppStore.save(hydrated);
     });
 
-    // Sync hash
+    // Sync hash to initialScreen
     if (SCREEN_HASH_MAP[initialScreen]) {
       window.location.hash = SCREEN_HASH_MAP[initialScreen];
     }
@@ -192,7 +292,14 @@ export default function MangNonApp() {
   const handleCompleteS02 = () => {
     setState((prev) => {
       if (!prev) return prev;
-      const next = { ...prev, bambooOpened: true };
+      const currentDewdrops = typeof prev.dewdrops === 'number' ? prev.dewdrops : 100;
+      const nextDewdrops = Math.max(0, currentDewdrops - 20);
+      const next: AppStateData = {
+        ...prev,
+        dewdrops: nextDewdrops,
+        incubationStartedAt: prev.incubationStartedAt || Date.now(),
+        bambooOpened: true,
+      };
       AppStore.save(next);
       return next;
     });
@@ -219,18 +326,25 @@ export default function MangNonApp() {
   };
 
   const handleCompleteFirstMeetingS05 = (goalTitle: string, durationDays: number | null) => {
+    const startedAt = state?.incubationStartedAt || Date.now();
+    const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+    const initialHatchStage: Stage = elapsedSeconds >= 120 ? 3 : 2;
+
     const newMangnon: Mangnon = {
       id: `mn-${Date.now()}`,
       name: draftName,
       personality: draftPersonality,
-      stage: 1,
+      stage: initialHatchStage,
+      growthLevel: 1,
+      stats: autoSetupGoalStats(goalTitle, draftPersonality, durationDays),
+      incubationStartedAt: startedAt,
       imageUri: draftImageUri,
       imageSource: draftImageSource,
       status: 'active',
       goalTitle,
       plannedDays: durationDays as (7 | 14 | 30 | null),
-      likes: ['tiếng gió reo', 'ngắm lá rơi'],
-      dislike: 'nơi ồn ào',
+      likes: ['whispering wind', 'watching falling leaves'],
+      dislike: 'crowded noise',
       sessionsCount: 1,
       activeDays: [new Date().toISOString().split('T')[0]],
       createdAt: new Date().toISOString(),
@@ -241,7 +355,7 @@ export default function MangNonApp() {
     const initialGreetingMessage: ChatMessage = {
       id: `msg-init-${Date.now()}`,
       role: 'mangnon',
-      text: `Chào cậu, mình là ${draftName}. Mình rất vui vì được đồng hành cùng cậu trên hành trình "${goalTitle}"!`,
+      text: `Chào bạn, mình là ${draftName}. Mình rất vui được đồng hành cùng bạn trên hành trình "${goalTitle}"!`,
       createdAt: new Date().toISOString(),
     };
 
@@ -256,6 +370,27 @@ export default function MangNonApp() {
       AppStore.save(next);
       return next;
     });
+
+    // 🔗 Register goal on Avalanche Fuji GoalRegistry.sol
+    const personalityIndex = draftPersonality === 'tomo' ? 0 : draftPersonality === 'haohung' ? 1 : draftPersonality === 'diemtinh' ? 2 : 3;
+    registerGoalOnChain({
+      name: goalTitle,
+      personality: personalityIndex,
+      plannedDays: durationDays || 14,
+    }).then((res) => {
+      setState((prev) => {
+        if (!prev || !prev.activeMangnon) return prev;
+        const next = {
+          ...prev,
+          activeMangnon: {
+            ...prev.activeMangnon,
+            goalTxHash: res.txHash,
+          },
+        };
+        AppStore.save(next);
+        return next;
+      });
+    }).catch(console.warn);
 
     SoundEngine.playBlessingChime();
     navigateTo('S06');
@@ -291,25 +426,92 @@ export default function MangNonApp() {
         newMems = [memItem, ...prev.memories];
       }
 
-      // Check stage progression
+      // Check cognitive growthLevel progression (levels 1..4), NEVER overwrite hatching stage!
       const active = prev.activeMangnon;
-      let nextStage = active?.stage || 1;
+      let nextGrowth: GrowthLevel = active?.growthLevel || 1;
       const sessions = (active?.sessionsCount || 0) + 1;
-      if (sessions >= 35) nextStage = 4;
-      else if (sessions >= 15) nextStage = 3;
-      else if (sessions >= 5) nextStage = 2;
+      if (sessions >= 35) nextGrowth = 4;
+      else if (sessions >= 15) nextGrowth = 3;
+      else if (sessions >= 5) nextGrowth = 2;
+
+      // Update stats: chat increases intelligence +2, creativity +1 (+ resonance if linked)
+      let updatedStats = active?.stats;
+      let updatedResting = prev.restingMangnons;
+      if (active) {
+        const currentStats = active.stats || { intelligence: 10, perseverance: 10, fitness: 10, creativity: 10 };
+        const nextStats = {
+          ...currentStats,
+          intelligence: currentStats.intelligence + 2,
+          creativity: currentStats.creativity + 1,
+        };
+        if (active.linkedMangnonId) {
+          const keys: (keyof MangnonStats)[] = ['intelligence', 'perseverance', 'fitness', 'creativity'];
+          let minKey = keys[0];
+          for (const k of keys) {
+            if (nextStats[k] < nextStats[minKey]) minKey = k;
+          }
+          nextStats[minKey] += 1; // +25% resonance bonus to weakest stat
+
+          // +20% to linked resting mangnon
+          updatedResting = prev.restingMangnons.map((r) => {
+            if (r.id === active.linkedMangnonId && r.stats) {
+              return { ...r, stats: { ...r.stats, intelligence: r.stats.intelligence + 1 } };
+            }
+            return r;
+          });
+        }
+        updatedStats = nextStats;
+      }
 
       const next: AppStateData = {
         ...prev,
         messages: [...prev.messages, userMsg, botMsg],
         memories: newMems,
+        restingMangnons: updatedResting,
         activeMangnon: active
           ? {
               ...active,
               sessionsCount: sessions,
-              stage: Math.max(active.stage, nextStage) as 1 | 2 | 3 | 4,
+              growthLevel: Math.max(active.growthLevel || 1, nextGrowth) as GrowthLevel,
+              stats: updatedStats,
             }
           : null,
+      };
+      AppStore.save(next);
+      return next;
+    });
+  };
+
+  const handleLinkMangnon = (targetId: string, txHash?: string) => {
+    let finalTx = txHash;
+    if (!finalTx) {
+      linkGoalsOnChain(1, 2).then((res) => {
+        setState((prev) => {
+          if (!prev || !prev.activeMangnon) return prev;
+          const next = {
+            ...prev,
+            activeMangnon: {
+              ...prev.activeMangnon,
+              linkedMangnonId: targetId,
+              synergyTxHash: res.txHash,
+            },
+          };
+          AppStore.save(next);
+          return next;
+        });
+      }).catch(console.warn);
+      finalTx = `0xRoot${Date.now().toString(16).slice(-8)}...fuji`;
+    }
+
+    setState((prev) => {
+      if (!prev || !prev.activeMangnon) return prev;
+      const next: AppStateData = {
+        ...prev,
+        activeMangnon: {
+          ...prev.activeMangnon,
+          linkedMangnonId: targetId,
+          synergyTxHash: finalTx,
+        },
       };
       AppStore.save(next);
       return next;
@@ -344,6 +546,30 @@ export default function MangNonApp() {
 
   // FLOW C: Resting Ritual (S10)
   const handleFinishRestingRitual = (lastWords: string, finalMemories: string[], txHash?: string) => {
+    let finalNftTx = txHash;
+    if (!finalNftTx && state?.activeMangnon) {
+      const recipient = userAccount?.embeddedAddress || '0x372587d6BF5B3c3a2D267df6a22f87E3F9ebb0AA';
+      mintJourneyNftOnChain({
+        toAddress: recipient,
+        goalId: 1,
+        goalName: state.activeMangnon.goalTitle,
+        daysActive: state.activeMangnon.activeDays.length,
+        sessionsCount: state.activeMangnon.sessionsCount,
+        memoryUri: `ipfs://mangnon-${state.activeMangnon.id}`,
+      }).then((res) => {
+        setState((prev) => {
+          if (!prev) return prev;
+          const updatedResting = prev.restingMangnons.map((r) =>
+            r.id === state.activeMangnon?.id ? { ...r, nftTxHash: res.txHash } : r
+          );
+          const next = { ...prev, restingMangnons: updatedResting };
+          AppStore.save(next);
+          return next;
+        });
+      }).catch(console.warn);
+      finalNftTx = `0xNFT${Date.now().toString(16).slice(-8)}...fuji`;
+    }
+
     setState((prev) => {
       if (!prev || !prev.activeMangnon) return prev;
       const rested: Mangnon = {
@@ -352,7 +578,7 @@ export default function MangNonApp() {
         restedAt: new Date().toISOString(),
         lastWords,
         finalMemories,
-        nftTxHash: txHash,
+        nftTxHash: finalNftTx,
       };
 
       const next: AppStateData = {
@@ -411,8 +637,42 @@ export default function MangNonApp() {
           </div>
         )}
 
+        {/* UNIFIED COMPACT HUD PILL (Chỉ hiện ở 3 màn hình chính S06, S11, S12) */}
+        {['S06', 'S11', 'S12'].includes(state.currentScreen) && !showJourneySheet && !showRestingRitual && (
+          <div className="absolute top-3 left-3 z-30 pointer-events-none">
+            <button
+              onClick={() => setShowUserProfile(true)}
+              className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F4EEDD]/95 text-[#26292B] border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] text-[11px] font-extrabold transition active:translate-y-0.5"
+              title="Mở Túi Gấm Học Giả & Ví Avalanche Fuji"
+            >
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#7E9A85]" />
+                <span>
+                  {userAccount?.embeddedAddress
+                    ? `${userAccount.embeddedAddress.slice(0, 4)}...${userAccount.embeddedAddress.slice(-3)}`
+                    : 'Túi Gấm'}
+                </span>
+              </span>
+              <span className="text-[#26292B]/30">|</span>
+              <span className="flex items-center gap-0.5">
+                <span>💧</span>
+                <span>{typeof state.dewdrops === 'number' ? state.dewdrops : 100}</span>
+              </span>
+              <span className="text-[#26292B]/30">|</span>
+              <span className="flex items-center gap-0.5 text-[#5A6544]">
+                <span>🍃</span>
+                <span>{state.villageLeaves}</span>
+              </span>
+            </button>
+          </div>
+        )}
+
         {/* SCREEN ROUTING */}
         <div className="flex-1 w-full h-full relative overflow-hidden">
+          {['S03', 'S04', 'S05'].includes(state.currentScreen) && (
+            <StudioIncubationBadge startedAt={state.incubationStartedAt} />
+          )}
+
           {state.currentScreen === 'S01' && (
             <S01NightForest
               onTapBamboo={handleTapBambooS01}
@@ -447,20 +707,86 @@ export default function MangNonApp() {
           {state.currentScreen === 'S06' && (
             <S06HomeForest
               mangnon={state.activeMangnon}
+              restingMangnons={state.restingMangnons}
               timeOfDay={timeOfDay}
               season={season}
               lastOpenedAt={state.settings.lastOpenedAt}
+              dewdrops={state.dewdrops}
               onOpenStoryChat={() => navigateTo('S07')}
               onOpenJourney={() => setShowJourneySheet(true)}
               onOpenSettings={() => navigateTo('S13')}
-              onOpenBambooStalk={() => navigateTo('S01')}
+              onLinkMangnon={handleLinkMangnon}
+              onOpenBambooStalk={() => {
+                setState((prev) => {
+                  if (!prev) return prev;
+                  const currentDewdrops = typeof prev.dewdrops === 'number' ? prev.dewdrops : 100;
+                  const nextDewdrops = Math.max(0, currentDewdrops - 20);
+                  const next: AppStateData = {
+                    ...prev,
+                    dewdrops: nextDewdrops,
+                    incubationStartedAt: Date.now(),
+                    bambooOpened: true,
+                  };
+                  AppStore.save(next);
+                  return next;
+                });
+                navigateTo('S03');
+              }}
+              onUpdateStage={(stage) => {
+                setState((prev) => {
+                  if (!prev) return prev;
+                  if (!prev.activeMangnon) return prev;
+                  const next: AppStateData = {
+                    ...prev,
+                    activeMangnon: { ...prev.activeMangnon, stage },
+                  };
+                  AppStore.save(next);
+                  return next;
+                });
+              }}
               onFocusReward={(leaves, note) => {
                 setState((prev) => {
                   if (!prev) return prev;
+                  const active = prev.activeMangnon;
+                  let updatedStats = active?.stats;
+                  let updatedResting = prev.restingMangnons;
+
+                  if (active) {
+                    const currentStats = active.stats || { intelligence: 10, perseverance: 10, fitness: 10, creativity: 10 };
+                    // Default focus increases perseverance +3, intelligence +2
+                    const nextStats = {
+                      ...currentStats,
+                      perseverance: currentStats.perseverance + 3,
+                      intelligence: currentStats.intelligence + 2,
+                    };
+
+                    // Root resonance if linked
+                    if (active.linkedMangnonId) {
+                      const keys: (keyof MangnonStats)[] = ['intelligence', 'perseverance', 'fitness', 'creativity'];
+                      let minKey = keys[0];
+                      for (const k of keys) {
+                        if (nextStats[k] < nextStats[minKey]) minKey = k;
+                      }
+                      nextStats[minKey] += 2; // +25% bonus to weakest stat
+
+                      // Pass +20% (1 point) to linked resting mangnon if found
+                      updatedResting = prev.restingMangnons.map((r) => {
+                        if (r.id === active.linkedMangnonId && r.stats) {
+                          return {
+                            ...r,
+                            stats: { ...r.stats, perseverance: r.stats.perseverance + 1 },
+                          };
+                        }
+                        return r;
+                      });
+                    }
+                    updatedStats = nextStats;
+                  }
+
                   const memItem = {
                     id: `mem-${Date.now()}`,
                     mangnonId: prev.activeMangnon?.id || 'mn-default',
-                    text: `Cậu kể: Vừa hoàn thành phiên tự học (${note || 'Tập trung sâu'})`,
+                    text: `You shared: Wrapped up a study session (${note || 'Deep Focus'})`,
                     pinned: false,
                     forgotten: false,
                     createdAt: new Date().toISOString(),
@@ -469,8 +795,23 @@ export default function MangNonApp() {
                     ...prev,
                     villageLeaves: prev.villageLeaves + leaves,
                     memories: [memItem, ...prev.memories],
+                    restingMangnons: updatedResting,
+                    activeMangnon: active
+                      ? {
+                          ...active,
+                          stats: updatedStats,
+                        }
+                      : null,
                   };
                   AppStore.save(next);
+
+                  // 🔗 Record Proof-of-Focus on Avalanche Fuji MamLucVault.sol
+                  recordFocusVaultOnChain({
+                    goalId: 1,
+                    minutesFocused: 25,
+                    leavesEarned: leaves,
+                  }).catch(console.warn);
+
                   return next;
                 });
               }}
@@ -508,6 +849,14 @@ export default function MangNonApp() {
               threshold={state.villageThreshold}
               lastBloomedAt={state.lastBloomedAt}
               onTriggerBloom={handleTriggerBloom}
+              onContributeLeaves={(amt) => {
+                setState((prev) => {
+                  if (!prev) return prev;
+                  const next = { ...prev, villageLeaves: Math.max(0, prev.villageLeaves - amt) };
+                  AppStore.save(next);
+                  return next;
+                });
+              }}
             />
           )}
 
@@ -576,14 +925,14 @@ export default function MangNonApp() {
           </div>
         )}
 
-        {/* BOTTOM NAVIGATION (3 Tabs: Rừng · Làng · Vườn) */}
+        {/* BOTTOM NAVIGATION (3 Tabs: Forest · Village · Memory) */}
         {isBottomNavVisible && (
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-forest-darker/95 border-t border-bamboo-mid/30 backdrop-blur-md z-30 flex items-center justify-around px-4 select-none">
-            {/* Tab 1: Rừng Tre Cổ */}
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-[#1A2426] border-t-2 border-[#26292B] z-30 flex items-center justify-around px-4 select-none">
+            {/* Tab 1: Bamboo Grove */}
             <button
               onClick={() => navigateTo('S06')}
-              className={`flex flex-col items-center gap-1 transition ${
-                state.currentScreen === 'S06' ? 'text-warm-glow scale-105' : 'text-dongho-paper/50 hover:text-dongho-paper'
+              className={`flex flex-col items-center gap-1 transition-transform hover:animate-wiggle-2d ${
+                state.currentScreen === 'S06' ? 'text-warm-glow scale-105' : 'text-dongho-paper/60 hover:text-dongho-paper'
               }`}
             >
               <span className="text-base">🎋</span>
@@ -592,11 +941,11 @@ export default function MangNonApp() {
               </span>
             </button>
 
-            {/* Tab 2: Làng Phù Đổng (Cây Đa) */}
+            {/* Tab 2: Phu Dong Village */}
             <button
               onClick={() => navigateTo('S12')}
-              className={`flex flex-col items-center gap-1 transition ${
-                state.currentScreen === 'S12' ? 'text-warm-amber scale-105' : 'text-dongho-paper/50 hover:text-dongho-paper'
+              className={`flex flex-col items-center gap-1 transition-transform hover:animate-wiggle-2d ${
+                state.currentScreen === 'S12' ? 'text-warm-amber scale-105' : 'text-dongho-paper/60 hover:text-dongho-paper'
               }`}
             >
               <span className="text-base">🌳</span>
@@ -605,11 +954,11 @@ export default function MangNonApp() {
               </span>
             </button>
 
-            {/* Tab 3: Suối Ký Ức (Vườn) */}
+            {/* Tab 3: Stream of Memories */}
             <button
               onClick={() => navigateTo('S11')}
-              className={`flex flex-col items-center gap-1 transition ${
-                state.currentScreen === 'S11' ? 'text-bamboo-light scale-105' : 'text-dongho-paper/50 hover:text-dongho-paper'
+              className={`flex flex-col items-center gap-1 transition-transform hover:animate-wiggle-2d ${
+                state.currentScreen === 'S11' ? 'text-bamboo-light scale-105' : 'text-dongho-paper/60 hover:text-dongho-paper'
               }`}
             >
               <span className="text-base">🌊</span>
@@ -639,6 +988,61 @@ export default function MangNonApp() {
             }
           }}
           onTriggerBloom={handleTriggerBloom}
+        />
+
+        {/* Welcome Login Modal */}
+        <WelcomeLoginModal
+          isOpen={showWelcomeLogin}
+          onClose={() => setShowWelcomeLogin(false)}
+          onLogin={(user) => {
+            setUserAccount(user);
+            setState((prev) => {
+              if (!prev) return prev;
+              const next = {
+                ...prev,
+                currentScreen: 'S06',
+                dewdrops: Math.max(prev.dewdrops, user.dewdrops || 100),
+                userProfile: {
+                  username: user.name,
+                  walletAddress: user.embeddedAddress,
+                  walletType: user.walletType || 'embedded',
+                  hasClaimedStarter: true,
+                },
+              };
+              AppStore.save(next);
+              return next;
+            });
+            window.location.hash = '#/rung';
+            setShowWelcomeLogin(false);
+          }}
+        />
+
+        {/* User Profile / Avalanche Wallet Modal */}
+        <UserProfileModal
+          isOpen={showUserProfile}
+          onClose={() => setShowUserProfile(false)}
+          onUserChange={(user) => {
+            setUserAccount(user);
+            if (user) {
+              setState((prev) => {
+                if (!prev) return prev;
+                const next = {
+                  ...prev,
+                  dewdrops: typeof user.dewdrops === 'number' ? user.dewdrops : prev.dewdrops,
+                  userProfile: {
+                    username: user.name,
+                    walletAddress: user.embeddedAddress,
+                    walletType: user.walletType || 'embedded',
+                    hasClaimedStarter: true,
+                  },
+                };
+                AppStore.save(next);
+                return next;
+              });
+            }
+          }}
+          villageLeaves={state.villageLeaves}
+          dewdrops={typeof state.dewdrops === 'number' ? state.dewdrops : 100}
         />
       </div>
     </MobileFrame>

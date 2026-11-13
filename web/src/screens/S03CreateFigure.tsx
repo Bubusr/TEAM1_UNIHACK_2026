@@ -76,22 +76,22 @@ interface S03CreateFigureProps {
   ) => void;
 }
 
-// Bảng màu 14 màu phong phú Đông Hồ & Mở Rộng
+// Bảng màu Muted Pastel & Rough Doodle theo Master Style Guide
 const FOLK_PALETTE = [
-  { name: 'Đen mực tàu', hex: '#1B2A2F' },
-  { name: 'Đỏ chu sa', hex: '#C8412F' },
-  { name: 'Vàng hoa cúc', hex: '#FFD166' },
-  { name: 'Cam đom đóm', hex: '#F4A259' },
-  { name: 'Xanh lá tre', hex: '#3E5C45' },
-  { name: 'Xanh măng non', hex: '#6B8F71' },
-  { name: 'Xanh chàm rừng', hex: '#1E3F5A' },
-  { name: 'Xanh dương nhạt', hex: '#7EB0D5' },
-  { name: 'Hồng sen Đông Hồ', hex: '#E8837A' },
-  { name: 'Tím khói', hex: '#8F6885' },
-  { name: 'Nâu đất đỏ', hex: '#8D5B4C' },
-  { name: 'Nâu vỏ tre', hex: '#5C3D2E' },
+  { name: 'Mực than (Soft Charcoal)', hex: '#26292B' },
+  { name: 'Đỏ gạch (Brick Red)', hex: '#A84D3D' },
+  { name: 'Hoàng thổ (Muted Ochre)', hex: '#CFA85B' },
+  { name: 'Nâu đất (Desaturated Brown)', hex: '#5C4D43' },
+  { name: 'Xanh tre trầm (Muted Olive)', hex: '#5A6544' },
+  { name: 'Xanh khói (Dusty Sage)', hex: '#7E9A85' },
+  { name: 'Xanh lam tro (Dusty Blue)', hex: '#6B818C' },
+  { name: 'Kem Dó (Warm Cream)', hex: '#F4EEDD' },
+  { name: 'Hồng phấn tro', hex: '#D48C7F' },
+  { name: 'Tím khói nhạt', hex: '#8F7D89' },
+  { name: 'Nâu gốm', hex: '#7A5C4D' },
+  { name: 'Xám tro nhạt', hex: '#6E7879' },
   { name: 'Trắng điệp', hex: '#FFFFFF' },
-  { name: 'Xám tro', hex: '#7A8B8B' },
+  { name: 'Màu giấy Dó', hex: '#EDE5D2' },
 ];
 
 // 3 Mẫu Toàn Thân Sinh Vật Đông Hồ
@@ -260,7 +260,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   // STEP 1: Drawing State
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [brushColor, setBrushColor] = useState('#1B2A2F');
+  const [brushColor, setBrushColor] = useState('#26292B');
   const [brushSize, setBrushSize] = useState(6);
   const [activeTool, setActiveTool] = useState<
     'point_pen' | 'brush' | 'brush_giggle' | 'crayon' | 'fill' | 'eraser'
@@ -379,7 +379,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     ctx.lineWidth = 3.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#1B2A2F';
+    ctx.strokeStyle = '#26292B';
     ctx.beginPath();
     ctx.moveTo(x, y);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -979,7 +979,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     );
 
     // 3. Viền nét đứt của Bounding Box
-    ctx.strokeStyle = '#FFD166';
+    ctx.strokeStyle = '#CFA85B';
     ctx.lineWidth = 2.5;
     ctx.setLineDash([6, 4]);
     ctx.strokeRect(boundingBox.x, boundingBox.y, boundingBox.w, boundingBox.h);
@@ -999,8 +999,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     ];
 
     handles.forEach((hd) => {
-      ctx.fillStyle = '#06D6A0';
-      ctx.strokeStyle = '#1B2A2F';
+      ctx.fillStyle = '#7E9A85';
+      ctx.strokeStyle = '#26292B';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(hd.px, hd.py, 6.5, 0, Math.PI * 2);
@@ -1781,8 +1781,8 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           const fy = horizonY + (groundCenterY - horizonY) * fScale - (f.y + Math.cos(f.phase) * 10) * fScale;
 
           ctx.save();
-          ctx.fillStyle = '#FFE18A';
-          ctx.shadowColor = '#FFD166';
+          ctx.fillStyle = '#F4EEDD';
+          ctx.shadowColor = '#CFA85B';
           ctx.shadowBlur = 6 * fScale;
           ctx.beginPath();
           ctx.arc(fx, fy, Math.max(1, 2.4 * fScale), 0, Math.PI * 2);
@@ -1872,7 +1872,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           const targetGroundY = horizonY + (groundCenterY - horizonY) * targetScale;
 
           ctx.save();
-          ctx.strokeStyle = '#FFD166';
+          ctx.strokeStyle = '#CFA85B';
           ctx.lineWidth = 1.5;
           ctx.setLineDash([3, 3]);
           ctx.beginPath();
@@ -1890,7 +1890,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   }, [step, currentImageUri, worldMode, turntableRotation, isAutoSpin, previewMotion, showSkeletonWireframe, showCreasePattern, rigData, faceExpr]);
 
   return (
-    <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-y-auto select-none p-3.5">
+    <div className="relative w-full h-full bg-[#222E30] text-dongho-paper flex flex-col justify-between overflow-y-auto select-none p-3.5">
       {/* Studio Header */}
       <div className="pt-6 px-2 flex items-center justify-between border-b border-bamboo-mid/25 pb-2.5">
         <div className="flex items-center gap-1.5">
@@ -1908,7 +1908,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 : '3. Thổi Hồn Hoạt Ảnh & Sân Chơi 3D')}
           </span>
         </div>
-        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-forest-darker border border-warm-amber/40 text-warm-amber font-semibold font-mono">
+        <span className="btn-woodblock-paper text-[10px] px-3 py-0.5 font-bold font-mono !rounded-full text-[#26292B]">
           {imageSource === 'upload' || imageSource === 'photo'
             ? `Bước ${step}/5`
             : step === 1
@@ -1925,16 +1925,16 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
       {step === 1 && (
         <div className="flex-1 flex flex-col items-center justify-between my-2">
           {/* Tabs */}
-          <div className="flex bg-forest-darker p-1 rounded-2xl border border-bamboo-mid/40 mb-2 text-[11px] font-semibold">
+          <div className="flex bg-[#141C1E] p-1.5 rounded-2xl border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B] mb-2 text-[11px] font-semibold gap-1.5">
             <button
               onClick={() => {
                 stopCamera();
                 setTab('draw');
               }}
-              className={`px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-xl transition flex items-center gap-1 ${
                 tab === 'draw'
-                  ? 'bg-forest-deep text-warm-glow shadow border border-warm-amber/40'
-                  : 'text-dongho-paper/60 hover:text-dongho-paper'
+                  ? 'btn-woodblock text-xs font-bold'
+                  : 'btn-woodblock-paper text-xs font-bold opacity-75 hover:opacity-100'
               }`}
             >
               <Paintbrush className="w-3.5 h-3.5" />
@@ -1945,10 +1945,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 setTab('camera');
                 void startCamera();
               }}
-              className={`px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-xl transition flex items-center gap-1 ${
                 tab === 'camera'
-                  ? 'bg-forest-deep text-warm-glow shadow border border-warm-amber/40'
-                  : 'text-dongho-paper/60 hover:text-dongho-paper'
+                  ? 'btn-woodblock text-xs font-bold'
+                  : 'btn-woodblock-paper text-xs font-bold opacity-75 hover:opacity-100'
               }`}
             >
               <Camera className="w-3.5 h-3.5" />
@@ -1959,10 +1959,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 stopCamera();
                 setTab('photo');
               }}
-              className={`px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-xl transition flex items-center gap-1 ${
                 tab === 'photo'
-                  ? 'bg-forest-deep text-warm-glow shadow border border-warm-amber/40'
-                  : 'text-dongho-paper/60 hover:text-dongho-paper'
+                  ? 'btn-woodblock text-xs font-bold'
+                  : 'btn-woodblock-paper text-xs font-bold opacity-75 hover:opacity-100'
               }`}
             >
               <Upload className="w-3.5 h-3.5" />
@@ -1973,10 +1973,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 stopCamera();
                 setTab('samples');
               }}
-              className={`px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-xl transition flex items-center gap-1 ${
                 tab === 'samples'
-                  ? 'bg-forest-deep text-warm-glow shadow border border-warm-amber/40'
-                  : 'text-dongho-paper/60 hover:text-dongho-paper'
+                  ? 'btn-woodblock text-xs font-bold'
+                  : 'btn-woodblock-paper text-xs font-bold opacity-75 hover:opacity-100'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -1991,15 +1991,15 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               <div className="relative w-[330px] h-[320px] rounded-3xl overflow-hidden bg-white border-4 border-bamboo-mid/70 shadow-[0_12px_30px_rgba(0,0,0,0.4)] touch-none flex items-center justify-center">
                 {showBodyGuide && (
                   <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3 opacity-20 text-[9px] font-mono select-none">
-                    <div className="border-b border-dashed border-[#1B2A2F] pb-0.5 text-[#1B2A2F] flex justify-between">
+                    <div className="border-b border-dashed border-[#26292B] pb-0.5 text-[#26292B] flex justify-between">
                       <span>VÙNG ĐẦU &amp; MẶT</span>
                       <span>30%</span>
                     </div>
-                    <div className="border-b border-dashed border-[#1B2A2F] pb-0.5 text-[#1B2A2F] flex justify-between">
+                    <div className="border-b border-dashed border-[#26292B] pb-0.5 text-[#26292B] flex justify-between">
                       <span>THÂN, ÁO &amp; 2 TAY</span>
                       <span>40%</span>
                     </div>
-                    <div className="pt-0.5 text-[#1B2A2F] flex justify-between">
+                    <div className="pt-0.5 text-[#26292B] flex justify-between">
                       <span>2 CHÂN ĐỨNG</span>
                       <span>30%</span>
                     </div>
@@ -2025,7 +2025,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               {/* TOOLBAR NẰM DƯỚI CANVAS */}
               <div className="w-[330px] mt-2 space-y-1.5">
                 {/* Hàng 1: 4 Cọ + Đổ Màu + Tẩy + Undo/Redo */}
-                <div className="flex items-center justify-between bg-forest-darker/95 p-1.5 rounded-2xl border border-bamboo-mid/40 shadow">
+                <div className="flex items-center justify-between bg-[#141C1E] p-1.5 rounded-2xl border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B]">
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
@@ -2033,10 +2033,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         SoundEngine.playBambooKnock();
                       }}
                       title="Bút kim nét sắc"
-                      className={`p-1.5 rounded-xl transition ${
+                      className={`p-1.5 !rounded-xl transition ${
                         activeTool === 'point_pen'
-                          ? 'bg-warm-amber text-forest-abyss shadow font-bold'
-                          : 'text-dongho-paper/60 hover:text-dongho-paper'
+                          ? 'btn-woodblock font-bold'
+                          : 'btn-woodblock-paper opacity-70 hover:opacity-100'
                       }`}
                     >
                       <PenTool className="w-3.5 h-3.5" />
@@ -2048,10 +2048,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         SoundEngine.playBambooKnock();
                       }}
                       title="Cọ mềm lông cừu"
-                      className={`p-1.5 rounded-xl transition ${
+                      className={`p-1.5 !rounded-xl transition ${
                         activeTool === 'brush'
-                          ? 'bg-warm-amber text-forest-abyss shadow font-bold'
-                          : 'text-dongho-paper/60 hover:text-dongho-paper'
+                          ? 'btn-woodblock font-bold'
+                          : 'btn-woodblock-paper opacity-70 hover:opacity-100'
                       }`}
                     >
                       <Paintbrush className="w-3.5 h-3.5" />
@@ -2063,10 +2063,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         SoundEngine.playBambooKnock();
                       }}
                       title="Cọ rung rinh mực loang"
-                      className={`p-1.5 rounded-xl transition ${
+                      className={`p-1.5 !rounded-xl transition ${
                         activeTool === 'brush_giggle'
-                          ? 'bg-warm-amber text-forest-abyss shadow font-bold'
-                          : 'text-dongho-paper/60 hover:text-dongho-paper'
+                          ? 'btn-woodblock font-bold'
+                          : 'btn-woodblock-paper opacity-70 hover:opacity-100'
                       }`}
                     >
                       <Feather className="w-3.5 h-3.5" />
@@ -2078,16 +2078,16 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         SoundEngine.playBambooKnock();
                       }}
                       title="Sáp màu Đông Hồ"
-                      className={`p-1.5 rounded-xl transition ${
+                      className={`p-1.5 !rounded-xl transition ${
                         activeTool === 'crayon'
-                          ? 'bg-warm-amber text-forest-abyss shadow font-bold'
-                          : 'text-dongho-paper/60 hover:text-dongho-paper'
+                          ? 'btn-woodblock font-bold'
+                          : 'btn-woodblock-paper opacity-70 hover:opacity-100'
                       }`}
                     >
                       <Wand2 className="w-3.5 h-3.5" />
                     </button>
 
-                    <div className="h-4 w-[1px] bg-bamboo-mid/40 mx-0.5" />
+                    <div className="h-4 w-[1px] bg-[#26292B] mx-0.5" />
 
                     <button
                       onClick={() => {
@@ -2095,10 +2095,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         SoundEngine.playWaterSplash();
                       }}
                       title="Đổ màu (Flood Fill)"
-                      className={`p-1.5 rounded-xl transition ${
+                      className={`p-1.5 !rounded-xl transition ${
                         activeTool === 'fill'
-                          ? 'bg-warm-amber text-forest-abyss shadow font-bold'
-                          : 'text-dongho-paper/60 hover:text-dongho-paper'
+                          ? 'btn-woodblock font-bold'
+                          : 'btn-woodblock-paper opacity-70 hover:opacity-100'
                       }`}
                     >
                       <PaintBucket className="w-3.5 h-3.5" />
@@ -2110,10 +2110,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         SoundEngine.playBambooKnock();
                       }}
                       title="Cục tẩy"
-                      className={`p-1.5 rounded-xl transition ${
+                      className={`p-1.5 !rounded-xl transition ${
                         activeTool === 'eraser'
-                          ? 'bg-dongho-red text-dongho-paper shadow font-bold'
-                          : 'text-dongho-paper/60 hover:text-dongho-paper'
+                          ? 'btn-woodblock-red font-bold'
+                          : 'btn-woodblock-paper opacity-70 hover:opacity-100'
                       }`}
                     >
                       <Eraser className="w-3.5 h-3.5" />
@@ -2124,7 +2124,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                     <button
                       onClick={handleUndo}
                       disabled={!canUndo}
-                      className="p-1.5 rounded-xl bg-forest-deep text-dongho-paper/80 disabled:opacity-30 hover:text-warm-amber transition"
+                      className="btn-woodblock-paper p-1.5 !rounded-xl disabled:opacity-30"
                       title="Hoàn tác (Undo)"
                     >
                       <Undo2 className="w-3.5 h-3.5" />
@@ -2132,23 +2132,23 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                     <button
                       onClick={handleRedo}
                       disabled={!canRedo}
-                      className="p-1.5 rounded-xl bg-forest-deep text-dongho-paper/80 disabled:opacity-30 hover:text-warm-amber transition"
+                      className="btn-woodblock-paper p-1.5 !rounded-xl disabled:opacity-30"
                       title="Làm lại (Redo)"
                     >
                       <Redo2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={handleClear}
-                      className="p-1.5 rounded-xl bg-forest-deep text-dongho-red/80 hover:text-dongho-red transition"
+                      className="btn-woodblock-paper p-1.5 !rounded-xl text-[#A84D3D]"
                       title="Xóa giấy trắng"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5 text-[#A84D3D]" />
                     </button>
                   </div>
                 </div>
 
                 {/* Hàng 2: Bảng 14 Màu Đông Hồ */}
-                <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1.5 bg-forest-darker/90 rounded-2xl border border-bamboo-mid/30 no-scrollbar">
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1.5 px-2 bg-[#141C1E] rounded-2xl border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B] no-scrollbar">
                   {FOLK_PALETTE.map((c) => (
                     <button
                       key={c.hex}
@@ -2171,10 +2171,10 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 {/* Nút Tiếp tục: Đi thẳng sang Gắn Khung Xương (Nét vẽ kỹ thuật số đã có nền trắng sạch, không cần tách) */}
                 <button
                   onClick={handleProceedDirectToRigging}
-                  className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 active:scale-[0.98] transition flex items-center justify-center gap-1.5"
+                  className="btn-woodblock w-full py-3.5 rounded-2xl text-xs font-black flex items-center justify-center gap-2"
                 >
                   <span>Xong nét vẽ → Gắn Khung Xương</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 text-[#26292B]" />
                 </button>
               </div>
             </div>
@@ -2201,9 +2201,9 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               <button
                 onClick={handleCapturePhoto}
                 disabled={!cameraActive}
-                className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow disabled:opacity-40 text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-2"
+                className="btn-woodblock w-full py-3 rounded-2xl disabled:opacity-40 text-xs font-bold flex items-center justify-center gap-2"
               >
-                <Camera className="w-4 h-4" />
+                <Camera className="w-4 h-4 text-[#26292B]" />
                 <span>Chụp ảnh ngay</span>
               </button>
             </div>
@@ -2301,17 +2301,17 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           <div className="flex gap-2.5 mt-2.5 w-[330px]">
             <button
               onClick={() => setStep(1)}
-              className="flex-1 py-2.5 rounded-2xl bg-forest-deep border border-bamboo-soft/40 text-dongho-paper/80 font-medium text-xs hover:border-warm-amber transition flex items-center justify-center gap-1.5"
+              className="btn-woodblock-paper flex-1 py-3 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Vẽ lại</span>
             </button>
             <button
               onClick={handleProceedToStep3Separate}
-              className="flex-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-1.5"
+              className="btn-woodblock flex-2 py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
             >
               <span>Khung chuẩn → Tách nền (Bước 3)</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 text-[#26292B]" />
             </button>
           </div>
         </div>
@@ -2446,17 +2446,17 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
             <div className="flex gap-2.5">
               <button
                 onClick={() => setStep(2)}
-                className="flex-1 py-2.5 rounded-2xl bg-forest-deep border border-bamboo-soft/40 text-dongho-paper/80 font-medium text-xs hover:border-warm-amber transition flex items-center justify-center gap-1.5"
+                className="btn-woodblock-paper flex-1 py-3 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Chỉnh lại khung</span>
               </button>
               <button
                 onClick={handleProceedToStep4Joints}
-                className="flex-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-1.5"
+                className="btn-woodblock flex-2 py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
               >
                 <span>Mặt nạ chuẩn → Gắn xương (Bước 4)</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 text-[#26292B]" />
               </button>
             </div>
           </div>
@@ -2481,15 +2481,15 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           </div>
 
           {/* BỘ CHUYỂN ĐỔI LOẠI KHUNG XƯƠNG CHUẨN META DEMO LAB */}
-          <div className="w-[330px] flex items-center justify-between bg-forest-darker/95 p-1 rounded-2xl border border-bamboo-mid/40 mb-1.5 text-[11px]">
+          <div className="w-[330px] flex items-center justify-between bg-[#141C1E] p-1.5 rounded-2xl border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B] mb-1.5 text-[11px] gap-1">
             {SKELETON_TYPE_OPTIONS.map((opt) => (
               <button
                 key={opt.id}
                 onClick={() => handleSelectSkeletonType(opt.id)}
-                className={`flex-1 py-1 px-1.5 rounded-xl transition text-center font-medium ${
+                className={`flex-1 py-1.5 px-1.5 rounded-xl transition text-center font-bold text-xs ${
                   skeletonType === opt.id
-                    ? 'bg-warm-amber text-forest-abyss font-bold shadow'
-                    : 'text-dongho-paper/60 hover:text-dongho-paper'
+                    ? 'btn-woodblock'
+                    : 'btn-woodblock-paper opacity-75 hover:opacity-100'
                 }`}
               >
                 <span>{opt.name}</span>
@@ -2561,21 +2561,21 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           <div className="flex gap-2.5 mt-2 w-[330px]">
             <button
               onClick={() => setStep(imageSource === 'upload' ? 3 : 1)}
-              className="flex-1 py-2.5 rounded-2xl bg-forest-deep border border-bamboo-soft/40 text-dongho-paper/80 font-medium text-xs hover:border-warm-amber transition flex items-center justify-center gap-1.5"
+              className="btn-woodblock-paper flex-1 py-3 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{imageSource === 'upload' ? 'Tách lại nét' : 'Vẽ lại'}</span>
             </button>
             <button
               onClick={handleProceedToStep5Animation}
-              className="flex-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-1.5"
+              className="btn-woodblock flex-2 py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
             >
               <span>
                 {imageSource === 'upload'
                   ? 'Khớp chuẩn → Thổi hồn hoạt ảnh (Bước 5)'
                   : 'Khớp chuẩn → Thổi hồn hoạt ảnh (Bước 3)'}
               </span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 text-[#26292B]" />
             </button>
           </div>
         </div>
@@ -2588,7 +2588,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
         <div className="flex-1 flex flex-col items-center justify-between my-1 animate-fade-in">
           {/* Animated Interactive Preview Canvas */}
           <div className="relative w-64 h-64 rounded-full bg-forest-darker/95 border-2 border-warm-amber/50 shadow-2xl flex items-center justify-center overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(#F4A259_1px,transparent_1px)] [background-size:16px_16px] opacity-20 pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(#CFA85B_1px,transparent_1px)] [background-size:16px_16px] opacity-20 pointer-events-none" />
             <div className="absolute w-44 h-44 rounded-full bg-warm-amber/15 blur-2xl pointer-events-none animate-pulse" />
 
             <canvas
@@ -3143,7 +3143,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         onPointerCancel={handleFacePointerUp}
                       />
                       {!faceExpr.customFaceCanvas && (
-                        <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-[#1B2A2F]/30 text-[10px]">
+                        <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-[#26292B]/30 text-[10px]">
                           <span>Vẽ mắt & miệng ở đây</span>
                         </div>
                       )}
@@ -3156,7 +3156,7 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                         🗑️ Xóa nét vẽ
                       </button>
                       {faceExpr.customFaceCanvas && (
-                        <span className="text-[9.5px] text-[#06D6A0] font-semibold flex items-center gap-1">
+                        <span className="text-[9.5px] text-[#7E9A85] font-semibold flex items-center gap-1">
                           <span>✓ Đang áp dụng nét vẽ</span>
                         </span>
                       )}
@@ -3171,16 +3171,16 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
           <div className="w-full max-w-xs space-y-2 mt-2.5">
             <button
               onClick={() => handleTriggerServerAnimation(previewMotion)}
-              className="w-full py-2 rounded-xl bg-forest-darker/90 hover:bg-forest-deep border border-warm-amber/50 text-warm-glow text-[11px] font-semibold flex items-center justify-center gap-1.5 transition shadow"
+              className="btn-woodblock-paper w-full py-2.5 rounded-2xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
             >
-              <Film className="w-3.5 h-3.5 text-warm-amber" />
+              <Film className="w-3.5 h-3.5 text-[#A84D3D]" />
               <span>Xuất Video MP4 từ Python Server ({previewMotion})</span>
             </button>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setStep(4)}
-                className="flex-1 py-2.5 rounded-2xl bg-forest-deep border border-bamboo-soft/40 text-dongho-paper/80 font-medium text-xs hover:border-warm-amber transition flex items-center justify-center gap-1.5"
+                className="btn-woodblock-paper flex-1 py-3 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
               >
                 <Move className="w-3.5 h-3.5" />
                 <span>Chỉnh lại xương</span>
@@ -3188,12 +3188,13 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
               <button
                 onClick={() => {
                   if (currentImageUri) {
-                    onConfirm(currentImageUri, imageSource);
+                    const { customFaceCanvas: _ignored, ...serializableFaceExpr } = faceExpr;
+                    onConfirm(currentImageUri, imageSource, rigData, serializableFaceExpr);
                   }
                 }}
-                className="flex-1 py-2.5 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-1.5"
+                className="btn-woodblock flex-1 py-3 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
               >
-                <Check className="w-4 h-4 text-forest-abyss" />
+                <Check className="w-4 h-4 text-[#26292B]" />
                 <span>Là bạn ấy rồi!</span>
               </button>
             </div>
@@ -3261,9 +3262,9 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 <a
                   href={generatedVideoUri}
                   download={`mangnon_${selectedMotionForApi}.mp4`}
-                  className="py-2.5 px-3 rounded-xl bg-forest-darker hover:bg-forest-mist border border-warm-amber/40 text-warm-glow text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+                  className="btn-woodblock-paper py-2.5 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-4 h-4 text-[#A84D3D]" />
                   <span>Tải Video MP4</span>
                 </a>
                 <button
@@ -3271,9 +3272,9 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                     setShowVideoModal(false);
                     setStep(4);
                   }}
-                  className="py-2.5 px-3 rounded-xl bg-forest-darker hover:bg-forest-mist border border-bamboo-soft/40 text-dongho-paper text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+                  className="btn-woodblock-paper py-2.5 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
                 >
-                  <Move className="w-4 h-4" />
+                  <Move className="w-4 h-4 text-[#26292B]" />
                   <span>Xem Khung Xương</span>
                 </button>
               </div>
@@ -3282,12 +3283,13 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
                 onClick={() => {
                   setShowVideoModal(false);
                   if (currentImageUri) {
-                    onConfirm(currentImageUri, imageSource);
+                    const { customFaceCanvas: _ignored, ...serializableFaceExpr } = faceExpr;
+                    onConfirm(currentImageUri, imageSource, rigData, serializableFaceExpr);
                   }
                 }}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-xl hover:brightness-105 transition flex items-center justify-center gap-1.5"
+                className="btn-woodblock w-full py-3.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5"
               >
-                <Check className="w-4 h-4 text-forest-abyss" />
+                <Check className="w-4 h-4 text-[#26292B]" />
                 <span>Đưa Măng Non Vào Rừng Tre</span>
               </button>
             </div>

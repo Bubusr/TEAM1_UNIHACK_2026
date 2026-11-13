@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const BLACKLIST = [
+  // Vietnamese pressure words
   'mất',
   'hết hạn',
   'cảnh báo',
@@ -22,6 +23,14 @@ const BLACKLIST = [
   'xp',
   'lên cấp',
   'goal',
+  // English coercive words
+  'penalty',
+  'punish',
+  'punishment',
+  'lose streak',
+  'streak loss',
+  'expiring soon',
+  'must complete',
 ];
 
 const screensDir = path.join(__dirname, '..', 'web', 'src', 'screens');

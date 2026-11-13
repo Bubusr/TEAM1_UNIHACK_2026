@@ -28,15 +28,23 @@ Deployer Wallet: `0x2B237fF449D21ECd304407d98cAAA379290747D5`
 MĂNG NON fundamentally redesigns the learning and habit companion:
 
 - **Create Your Own Companion:** Draw your character on paper and take a photo, or draw directly on the digital canvas with 14 folk ink pigments. Our Computer Vision AI auto-rigs 16 anatomical joints (Meta Humanoid / Chibi / Quadruped), applies continuous paper cutout deformation, and adds a die-cut sticker outline (inspired by Teri from *The Amazing World of Gumball*).
-- **Inverted Role — You Teach the AI:** You are not monitored, tested, or judged by AI. Instead, you share your daily learning reflections. Măng Non grows through 4 cognitive stages:
-  1. *Stage 1 — Raw Curiosity:* Asks simple, naive questions.
-  2. *Stage 2 — Association:* Connects things you told it days ago.
-  3. *Stage 3 — Personal Perspective:* Expresses gentle preferences and aesthetic tastes.
-  4. *Stage 4 — Deep Companionship:* Offers quiet emotional presence and comfort during tough days.
+- **5-Stage Hatching Lifecycle (`stage: 1..5`):**
+  1. *Stage 1 — Dormant Shoot:* Sleeping shoot unlocked with -20 Dewdrops (`💧`), starting an immediate 2-minute real-time incubation timer.
+  2. *Studio & Floating Dynamic Island (`S03-S05`):* As you draw and name your character, a floating badge displays the real-time countdown.
+  3. *Stage 2 & 3 — Growing Bamboo & Glowing Node:* Returning to the forest, the bamboo completes its growth (with an instant skip button for demos) and its sacred node radiates warm golden light.
+  4. *Stage 4 — Open Hollow (Auto-Crop Bounding Box):* The bamboo splits open revealing your tightly auto-cropped drawing curled up asleep inside, prompting the awakening CTA: *"✨ Đánh thức bước ra Rừng Tre!"*.
+  5. *Stage 5 — Stepping into the Forest:* The stalk disappears, and your companion steps onto the grass as a 16-joint paper puppet animating in real time with continuous mesh physics.
+- **Inverted Role — 4 Cognitive Growth Levels (`growthLevel: 1..4`):** Distinct from the hatching lifecycle, your companion deepens its conversational resonance across learning sessions:
+  1. *Level 1 — Raw Curiosity:* Naive questions and gentle wonder.
+  2. *Level 2 — Association (≥ 5 sessions):* Connecting threads between past memories.
+  3. *Level 3 — Personal Perspective (≥ 15 sessions):* Developing aesthetic taste and quiet opinions.
+  4. *Level 4 — Deep Companionship (≥ 35 sessions):* Quiet emotional presence through thick and thin.
 - **Pressure-Free Guarantee (Non-Violent UX):** Zero streaks, zero point deductions, zero guilt. If you are away for weeks, Măng Non simply rests asleep in the bamboo grove waiting for your return.
+- **Focus Session & "Proof of Output" (Show-and-Tell):** A serene study timer (15/25/45m) with complete silence and zero surveillance snaps. At session end, students optionally snap a photo of their notes, mind map, or code to show Măng Non. The companion marvels at the progress, awarding Mam Luc to fuel the Knowledge Tree.
+- **Student Identity (.edu.vn) & Student Boost:** 1-click Google authentication with an embedded Avalanche Fuji wallet, automated `.edu.vn` school email verification granting the "Verified Student" badge, a 1.5x Student Boost on all focus sessions, and 3 exam shields.
 - **Mam Luc Commitment Vault & The Village Tree:** You lock an optional commitment deposit in AVAX. Upon completing your goal, you withdraw **100% of your principal**. A portion of generated mock-yield is channeled into the **Phù Đổng Village Tree** to trigger community blossom blessings.
 - **Stream of Memories (ERC-721 NFT):** When a journey concludes, Măng Non performs a peaceful resting ritual, transforming into an immutable pebble NFT on Avalanche Fuji.
-- **Bamboo Stations (Real-World Venues):** Privacy-preserving GPS check-in (Haversine formula ≤ 300m radius) at partner student study cafes and campus libraries in Ho Chi Minh City to unlock real-world study vouchers.
+- **Bamboo Stations & Community Scholarship Pool:** Privacy-preserving GPS check-in (Haversine formula ≤ 300m radius) at partner study cafes (The Coffee House, Highlands, Cheese Coffee) and campus libraries in Ho Chi Minh City to unlock 15-20% drink discount vouchers and donate Mam Luc to the Phù Đổng Community Scholarship Pool.
 
 ---
 
@@ -54,7 +62,7 @@ MĂNG NON fundamentally redesigns the learning and habit companion:
 
 ### 3. Where does the money or yield come from? & Legal Limits
 - **100% Capital Safety:** User commitment deposits are held in `MamLucVault`. The principal is 100% redeemable upon goal completion.
-- **Yield Mechanism:** Idle commitment funds earn staking/lending yield across Avalanche DeFi protocols. 30% of this accrued yield feeds the Village Tree reserve to sponsor study vouchers.
+- **Yield Mechanism & Scholarship Sponsoring:** Idle commitment funds earn staking/lending yield across Avalanche DeFi protocols. Accrued yield alongside corporate CSR contributions directly fund the Phù Đổng Scholarship Pool for underprivileged students and real-world F&B partner discounts (The Coffee House, Highlands, Cheese Coffee) and Fahasa bookstore perks.
 - **Vietnam Legal Compliance:** Tokens and NFTs within MĂNG NON are **strictly educational utility and identity assets**, NOT legal currency or cash substitutes. Partner perks at Bamboo Stations are legal commercial service discount vouchers with zero cash redemption.
 
 ---
@@ -132,7 +140,7 @@ Open **[http://localhost:3000](http://localhost:3000)**. The interface renders a
 ```bash
 npm run lint:copy
 ```
-*Output:* `✅ 100% COPY-LINT PASS! Không có từ gây áp lực nào.`
+*Output:* `100% COPY-LINT PASS! Không có từ gây áp lực nào.`
 
 ### 4. Run Smart Contract Tests
 ```bash

@@ -3,96 +3,326 @@
 @tailwind utilities;
 
 :root {
-  /* Design tokens chuẩn Prompt §9.2 & CoreDesign */
-  --bamboo-day-1: #3E5C45;
-  --bamboo-day-2: #6B8F71;
-  --night-deep: #1B2A2F;
-  --glow-amber: #F4A259;
-  --glow-gold: #FFD166;
-  --dongho-red: #C8412F;
-  --dongho-pink: #E8837A;
-  --paper-bamboo: #E9D8A6;
-  --paper-do: #F6EBD4;
-  --ink: #2B2118;
-  --node-ring: #B98B3E;
+  /* ==========================================================================
+     GAME ART DIRECTION — MASTER STYLE GUIDE TOKENS
+     Style: Rough Doodle | Palette: Muted Pastel | Atmosphere: Eerie Vintage
+     ========================================================================== */
 
-  --ease-soft: cubic-bezier(.22, 1, .36, 1);
-  --dur-short: 300ms;
-  --dur-med: 600ms;
-  --dur-long: 1200ms;
-  --breathe: 3.6s;
-  --sway: 6s;
+  /* 1. Muted Pastel Palette */
+  --doodle-sage: #7E9A85;          /* Dusty sage green */
+  --doodle-sage-soft: #8FA996;
+  --doodle-sage-dark: #6A8B74;
+
+  --doodle-olive: #727D56;         /* Muted olive */
+  --doodle-olive-dark: #5A6544;
+
+  --doodle-blue: #6B818C;          /* Dusty blue */
+  --doodle-blue-soft: #7D93A0;
+  --doodle-blue-dark: #536772;
+
+  --doodle-cream: #F4EEDD;         /* Warm cream / Dó Paper Ivory */
+  --doodle-cream-dark: #EDE5D2;
+
+  --doodle-ochre: #CFA85B;         /* Muted ochre */
+  --doodle-ochre-dark: #B8934A;
+
+  --doodle-brick: #A84D3D;         /* Brick red */
+  --doodle-brick-dark: #8E3E30;
+
+  --doodle-brown: #5C4D43;         /* Desaturated brown */
+  --doodle-brown-dark: #473A32;
+
+  --doodle-charcoal: #26292B;      /* Soft charcoal ink */
+  --doodle-ink: #1F2224;           /* Deep hand-drawn ink border */
+  --doodle-shadow: #191B1D;        /* Flat 2D Cel Shadow */
+
+  /* Eerie Vintage Forest Background (Visible & balanced — not dark or monochromatic) */
+  --doodle-forest: #222E30;
+  --doodle-forest-mist: #2D3C3F;
+  --doodle-forest-deep: #1A2426;
+
+  /* Backward Compatibility Aliases */
+  --bamboo-day-1: #5A6544;
+  --bamboo-day-2: #7E9A85;
+  --night-deep: #222E30;
+  --glow-amber: #CFA85B;
+  --glow-gold: #CFA85B;
+  --dongho-red: #A84D3D;
+  --dongho-pink: #D48C7F;
+  --paper-bamboo: #EDE5D2;
+  --paper-do: #F4EEDD;
+  --ink: #26292B;
+  --node-ring: #5A6544;
+
+  /* 2. Rough Doodle Organic & Asymmetric Radii (Hand-inked, naive cartoon paper cutouts) */
+  --radius-doodle-1: 24px 13px 22px 15px / 14px 22px 14px 24px;
+  --radius-doodle-2: 17px 22px 14px 20px / 20px 14px 22px 16px;
+  --radius-doodle-3: 13px 17px 11px 15px / 15px 11px 17px 13px;
+
+  --radius-cutout-1: var(--radius-doodle-1);
+  --radius-cutout-2: var(--radius-doodle-2);
+  --radius-cutout-3: var(--radius-doodle-3);
+
+  /* 3. 2D Flat Shading (0px Blur, Minimal Cel Shadow) */
+  --shadow-flat-2d: 3px 3.5px 0px #191B1D;
+  --shadow-flat-2d-sm: 2px 2px 0px #191B1D;
+  --shadow-flat-2d-lg: 5px 5.5px 0px #191B1D;
+
+  --shadow-woodblock: var(--shadow-flat-2d);
+  --shadow-woodblock-sm: var(--shadow-flat-2d-sm);
+  --shadow-woodblock-lg: var(--shadow-flat-2d-lg);
+
+  /* 4. Stepped Hand-Drawn Frame Timing (4–6 FPS Shaky Inking) */
+  --step-timing: steps(3, end);
+  --step-timing-fast: steps(4, end);
 
   --font-ui: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-hand: "Mali", "Be Vietnam Pro", cursive, sans-serif;
-  --forest-bg: #1B2A2F;
-  --bamboo-text: #F6EBD4;
+  --forest-bg: var(--doodle-forest);
+  --bamboo-text: var(--doodle-cream);
 }
 
+/* ==========================================================================
+   BACKGROUND: EERIE VINTAGE FOREST WITH SUBTLE VIETNAMESE DÓ PAPER FIBERS
+   ========================================================================== */
 body {
-  color: var(--bamboo-text);
-  background: radial-gradient(ellipse at top, #273D44 0%, #1B2A2F 50%, #0D1619 100%);
+  color: var(--doodle-cream);
+  background-color: var(--doodle-forest);
+  background-image: 
+    radial-gradient(#2D3C3F 1.2px, transparent 1.2px),
+    radial-gradient(#182325 1px, transparent 1px);
+  background-size: 20px 20px, 10px 10px;
+  background-position: 0 0, 5px 5px;
   min-height: 100vh;
   font-family: var(--font-ui);
   letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
 }
 
 .font-hand {
   font-family: var(--font-hand);
 }
 
-/* Nút kiểu mộc bản Đông Hồ (in lệch bản nhẹ, không blur) */
+/* ==========================================================================
+   ROUGH DOODLE BUTTONS (.btn-doodle & .btn-woodblock)
+   - Thick, dark ink outline (3px solid #26292B)
+   - Organic, asymmetrical hand-drawn edges with rough ink displacement
+   - 2D Flat shading: 3px hard cel shadow, 0px blur
+   - Muted pastel color palette: Ochre, Brick Red, Warm Cream, Dusty Sage
+   ========================================================================== */
+.btn-doodle,
+.btn-woodblock,
+.btn-woodblock-red,
+.btn-woodblock-paper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-weight: 800;
+  border-radius: var(--radius-doodle-2);
+  border: 3px solid #26292B !important;
+  box-shadow: 3px 3.5px 0px #191B1D !important;
+  filter: url(#doodle-rough-edge) !important;
+  transition: transform 0.12s steps(3, end), box-shadow 0.12s steps(3, end);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+/* Primary Muted Ochre Button */
+.btn-doodle,
 .btn-woodblock {
-  border: 2px solid #2B2118;
-  box-shadow: 2px 3px 0px #0D1619;
-  transition: transform var(--dur-short) var(--ease-soft), box-shadow var(--dur-short) var(--ease-soft);
-}
-.btn-woodblock:active {
-  transform: translate(1px, 2px);
-  box-shadow: 1px 1px 0px #0D1619;
+  background-color: #CFA85B;
+  color: #1F2224 !important;
 }
 
-/* Thẻ tre cuộn / Phong cách mộc bản Đông Hồ */
-.bamboo-card {
-  background: rgba(27, 42, 47, 0.85);
-  border: 1.5px solid rgba(107, 143, 113, 0.35);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+/* Weathered Brick Red Button */
+.btn-doodle-red,
+.btn-woodblock-red {
+  background-color: #A84D3D;
+  color: #F4EEDD !important;
 }
 
-.bamboo-card:hover {
-  border-color: rgba(244, 162, 89, 0.6);
+/* Warm Cream Dó Paper Button */
+.btn-doodle-paper,
+.btn-woodblock-paper {
+  background-color: #F4EEDD;
+  color: #1F2224 !important;
 }
 
-.bamboo-scroll {
-  background: #F6EBD4;
-  color: #2B2118;
-  border-left: 4px solid #3E5C45;
-  border-radius: 8px;
+/* Dusty Sage Green Button */
+.btn-doodle-sage {
+  background-color: #7E9A85;
+  color: #1F2224 !important;
 }
 
-/* Hiệu ứng hạt đom đóm trong rừng */
-@keyframes fireflyFloat {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
-  50% { transform: translateY(-12px) translateX(6px); opacity: 0.85; }
+/* Hover: Gentle Stepped Hand-Drawn Boiling Outline (Subtle, zero nausea) */
+.btn-doodle:hover,
+.btn-woodblock:hover,
+.btn-woodblock-red:hover,
+.btn-woodblock-paper:hover,
+.btn-doodle-sage:hover,
+.btn-doodle:focus-visible,
+.btn-woodblock:focus-visible,
+.btn-woodblock-red:focus-visible,
+.btn-woodblock-paper:focus-visible {
+  animation: doodleBoil 0.36s steps(3, end) infinite;
+  border-radius: var(--radius-doodle-1);
 }
 
-.firefly-particle {
-  animation: fireflyFloat 4s ease-in-out infinite;
+.btn-doodle:active,
+.btn-woodblock:active,
+.btn-woodblock-red:active,
+.btn-woodblock-paper:active,
+.btn-doodle-sage:active {
+  animation: none !important;
+  transform: translate(2px, 2.5px) !important;
+  box-shadow: 1px 1px 0px #191B1D !important;
 }
 
-/* Tôn trọng chế độ Giảm chuyển động (Cài đặt & OS prefers-reduced-motion) */
+@keyframes doodleBoil {
+  0%, 100% {
+    filter: url(#cuphead-boil-1) !important;
+    transform: rotate(-0.3deg) scale(1.005, 0.995);
+  }
+  33% {
+    filter: url(#cuphead-boil-2) !important;
+    transform: rotate(0.3deg) scale(0.995, 1.005);
+  }
+  66% {
+    filter: url(#cuphead-boil-3) !important;
+    transform: rotate(-0.1deg) scale(1.002, 0.998);
+  }
+}
+
+/* ==========================================================================
+   2D FLAT SHADING & STICKER CUTOUT (.interactive-cutout & .spirit-sticker)
+   - Sticker cutout: Warm Cream border + Thick dark charcoal ink
+   - Shading: Strictly 2D Flat with minimal 1-step cel shadow (Zero glossy blur)
+   ========================================================================== */
+.interactive-cutout,
+.spirit-sticker {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  filter: 
+    url(#doodle-rough-edge)
+    drop-shadow(1.5px 0px 0px #F4EEDD)
+    drop-shadow(-1.5px 0px 0px #F4EEDD)
+    drop-shadow(0px 1.5px 0px #F4EEDD)
+    drop-shadow(0px -1.5px 0px #F4EEDD)
+    drop-shadow(2.5px 3.5px 0px #191B1D) !important;
+  transition: transform 0.12s steps(3, end), filter 0.12s steps(3, end);
+}
+
+.interactive-cutout:hover,
+.spirit-sticker:hover {
+  animation: doodleBoil 0.36s steps(3, end) infinite;
+  cursor: pointer;
+}
+
+.interactive-cutout:active,
+.spirit-sticker:active {
+  animation: none !important;
+  transform: translate(1.5px, 2px) scale(0.97) !important;
+}
+
+/* ==========================================================================
+   WARM CREAM DÓ PAPER CARD (.bamboo-card & .doodle-card)
+   - Warm cream / Ivory base (#F4EEDD), dark charcoal ink typography (#1F2224).
+   - Thick 3px hand-inked border #26292B.
+   - Flat 2D cel shadow 4px 4px 0px #191B1D.
+   - Misprinted offset backplate in Dusty Sage (#7E9A85).
+   ========================================================================== */
+.bamboo-card,
+.doodle-card {
+  position: relative;
+  background-color: #F4EEDD;
+  color: #1F2224;
+  border: 3px solid #26292B;
+  border-radius: var(--radius-doodle-1);
+  box-shadow: 4px 4px 0px #191B1D;
+}
+
+/* Misprint Offset Backing Layer: Dusty Sage Green */
+.bamboo-card::before,
+.doodle-card::before {
+  content: "";
+  position: absolute;
+  top: 3.5px;
+  left: 3.5px;
+  right: -4.5px;
+  bottom: -4.5px;
+  background-color: #7E9A85;
+  border-radius: var(--radius-doodle-2);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Brick Red Variant */
+.bamboo-card-brick::before {
+  background-color: #A84D3D;
+}
+
+/* Muted Ochre Variant */
+.boodle-card-ochre::before,
+.bamboo-card-amber::before {
+  background-color: #CFA85B;
+}
+
+/* Dusty Blue Variant */
+.bamboo-card-blue::before {
+  background-color: #6B818C;
+}
+
+/* ==========================================================================
+   STICKER CUTOUT BADGE (.cutout-sticker)
+   ========================================================================== */
+.cutout-sticker {
+  border: 3px solid #26292B !important;
+  box-shadow: 3.5px 3.5px 0px #191B1D !important;
+  border-radius: var(--radius-doodle-2);
+  cursor: pointer;
+}
+
+.cutout-sticker:hover {
+  animation: doodleBoil 0.35s steps(3, end) infinite !important;
+}
+
+.cutout-sticker:active {
+  animation: none !important;
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0px #191B1D !important;
+}
+
+/* Subdued Information Badge (Eerie vintage blend) */
+.badge-subdued {
+  background-color: rgba(26, 36, 38, 0.9);
+  color: #EDE5D2;
+  border: 1.5px solid #26292B !important;
+  box-shadow: 2px 2px 0px #191B1D !important;
+}
+
+/* Keyframes for Rough Doodle Wiggle */
+@keyframes wiggleDoodle {
+  0% { transform: rotate(-1.2deg) scale(1.02, 0.98) translate(-0.5px, 0px); }
+  33% { transform: rotate(1.2deg) scale(0.98, 1.02) translate(0.5px, -1px); }
+  66% { transform: rotate(-0.6deg) scale(1.01, 0.99) translate(0px, 0.5px); }
+  100% { transform: rotate(-1.2deg) scale(1.02, 0.98) translate(-0.5px, 0px); }
+}
+
+/* Reduced Motion Override */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 150ms !important;
+    animation: none !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
 [data-reduced-motion="true"] *,
 [data-reduced-motion="true"] *::before,
 [data-reduced-motion="true"] *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 150ms !important;
+  animation: none !important;
+  transition-duration: 0.01ms !important;
 }

@@ -20,13 +20,13 @@ export default function MemoryPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <span className="text-2xl">🌊</span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-bamboo-light">Suối Ký Ức</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-bamboo-light">Stream of Memories</h1>
             <span className="text-xs px-2.5 py-0.5 rounded-md bg-forest-deep border border-bamboo-soft text-warm-glow font-semibold">
-              {nfts.length} phiến đá an nghỉ
+              {nfts.length} resting stones
             </span>
           </div>
           <p className="text-xs sm:text-sm text-dongho-paper/70 mt-1 italic">
-            Dòng suối trong vắt giữa Rừng Tre và Làng Phù Đổng. Nước chảy qua nhưng phiến đá không mòn — ký ức vĩnh cửu thành NFT on-chain.
+            Clear stream flowing between the Bamboo Grove and Phu Dong Village. Water rushes past, but the stones never wear away — eternal memories etched on-chain.
           </p>
         </div>
       </div>
@@ -48,11 +48,11 @@ export default function MemoryPage() {
                   </span>
                   <span className="text-[11px] text-dongho-paper/60 flex items-center gap-1">
                     <Calendar className="w-3 h-3 text-bamboo-light" />
-                    {new Date(nft.completedAt).toLocaleDateString('vi-VN')}
+                    {new Date(nft.completedAt).toLocaleDateString('en-US')}
                   </span>
                 </div>
 
-                {/* Phiến đá dưới lòng suối */}
+                {/* River stone */}
                 <div className="w-full h-44 rounded-2xl bg-gradient-to-b from-forest-darker to-forest-abyss border border-bamboo-mid/30 flex items-center justify-center p-4 overflow-hidden group-hover:shadow-inner transition">
                   <img
                     src={nft.imageUri}
@@ -66,26 +66,26 @@ export default function MemoryPage() {
                   {nft.goalName}
                 </h3>
                 <div className="text-xs text-dongho-paper/60 mt-0.5 capitalize">
-                  Tính cách: <span className="text-warm-amber">{nft.personality}</span> · {nft.interactionCount} lần tâm sự
+                  Personality: <span className="text-warm-amber">{nft.personality}</span> · {nft.interactionCount} stories shared
                 </div>
 
                 {/* Final Stats */}
                 <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px] text-dongho-paper/80 bg-forest-darker/90 p-2.5 rounded-xl border border-bamboo-mid/30">
                   <div className="flex items-center gap-1">
                     <Brain className="w-3 h-3 text-bamboo-light" />
-                    <span>Hiểu biết: {nft.finalStats.intelligence}</span>
+                    <span>Insight: {nft.finalStats.intelligence}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Flame className="w-3 h-3 text-warm-amber" />
-                    <span>Kiên trì: {nft.finalStats.perseverance}</span>
+                    <span>Perseverance: {nft.finalStats.perseverance}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Activity className="w-3 h-3 text-bamboo-soft" />
-                    <span>Sức sống: {nft.finalStats.fitness}</span>
+                    <span>Vitality: {nft.finalStats.fitness}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Palette className="w-3 h-3 text-dongho-ochre" />
-                    <span>Tự do: {nft.finalStats.creativity}</span>
+                    <span>Creativity: {nft.finalStats.creativity}</span>
                   </div>
                 </div>
               </div>
@@ -94,7 +94,7 @@ export default function MemoryPage() {
               <div className="mt-4 pt-3 border-t border-bamboo-mid/20 flex items-center justify-between text-[11px] text-dongho-paper/60 font-mono">
                 <span>{nft.txHash.substring(0, 14)}...</span>
                 <span className="text-warm-amber flex items-center gap-1 group-hover:underline">
-                  Ngắm nhìn ký ức <ExternalLink className="w-3 h-3" />
+                  View memory <ExternalLink className="w-3 h-3" />
                 </span>
               </div>
             </div>
@@ -103,9 +103,9 @@ export default function MemoryPage() {
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
           <span className="text-6xl mb-3">🌊</span>
-          <h3 className="text-lg font-bold text-bamboo-light">Dòng Suối Ký Ức đang đón chờ</h3>
+          <h3 className="text-lg font-bold text-bamboo-light">The Stream of Memories awaits</h3>
           <p className="text-xs text-dongho-paper/70 max-w-sm mt-1">
-            Khi một hành trình khép lại, Măng Non sẽ an nghỉ như một phiến đá nhẵn dưới lòng suối này và trở thành NFT hành trình bất biến on-chain.
+            When a journey reaches completion, your companion rests as a smooth river stone beneath these waters, eternally recorded as an immutable on-chain journey NFT.
           </p>
         </div>
       )}
@@ -116,13 +116,13 @@ export default function MemoryPage() {
           <div className="relative w-full max-w-md bg-forest-deep border-2 border-bamboo-soft/50 rounded-3xl p-6 text-dongho-paper shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-mono font-bold text-warm-glow bg-forest-darker px-2.5 py-1 rounded-md border border-warm-amber/50">
-                {selectedNft.tokenId} (ERC-721 NFT Hành Trình)
+                {selectedNft.tokenId} (ERC-721 Journey NFT)
               </span>
               <button
                 onClick={() => setSelectedNft(null)}
                 className="text-dongho-paper/60 hover:text-dongho-paper text-sm"
               >
-                ✕ Đóng
+                ✕ Close
               </button>
             </div>
 
@@ -136,20 +136,20 @@ export default function MemoryPage() {
 
             <h3 className="font-bold text-lg text-warm-glow">{selectedNft.goalName}</h3>
             <p className="text-xs text-dongho-paper/70 mt-1">
-              Đã hoàn thành và khắc ghi vĩnh cửu trên Avalanche C-Chain Fuji Testnet.
+              Completed and eternally inscribed on Avalanche C-Chain Fuji Testnet.
             </p>
 
             <div className="mt-4 space-y-2 text-xs bg-forest-darker p-3.5 rounded-2xl border border-bamboo-mid/30 font-mono">
               <div className="flex justify-between">
-                <span className="text-dongho-paper/60">Mạng lưới:</span>
+                <span className="text-dongho-paper/60">Network:</span>
                 <span className="text-dongho-red font-semibold">Avalanche Fuji</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-dongho-paper/60">Góp cho Cây Đa:</span>
+                <span className="text-dongho-paper/60">Contributed to Village Tree:</span>
                 <span className="text-warm-amber">+{selectedNft.mockYieldContributed} AVAX yield</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-dongho-paper/60">Giao dịch on-chain:</span>
+                <span className="text-dongho-paper/60">On-chain Transaction:</span>
                 <span className="text-dongho-paper break-all">{selectedNft.txHash}</span>
               </div>
             </div>

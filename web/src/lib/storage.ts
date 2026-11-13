@@ -8,11 +8,11 @@ const STORAGE_KEYS = {
   GLOWING_BAMBOO_COUNT: 'mangnon_glowing_bamboo_count',
 };
 
-// Seed ban đầu khi mới mở app
+// Initial seed data when launching the app
 const SEED_GOALS: Goal[] = [
   {
     id: 'goal-1',
-    name: 'Chinh phục IELTS 7.5',
+    name: 'Mastering IELTS 7.5',
     level: 'intermediate',
     personality: 'curious',
     cognitiveStage: 'association',
@@ -36,15 +36,15 @@ const SEED_GOALS: Goal[] = [
         id: 'j-1',
         timestamp: Date.now() - 86400000 * 3,
         type: 'chat',
-        userMessage: 'Hôm nay mình vừa học xong 20 từ vựng chủ đề Environment!',
-        companionReply: 'Ồ, từ vựng môi trường à? Thế lá tre rơi xuống có được gọi là biodegradable không bạn ơi?',
+        userMessage: 'I just finished learning 20 vocabulary words on the Environment topic today!',
+        companionReply: 'Oh, environment vocabulary? So when a bamboo leaf falls to the ground, is it considered biodegradable, my friend?',
         statGained: { type: 'intelligence', amount: 5 },
       },
     ],
   },
   {
     id: 'goal-2',
-    name: 'Đọc 10 trang sách tiếng Anh mỗi ngày',
+    name: 'Read 10 pages of English books daily',
     level: 'beginner',
     personality: 'excited',
     cognitiveStage: 'association',
@@ -78,36 +78,36 @@ const SEED_TREE: VillageTreeState = {
 const SEED_STATIONS: Station[] = [
   {
     id: 'station-1',
-    name: 'Trạm Tre The Workshop Coffee',
-    address: '27 Ngô Đức Kế, Bến Nghé, Quận 1, TP.HCM',
+    name: 'Bamboo Study Station - The Workshop Coffee',
+    address: '27 Ngo Duc Ke St, District 1, HCMC',
     lat: 10.7725,
     lng: 106.7042,
-    voucherReward: 'Giảm 20% đồ uống Specialty Coffee khi học tập',
+    voucherReward: '20% off Specialty Coffee during study sessions',
     voucherCode: 'MN-WORKSHOP-2026',
     claimed: false,
-    description: 'Không gian yên tĩnh với view rừng tre mini lý tưởng để đọc sách và trò chuyện cùng Măng Non.',
+    description: 'Quiet study sanctuary overlooking a mini bamboo garden, perfect for reading and studying with your companion.',
   },
   {
     id: 'station-2',
-    name: 'Trạm Tre Tri Thức - Thư Viện Cá Chép',
-    address: '211 Võ Văn Tần, Phường 5, Quận 3, TP.HCM',
+    name: 'Knowledge Bamboo Station - Ca Chep Bookshop',
+    address: '211 Vo Van Tan St, District 3, HCMC',
     lat: 10.7742,
     lng: 106.6888,
-    voucherReward: 'Voucher 50.000đ mua sách học thuật & văn học',
+    voucherReward: '50,000 VND voucher for academic & literature books',
     voucherCode: 'MN-CACHEP-50K',
     claimed: false,
-    description: 'Nơi quy tụ hàng nghìn đầu sách bổ trợ kiến thức đa lĩnh vực cho các mục tiêu học tập.',
+    description: 'A quiet gathering place of thousands of titles supporting diverse self-learning goals.',
   },
   {
     id: 'station-3',
-    name: 'Trạm Tre Không Gian Sáng Tạo Avalanche Hub',
-    address: 'Khu Đô Thị ĐHQG-HCM, TP. Thủ Đức',
+    name: 'Avalanche Hub Creative Station',
+    address: 'VNU-HCM University Village, Thu Duc City',
     lat: 10.8701,
     lng: 106.8032,
-    voucherReward: 'Huy hiệu Soulbound Dev + Bộ Kit Builder UniHack',
+    voucherReward: 'Soulbound Dev Badge + UniHack Builder Kit',
     voucherCode: 'AVAX-BUILDER-MANGNON',
     claimed: true,
-    description: 'Không gian công nghệ Web3 tổ chức các buổi học nhóm, chia sẻ về Subnet và Smart Contracts.',
+    description: 'Web3 study sanctuary hosting group study sessions, Subnet workshops, and smart contract labs.',
   },
 ];
 

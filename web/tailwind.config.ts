@@ -10,42 +10,68 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Bảng màu Măng Non theo Idea03_MangNon_CoreDesign.md & Prompt §9.2
+        // Master Style Guide Palette: Rough Doodle & Muted Pastel
+        doodle: {
+          sage: "#7E9A85",
+          olive: "#727D56",
+          blue: "#6B818C",
+          cream: "#F4EEDD",
+          ochre: "#CFA85B",
+          brick: "#A84D3D",
+          brown: "#5C4D43",
+          charcoal: "#26292B",
+          ink: "#1F2224",
+          shadow: "#191B1D",
+          forest: "#222E30",
+          mist: "#2D3C3F",
+        },
         forest: {
-          deep: "#1B2A2F",    // Xanh đêm sâu Rừng Tre (Ghibli night)
-          darker: "#132024",
-          abyss: "#0D1619",
-          mist: "#273D44",
+          deep: "#222E30",    // Eerie vintage forest
+          darker: "#1A2426",
+          abyss: "#141C1E",
+          mist: "#2D3C3F",
         },
         bamboo: {
-          light: "#A7C4AC",
-          soft: "#6B8F71",    // Xanh tre tự nhiên
-          mid: "#52795B",
-          deep: "#3E5C45",    // Xanh tre trầm ban ngày
-          dark: "#2A4030",
+          light: "#8FA996",
+          soft: "#7E9A85",    // Dusty sage green
+          mid: "#6A8B74",
+          deep: "#5A6544",    // Muted olive
+          dark: "#475235",
         },
         warm: {
-          light: "#FFE099",
-          glow: "#FFD166",    // Vàng cam ấm điểm nhấn (Ống nứa Kaguya)
-          amber: "#F4A259",   // Ánh sáng ấm đốt tre
-          wood: "#BC6C25",    // Vàng đất / mộc bản
+          light: "#DFC07A",
+          glow: "#CFA85B",    // Muted ochre
+          amber: "#CFA85B",
+          wood: "#5C4D43",    // Desaturated brown
         },
         dongho: {
-          red: "#C8412F",     // Đỏ Đông Hồ
-          crimson: "#C1121F",
-          pink: "#E8837A",    // Hồng sen Đông Hồ
-          ochre: "#DDA15E",
-          paper: "#F6EBD4",   // Màu giấy dó / điệp mộc bản Đông Hồ
-          papermid: "#E8DEC8",
+          red: "#A84D3D",     // Weathered brick red
+          crimson: "#8E3E30",
+          pink: "#D48C7F",
+          ochre: "#CFA85B",   // Muted ochre
+          paper: "#F4EEDD",   // Warm cream Dó paper
+          papermid: "#EDE5D2",
         },
         paper: {
-          bamboo: "#E9D8A6",  // Thẻ tre khô
-          do: "#F6EBD4",      // Giấy dó
+          bamboo: "#EDE5D2",
+          do: "#F4EEDD",
         },
-        ink: "#2B2118",
+        ink: "#26292B",
         node: {
-          ring: "#B98B3E",
+          ring: "#727D56",
         },
+      },
+      boxShadow: {
+        // 2D Flat Cel Shadows (0px blur — Strict 2D Aesthetic)
+        "flat-2d": "3px 3.5px 0px #191B1D",
+        "flat-2d-sm": "2px 2px 0px #191B1D",
+        "flat-2d-lg": "5px 5.5px 0px #191B1D",
+        woodblock: "3px 3.5px 0px #191B1D",
+        "woodblock-sm": "2px 2px 0px #191B1D",
+        "woodblock-lg": "5px 5.5px 0px #191B1D",
+        "misprint-red": "4px 4px 0px #A84D3D",
+        "misprint-bamboo": "4px 4px 0px #7E9A85",
+        "misprint-amber": "4px 4px 0px #CFA85B",
       },
       fontFamily: {
         sans: ["var(--font-ui)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
@@ -54,16 +80,33 @@ const config: Config = {
       },
       transitionTimingFunction: {
         soft: "cubic-bezier(.22, 1, .36, 1)",
+        stepped3: "steps(3, end)",
+        stepped4: "steps(4, end)",
       },
       animation: {
+        // Cuphead 1930s Stepped 2D Wiggle (Rubber-hose Squash & Stretch at 4-6 FPS)
+        "wiggle-2d": "wiggleCuphead 0.35s steps(3, end) infinite",
+        "boil-2d": "boilLine 0.25s steps(4, end) infinite",
         "breathe": "breathe 3.6s ease-in-out infinite",
         "sway-gentle": "swayGentle 6s ease-in-out infinite",
-        "firefly": "firefly 3s ease-in-out infinite",
-        "glow-soft": "glowSoft 3s ease-in-out infinite",
-        "fade-in": "fadeIn 0.35s cubic-bezier(.22, 1, .36, 1) forwards",
-        "slide-up": "slideUp 0.4s cubic-bezier(.22, 1, .36, 1) forwards",
+        "firefly": "firefly 3s steps(3, end) infinite",
+        "fade-in": "fadeIn 0.2s steps(3, end) forwards",
+        "slide-up": "slideUp 0.25s steps(3, end) forwards",
       },
       keyframes: {
+        wiggleCuphead: {
+          "0%": { transform: "rotate(-0.5deg) scale(1.007, 0.993) translate(-0.3px, 0px)" },
+          "33%": { transform: "rotate(0.5deg) scale(0.993, 1.007) translate(0.3px, -0.6px)" },
+          "66%": { transform: "rotate(-0.25deg) scale(1.008, 0.992) translate(0px, 0.3px)" },
+          "100%": { transform: "rotate(-0.5deg) scale(1.007, 0.993) translate(-0.3px, 0px)" },
+        },
+        boilLine: {
+          "0%": { transform: "translate(0px, 0px)" },
+          "25%": { transform: "translate(1.5px, -1px)" },
+          "50%": { transform: "translate(-1px, 1.5px)" },
+          "75%": { transform: "translate(1px, 0.5px)" },
+          "100%": { transform: "translate(0px, 0px)" },
+        },
         breathe: {
           "0%, 100%": { transform: "scaleY(1)" },
           "50%": { transform: "scaleY(1.02)" },
@@ -72,20 +115,16 @@ const config: Config = {
           "0%, 100%": { transform: "rotate(-1.5deg)" },
           "50%": { transform: "rotate(1.5deg)" },
         },
-        glowSoft: {
-          "0%, 100%": { filter: "drop-shadow(0 0 12px rgba(244, 162, 89, 0.4))" },
-          "50%": { filter: "drop-shadow(0 0 24px rgba(255, 209, 102, 0.75))" },
-        },
         firefly: {
           "0%, 100%": { opacity: "0.3", transform: "translateY(0px)" },
-          "50%": { opacity: "0.9", transform: "translateY(-8px)" },
+          "50%": { opacity: "0.9", transform: "translateY(-6px)" },
         },
         fadeIn: {
-          "0%": { opacity: "0", transform: "translateY(6px)" },
+          "0%": { opacity: "0", transform: "translateY(4px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         slideUp: {
-          "0%": { opacity: "0", transform: "translateY(32px)" },
+          "0%": { opacity: "0", transform: "translateY(16px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },

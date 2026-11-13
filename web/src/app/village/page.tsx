@@ -36,12 +36,12 @@ export default function VillagePage() {
 
   const triggerBlessingAnimation = () => {
     setJustBlessed(true);
-    // Hoa gạo nở đỏ rực (#E63946) & đom đóm rợp trời (#FFD166, #F4A259)
+    // Hoa gạo nở đỏ gạch (#A84D3D) & đom đóm rợp trời (#CFA85B, #5C4D43)
     confetti({
       particleCount: 140,
       spread: 100,
       origin: { y: 0.4 },
-      colors: ['#E63946', '#FFD166', '#F4A259', '#6B8F71', '#C1121F'],
+      colors: ['#A84D3D', '#CFA85B', '#5C4D43', '#7E9A85', '#8E3E30'],
     });
     setTimeout(() => setJustBlessed(false), 5000);
   };
@@ -53,27 +53,27 @@ export default function VillagePage() {
         <div>
           <div className="flex items-center gap-2.5">
             <span className="text-2xl">🏛️</span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-warm-amber">Làng Phù Đổng</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-warm-amber">Phu Dong Village</h1>
             <span className="text-xs px-2.5 py-0.5 rounded-md bg-forest-deep border border-warm-amber/60 text-warm-glow font-semibold">
-              Mùa thứ {treeState.blessingCycleCount}
+              Season {treeState.blessingCycleCount}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-dongho-paper/70 mt-1 italic">
-            Hiện thân của cộng đồng. Mỗi mục tiêu an nghỉ sẽ trích mock-yield từ Mầm Lực Vault để nuôi Cây Đa Phù Đổng.
+            The living heart of our community. Each resting companion contributes mock-yield from the Mam Luc Vault to nourish the Sacred Tree.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="px-3.5 py-1.5 rounded-xl bg-forest-deep border border-warm-amber/40 text-xs text-warm-glow flex items-center gap-1.5 shadow">
             <Flame className="w-4 h-4 text-warm-amber fill-warm-amber" />
-            <span>Tổng mầm lực cộng đồng: <strong>{treeState.totalLifetimeEnergy}</strong></span>
+            <span>Total Community Energy: <strong>{treeState.totalLifetimeEnergy}</strong></span>
           </div>
         </div>
       </div>
 
       {/* Main Village Tree Section */}
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Cây Đa Phù Đổng Visualization */}
+        {/* Sacred Banyan Tree Visualization */}
         <div className="lg:col-span-2 relative rounded-3xl bg-gradient-to-b from-forest-darker via-forest-deep to-forest-abyss border-2 border-warm-amber/40 p-6 sm:p-10 flex flex-col items-center justify-center text-center overflow-hidden shadow-2xl">
           {/* Ambient Glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-warm-amber/10 rounded-full blur-[100px] pointer-events-none"></div>
@@ -85,24 +85,24 @@ export default function VillagePage() {
             </div>
             {justBlessed && (
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-dongho-red to-warm-amber text-dongho-paper font-extrabold text-xs px-5 py-2 rounded-full shadow-xl animate-pulse whitespace-nowrap">
-                🌸 HOA GẠO NỞ ĐỎ RỰC · ĐOM ĐÓM BAY RỢP TRỜI! 🌟
+                🌸 CRIMSON PETALS IN BLOOM · FIREFLIES FILL THE GROVE! 🌟
               </div>
             )}
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold text-warm-glow">
-            Cây Đa Phù Đổng (Cây Làng Cổ Thụ)
+            The Sacred Banyan Tree (Ancient Village Tree)
           </h2>
           <p className="text-xs text-dongho-paper/80 max-w-md mt-2 leading-relaxed">
-            Rễ cây ăn sâu vào lòng đất tượng trưng cho cội rễ chung của cộng đồng. Khi mầm lực đạt ngưỡng, hoa gạo đỏ rực sẽ bung nở và đom đóm bay rợp trời, ban phước ngược lại cho mọi Măng Non đang sống.
+            Deep roots reaching into the earth symbolize our shared community foundation. When collective energy reaches the threshold, crimson flowers blossom and fireflies illuminate the grove, showering blessings back to every living companion.
           </p>
 
           {/* Progress Bar */}
           <div className="w-full max-w-md mt-6">
             <div className="flex justify-between text-xs text-dongho-paper/80 mb-2 font-medium">
-              <span>Tiến trình mùa {treeState.blessingCycleCount}:</span>
+              <span>Season {treeState.blessingCycleCount} Progress:</span>
               <span className="font-mono text-warm-glow">
-                {treeState.currentCycleEnergy} / {treeState.threshold} Mầm Lực ({progressPercent}%)
+                {treeState.currentCycleEnergy} / {treeState.threshold} Energy ({progressPercent}%)
               </span>
             </div>
             <div className="w-full h-3.5 bg-forest-abyss rounded-full p-0.5 border border-warm-amber/40 overflow-hidden shadow-inner">
@@ -120,11 +120,11 @@ export default function VillagePage() {
           <div className="p-6 rounded-3xl bg-forest-deep/80 border border-warm-amber/40 backdrop-blur-md shadow-xl">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-warm-amber mb-2">
               <HeartHandshake className="w-4 h-4" />
-              Doanh nghiệp / Nhà tài trợ CSR
+              Corporate & CSR Sponsors
             </div>
-            <h3 className="font-bold text-base text-dongho-paper">Đóng Góp Năng Lượng Cộng Đồng</h3>
+            <h3 className="font-bold text-base text-dongho-paper">Support Community Energy</h3>
             <p className="text-xs text-dongho-paper/70 mt-1.5 leading-relaxed">
-              Mô hình &quot;khắc tên vào truyền thuyết&quot;: Doanh nghiệp tài trợ mầm lực cho Cây Đa sẽ được khắc ghi danh tính trong sự kiện hoa nở ban phước của cả làng.
+              &quot;Inscribe your legacy in lore&quot;: Sponsors gifting energy to the Sacred Tree are permanently recognized during village-wide blessing celebrations.
             </p>
 
             <div className="mt-4 flex items-center gap-2">
@@ -136,12 +136,12 @@ export default function VillagePage() {
                 onChange={(e) => setSponsorAmount(e.target.value)}
                 className="w-24 bg-forest-abyss border border-warm-amber/50 rounded-xl px-3 py-2 text-xs text-warm-glow focus:outline-none"
               />
-              <span className="text-xs text-dongho-paper/60">Mầm lực</span>
+              <span className="text-xs text-dongho-paper/60">Energy</span>
               <button
                 onClick={handleSponsorContribute}
                 className="flex-1 py-2 rounded-xl bg-warm-amber hover:bg-warm-glow text-forest-abyss font-bold text-xs transition shadow-md"
               >
-                + Góp mầm lực
+                + Gift Energy
               </button>
             </div>
           </div>
@@ -151,27 +151,27 @@ export default function VillagePage() {
             <div>
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-bamboo-light mb-2">
                 <ShieldCheck className="w-4 h-4" />
-                Minh Bạch Tuyệt Đối On-Chain
+                Absolute On-Chain Transparency
               </div>
-              <h3 className="font-bold text-base text-dongho-paper">Vì sao cần Avalanche?</h3>
+              <h3 className="font-bold text-base text-dongho-paper">Why Avalanche?</h3>
               <ul className="mt-3 space-y-2 text-xs text-dongho-paper/75">
                 <li className="flex items-start gap-2">
                   <span className="text-warm-glow">✓</span>
-                  <span>Không ai (kể cả ban quản trị) có thể sửa số liệu hay rút ruột quỹ Cây Đa Phù Đổng.</span>
+                  <span>No central authority or admin can alter stats or drain the community vault.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-warm-glow">✓</span>
-                  <span>Thời gian hoàn tất giao dịch ~1 giây giúp sự kiện bùng nổ ban phước diễn ra tức thì.</span>
+                  <span>Sub-second transaction finality triggers real-time blossom celebrations.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-warm-glow">✓</span>
-                  <span>Game L1 Subnet xử lý tương tác thường nhật, C-Chain lưu trữ tài sản bền vững.</span>
+                  <span>Game L1 Subnets handle micro-interactions, while C-Chain secures eternal soulbound assets.</span>
                 </li>
               </ul>
             </div>
 
             <div className="mt-5 pt-3 border-t border-bamboo-mid/20 flex items-center justify-between text-[11px] text-dongho-paper/60 font-mono">
-              <span>Hợp đồng: {contractAddr ? `${contractAddr.slice(0, 8)}...${contractAddr.slice(-6)}` : 'chưa triển khai'}</span>
+              <span>Contract: {contractAddr ? `${contractAddr.slice(0, 8)}...${contractAddr.slice(-6)}` : 'not deployed'}</span>
               <span className="text-warm-glow">Avalanche Fuji</span>
             </div>
           </div>

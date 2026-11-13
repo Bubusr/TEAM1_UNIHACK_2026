@@ -34,10 +34,10 @@ export default function InteractiveVillageCanvas({
 
   // Sinh linh của cộng đồng tụ họp về quanh Cây Đa (vô danh, ấm áp)
   const spiritsRef = useRef<VillageSpirit[]>([
-    { x: 220, y: 430, hopOffset: 0, direction: 1, color: '#A7C4AC', name: '' },
-    { x: 380, y: 440, hopOffset: 0, direction: -1, color: '#FFD166', name: '' },
-    { x: 620, y: 435, hopOffset: 0, direction: 1, color: '#F4A259', name: '' },
-    { x: 780, y: 445, hopOffset: 0, direction: -1, color: '#6B8F71', name: '' },
+    { x: 220, y: 430, hopOffset: 0, direction: 1, color: '#7E9A85', name: '' },
+    { x: 380, y: 440, hopOffset: 0, direction: -1, color: '#CFA85B', name: '' },
+    { x: 620, y: 435, hopOffset: 0, direction: 1, color: '#5C4D43', name: '' },
+    { x: 780, y: 445, hopOffset: 0, direction: -1, color: '#6B818C', name: '' },
   ]);
 
   // Đom đóm & hoa gạo bay
@@ -69,7 +69,7 @@ export default function InteractiveVillageCanvas({
           y: dimensions.height * 0.55 + (Math.random() * 100 - 50),
           vx: (Math.random() - 0.5) * 3,
           vy: -2 - Math.random() * 4,
-          color: Math.random() > 0.4 ? '#E63946' : '#FFD166',
+          color: Math.random() > 0.4 ? '#A84D3D' : '#CFA85B',
           size: Math.random() > 0.5 ? 4 : 2.5,
           alpha: 1,
         });
@@ -128,8 +128,23 @@ export default function InteractiveVillageCanvas({
     };
   }, [dimensions, currentEnergy, threshold, isBlessed]);
 
+  // Vị trí các đèn lồng đỏ / nụ hoa trên tán cây đa
+  const lanternPositions = [
+    { x: 100, y: 150 },
+    { x: 135, y: 100 },
+    { x: 195, y: 65 },
+    { x: 260, y: 80 },
+    { x: 310, y: 130 },
+    { x: 270, y: 170 },
+    { x: 160, y: 175 },
+    { x: 215, y: 135 },
+    { x: 80, y: 185 },
+    { x: 335, y: 180 },
+  ];
+
   return (
     <div ref={containerRef} className="relative w-full rounded-3xl overflow-hidden border-2 border-warm-amber/40 shadow-2xl bg-forest-abyss">
+      {/* 1. Canvas Background Scene (Sky, Hills, Ground, Wandering Spirits) */}
       <canvas
         ref={canvasRef}
         width={dimensions.width}
@@ -137,12 +152,105 @@ export default function InteractiveVillageCanvas({
         className="w-full h-auto block"
       />
 
+      {/* 2. Full Moon Paper Cutout with Warm Glow */}
+      <div
+        className="absolute top-24 right-10 w-16 h-16 rounded-full bg-[#FFE599] pointer-events-none"
+        style={{
+          boxShadow: '0 0 40px rgba(255, 229, 153, 0.55)',
+        }}
+      />
+
+      {/* 3. Sacred Banyan Tree (SVG Liền Mạch + Soft Bioluminescent Glow) */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <svg
+          viewBox="0 0 400 320"
+          className="w-[340px] sm:w-[410px] h-auto overflow-visible select-none translate-y-4"
+          style={{
+            filter: 'drop-shadow(0 0 35px rgba(79, 119, 90, 0.35))',
+          }}
+        >
+          <defs>
+            <radialGradient id="banyanCanopyGrad" cx="50%" cy="50%" r="55%">
+              <stop offset="0%" stopColor="#4F775A" />
+              <stop offset="65%" stopColor="#233B2E" />
+              <stop offset="100%" stopColor="#16261E" />
+            </radialGradient>
+            <radialGradient id="lanternGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#CFA85B" />
+              <stop offset="70%" stopColor="#A84D3D" />
+              <stop offset="100%" stopColor="#8E3E30" />
+            </radialGradient>
+          </defs>
+
+          {/* Thân cây và rễ phụ uốn lượn màu nâu trầm ấm #3A2618 (không viền đen cứng) */}
+          <g stroke="none">
+            {/* Thân chính */}
+            <path
+              d="M175,310 C180,240 185,210 170,170 C190,165 210,165 230,170 C215,210 220,240 225,310 Z"
+              fill="#3A2618"
+            />
+            {/* Rễ phụ buông mềm mại */}
+            <path d="M162,190 C155,230 148,270 142,310" stroke="#3A2618" strokeWidth="4" strokeLinecap="round" fill="none" />
+            <path d="M185,210 C180,250 175,280 170,310" stroke="#3A2618" strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M215,210 C220,250 225,280 230,310" stroke="#3A2618" strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M238,190 C245,230 252,270 258,310" stroke="#3A2618" strokeWidth="4" strokeLinecap="round" fill="none" />
+          </g>
+
+          {/* Tán lá: 1 thẻ path duy nhất tạo hình đám mây lá đa mềm mại không viền đen cứng */}
+          <path
+            d="M85,210 C40,210 20,170 40,130 C25,90 60,45 110,50 C140,15 215,10 255,45 C305,35 355,70 350,120 C380,155 360,205 315,210 C250,225 150,225 85,210 Z"
+            fill="url(#banyanCanopyGrad)"
+            stroke="none"
+          />
+
+          {/* Đèn Lồng Đỏ / Hoa Gạo phát sáng gắn class interactive-cutout */}
+          {lanternPositions.slice(0, isBlessed ? 10 : Math.max(3, Math.floor((currentEnergy / threshold) * 10))).map((lp, idx) => (
+            <g
+              key={idx}
+              className="interactive-cutout pointer-events-auto cursor-pointer"
+              transform={`translate(${lp.x}, ${lp.y})`}
+              style={{
+                filter: 'drop-shadow(0 0 8px rgba(168, 77, 61, 0.8))',
+              }}
+              onClick={onTriggerBlessing}
+            >
+              <circle cx="0" cy="0" r="8.5" fill="#A84D3D" stroke="#26292B" strokeWidth="1.5" />
+              <circle cx="0" cy="0" r="3" fill="#CFA85B" />
+              <line x1="0" y1="-12" x2="0" y2="-8.5" stroke="#26292B" strokeWidth="1.5" />
+              <line x1="0" y1="8.5" x2="0" y2="12" stroke="#A84D3D" strokeWidth="1.5" />
+            </g>
+          ))}
+        </svg>
+
+        {/* Linh Vật Trắng dưới gốc cây (Die-cut sticker + Cuphead Wiggle khi chạm) */}
+        <div
+          className="absolute bottom-8 left-1/2 -translate-x-12 z-20 cursor-pointer pointer-events-auto"
+          onClick={onTriggerBlessing}
+          title="Bạch Linh Đồng — Chạm để chúc phúc"
+        >
+          <svg viewBox="0 0 50 65" className="interactive-cutout w-12 h-14 overflow-visible">
+            {/* Thân bạch linh trắng */}
+            <ellipse cx="25" cy="35" rx="16" ry="20" fill="#FFFFFF" stroke="#26292B" strokeWidth="2.5" />
+            {/* Chiếc lá xanh trên đầu */}
+            <path d="M22,15 C24,6 32,8 30,15 Z" fill="#7E9A85" stroke="#26292B" strokeWidth="2" />
+            {/* Mắt chớp đen mộc bản */}
+            <circle cx="20" cy="32" r="2.5" fill="#26292B" />
+            <circle cx="30" cy="32" r="2.5" fill="#26292B" />
+            {/* Má hồng pastel */}
+            <circle cx="16" cy="38" r="2.5" fill="#D48C7F" />
+            <circle cx="34" cy="38" r="2.5" fill="#D48C7F" />
+            {/* Nụ cười */}
+            <path d="M22,40 Q25,43 28,40" fill="none" stroke="#26292B" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+      </div>
+
       {/* Village Banner */}
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none">
-        <div className="pointer-events-auto px-4 py-1.5 rounded-full bg-forest-abyss/85 backdrop-blur border border-warm-amber/50 text-xs text-dongho-paper flex items-center gap-2 shadow-lg">
-          <span className="w-2.5 h-2.5 rounded-full bg-dongho-red animate-pulse"></span>
-          <span><strong>Cây Đa Phù Đổng</strong> · Mùa thứ {cycle}</span>
-          <span className="text-dongho-paper/50">|</span>
+        <div className="pointer-events-auto px-4 py-1.5 rounded-xl bg-[#1A2426]/90 text-xs text-dongho-paper/70 flex items-center gap-2 select-none border-0 shadow-none">
+          <span className="w-2 h-2 rounded-full bg-[#A84D3D]"></span>
+          <span><strong>Phù Đổng Sacred Tree</strong> · Season {cycle}</span>
+          <span className="text-dongho-paper/40">|</span>
           <span className="text-warm-glow">
             {Array.from({ length: Math.min(Math.round((currentEnergy / threshold) * 5), 5) }).map((_, i) => (
               <span key={i}>🍃</span>
@@ -153,9 +261,9 @@ export default function InteractiveVillageCanvas({
         {currentEnergy >= threshold && (
           <button
             onClick={onTriggerBlessing}
-            className="pointer-events-auto px-4 py-2 rounded-xl bg-dongho-red hover:bg-dongho-crimson text-dongho-paper font-bold text-xs shadow-xl animate-bounce transition flex items-center gap-1.5 border border-warm-amber"
+            className="pointer-events-auto btn-woodblock-red px-3 py-1.5 rounded-full text-xs font-bold shadow-[2px_3px_0px_#26292B] flex items-center gap-1"
           >
-            🌸 Kích Hoạt Bùng Nổ Hoa Gạo!
+            🌸 Kích Hoạt Hoa Gạo!
           </button>
         )}
       </div>
@@ -171,34 +279,11 @@ function drawVillageScene(
   energyRatio: number,
   isBlessed: boolean
 ) {
-  // Bầu trời đêm làng quê
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-  skyGrad.addColorStop(0, '#0D1619');
-  skyGrad.addColorStop(0.5, '#1B2A2F');
-  skyGrad.addColorStop(1, '#273D44');
-  ctx.fillStyle = skyGrad;
+  // 1. Flat 2D Deep Night Sky
+  ctx.fillStyle = '#0D1619';
   ctx.fillRect(0, 0, width, height);
 
-  // Ánh trăng rằm tròn vành vạnh
-  ctx.save();
-  const moonX = width * 0.78;
-  const moonY = 85;
-  const moonGlow = ctx.createRadialGradient(moonX, moonY, 15, moonX, moonY, 80);
-  moonGlow.addColorStop(0, 'rgba(255, 209, 102, 0.9)');
-  moonGlow.addColorStop(0.3, 'rgba(244, 162, 89, 0.4)');
-  moonGlow.addColorStop(1, 'transparent');
-  ctx.fillStyle = moonGlow;
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, 80, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#FFE099';
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, 26, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // Đồi xa và những mái nhà tranh nhấp nhô
+  // 2. Flat 2D Distant Hills & Cottages
   ctx.fillStyle = '#132024';
   ctx.beginPath();
   ctx.moveTo(0, height * 0.65);
@@ -207,153 +292,35 @@ function drawVillageScene(
   ctx.lineTo(0, height);
   ctx.fill();
 
-  // Vài mái nhà tranh làng quê với ánh đèn dầu vàng ấm trong khe cửa
   drawCottage(ctx, width * 0.12, height * 0.62);
   drawCottage(ctx, width * 0.82, height * 0.64);
 
-  // Mặt sân đình làng
+  // 3. Flat 2D Ground Plane (Mặt sân đình phẳng lì)
   const groundY = height * 0.78;
-  const groundGrad = ctx.createLinearGradient(0, groundY - 20, 0, height);
-  groundGrad.addColorStop(0, '#2A4030');
-  groundGrad.addColorStop(0.4, '#1B2A2F');
-  groundGrad.addColorStop(1, '#0D1619');
-  ctx.fillStyle = groundGrad;
+  ctx.fillStyle = '#1A2920';
   ctx.beginPath();
   ctx.moveTo(0, groundY);
-  ctx.bezierCurveTo(width * 0.3, groundY - 15, width * 0.7, groundY + 10, width, groundY - 5);
+  ctx.bezierCurveTo(width * 0.3, groundY - 12, width * 0.7, groundY + 8, width, groundY - 4);
   ctx.lineTo(width, height);
   ctx.lineTo(0, height);
   ctx.fill();
-
-  // TÂM ĐIỂM: CÂY ĐA PHÙ ĐỔNG CỔ THỤ KHỔNG LỒ
-  drawSacredBanyanTree(ctx, width * 0.5, groundY + 15, tick, energyRatio, isBlessed);
 }
 
 function drawCottage(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.save();
-  // Mái nhà tranh tam giác
-  ctx.fillStyle = '#3E5C45';
-  ctx.beginPath();
-  ctx.moveTo(x - 30, y);
-  ctx.lineTo(x, y - 24);
-  ctx.lineTo(x + 30, y);
-  ctx.closePath();
-  ctx.fill();
-
-  // Thân nhà đất
-  ctx.fillStyle = '#1B2A2F';
-  ctx.fillRect(x - 22, y, 44, 28);
-
-  // Ánh đèn dầu ấm trong cửa sổ
-  ctx.fillStyle = '#FFD166';
-  ctx.fillRect(x - 6, y + 8, 12, 10);
-  ctx.restore();
-}
-
-function drawSacredBanyanTree(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  groundY: number,
-  tick: number,
-  energyRatio: number,
-  isBlessed: boolean
-) {
-  ctx.save();
-
-  // 1. Thân Cây Đa cổ thụ xù xì và rễ phụ buông xuống
-  const trunkWidth = 75;
-  const trunkHeight = 170;
-  const treeTopY = groundY - trunkHeight;
-
-  // Hào quang mầm lực quanh gốc cây đa
-  const auraSize = 90 + energyRatio * 40;
-  const auraGrad = ctx.createRadialGradient(x, groundY - 60, 20, x, groundY - 60, auraSize);
-  auraGrad.addColorStop(0, isBlessed ? 'rgba(230, 57, 70, 0.45)' : 'rgba(255, 209, 102, 0.3)');
-  auraGrad.addColorStop(1, 'transparent');
-  ctx.fillStyle = auraGrad;
-  ctx.beginPath();
-  ctx.arc(x, groundY - 60, auraSize, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Thân chính
   ctx.fillStyle = '#2A4030';
   ctx.beginPath();
-  ctx.moveTo(x - trunkWidth / 2, groundY);
-  ctx.quadraticCurveTo(x - trunkWidth * 0.3, groundY - trunkHeight * 0.5, x - trunkWidth * 0.4, treeTopY);
-  ctx.lineTo(x + trunkWidth * 0.4, treeTopY);
-  ctx.quadraticCurveTo(x + trunkWidth * 0.3, groundY - trunkHeight * 0.5, x + trunkWidth / 2, groundY);
+  ctx.moveTo(x - 28, y);
+  ctx.lineTo(x, y - 22);
+  ctx.lineTo(x + 28, y);
   ctx.closePath();
   ctx.fill();
 
-  // Rễ phụ buông từ cành xuống đất (đặc trưng Cây Đa)
-  ctx.strokeStyle = '#3E5C45';
-  ctx.lineWidth = 4;
-  for (let i = -3; i <= 3; i++) {
-    if (i === 0) continue;
-    const rootX = x + i * 22;
-    ctx.beginPath();
-    ctx.moveTo(rootX, treeTopY + 25);
-    ctx.quadraticCurveTo(rootX + Math.sin(i * 3) * 10, groundY - 60, rootX + i * 4, groundY);
-    ctx.stroke();
-  }
+  ctx.fillStyle = '#222E30';
+  ctx.fillRect(x - 20, y, 40, 26);
 
-  // Mạch mầm lực phát sáng chạy dọc thân cây theo tỷ lệ nạp
-  const energySapHeight = trunkHeight * Math.min(1, energyRatio);
-  ctx.strokeStyle = '#FFD166';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([4, 4]);
-  ctx.lineDashOffset = -tick * 0.4;
-  ctx.beginPath();
-  ctx.moveTo(x, groundY);
-  ctx.lineTo(x, groundY - energySapHeight);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // 2. Tán lá Cây Đa rợp bóng
-  const canopyRadius = 145;
-  const leafGrad = ctx.createRadialGradient(x, treeTopY, 40, x, treeTopY, canopyRadius);
-  leafGrad.addColorStop(0, '#52795B');
-  leafGrad.addColorStop(0.6, '#3E5C45');
-  leafGrad.addColorStop(1, '#1B2A2F');
-
-  ctx.fillStyle = leafGrad;
-  ctx.beginPath();
-  ctx.arc(x, treeTopY, canopyRadius, 0, Math.PI * 2);
-  ctx.arc(x - 90, treeTopY + 25, 80, 0, Math.PI * 2);
-  ctx.arc(x + 90, treeTopY + 25, 80, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 3. HOA GẠO ĐỎ RỰC NỞ TRÊN CÀNH (khi bùng nổ hoặc tích lũy mầm lực cao)
-  const flowerCount = isBlessed ? 28 : Math.floor(energyRatio * 18);
-  for (let i = 0; i < flowerCount; i++) {
-    const angle = i * 2.39996; // Golden angle
-    const r = (canopyRadius - 25) * Math.sqrt((i + 1) / 28);
-    const fx = x + Math.cos(angle) * r;
-    const fy = treeTopY + Math.sin(angle) * (r * 0.7);
-
-    drawGaoFlower(ctx, fx, fy, isBlessed ? 1 : 0.85);
-  }
-
-  ctx.restore();
-}
-
-function drawGaoFlower(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-
-  ctx.fillStyle = '#E63946'; // Đỏ hoa gạo Đông Hồ
-  for (let p = 0; p < 5; p++) {
-    ctx.beginPath();
-    ctx.ellipse(0, -6, 3, 7, (p * Math.PI * 2) / 5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Nhị vàng
-  ctx.fillStyle = '#FFD166';
-  ctx.beginPath();
-  ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillStyle = '#CFA85B';
+  ctx.fillRect(x - 5, y + 8, 10, 8);
   ctx.restore();
 }
 
@@ -361,25 +328,53 @@ function drawLittleSpirit(ctx: CanvasRenderingContext2D, s: VillageSpirit, tick:
   ctx.save();
   const y = s.y - s.hopOffset;
 
-  // Bóng đổ
-  ctx.fillStyle = 'rgba(13, 22, 25, 0.4)';
+  // 1. Hard Flat Cutout Shadow under feet (#191B1D - ZERO BLUR!)
+  ctx.fillStyle = '#191B1D';
   ctx.beginPath();
-  ctx.ellipse(s.x, s.y + 4, 14, 4.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(s.x, s.y + 4, 15, 5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Thân sinh linh măng tre
+  // 2. White Mascot / Spirit Sticker Body (Pure Solid White/Cream with 2.8px Ink Contour)
+  ctx.fillStyle = '#FFFFFF';
+  ctx.strokeStyle = '#26292B';
+  ctx.lineWidth = 2.8;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.ellipse(s.x, y - 18, 13, 17, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Little Green/Gold Folk Leaf Headband
   ctx.fillStyle = s.color;
   ctx.beginPath();
-  ctx.ellipse(s.x, y - 18, 12, 16, 0, 0, Math.PI * 2);
+  ctx.moveTo(s.x - 6, y - 34);
+  ctx.quadraticCurveTo(s.x, y - 42, s.x + 6, y - 34);
+  ctx.quadraticCurveTo(s.x, y - 30, s.x - 6, y - 34);
+  ctx.closePath();
   ctx.fill();
+  ctx.stroke();
 
-  // Mắt chớp
-  ctx.fillStyle = '#1B2A2F';
+  // Expressive Ink Eyes & Smile
+  ctx.fillStyle = '#26292B';
   ctx.beginPath();
-  ctx.arc(s.x - 4, y - 20, 1.8, 0, Math.PI * 2);
-  ctx.arc(s.x + 4, y - 20, 1.8, 0, Math.PI * 2);
+  ctx.arc(s.x - 4, y - 20, 2.2, 0, Math.PI * 2);
+  ctx.arc(s.x + 4, y - 20, 2.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Không hiển thị tên người chơi khác (tuân thủ quy tắc riêng tư)
+  ctx.strokeStyle = '#26292B';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(s.x, y - 15, 3.5, 0.1 * Math.PI, 0.9 * Math.PI);
+  ctx.stroke();
+
+  // Cute rosy cheeks
+  ctx.fillStyle = '#D48C7F';
+  ctx.beginPath();
+  ctx.arc(s.x - 7, y - 16, 2, 0, Math.PI * 2);
+  ctx.arc(s.x + 7, y - 16, 2, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.restore();
 }

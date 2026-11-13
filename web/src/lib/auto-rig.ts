@@ -1165,8 +1165,8 @@ export function drawPaperEyeSlider(
   ctx.stroke();
 
   // 3. Nét vẽ biểu cảm mực in Đông Hồ trên thẻ trượt
-  ctx.strokeStyle = '#1B2A2F';
-  ctx.fillStyle = '#1B2A2F';
+  ctx.strokeStyle = '#26292B';
+  ctx.fillStyle = '#26292B';
   ctx.lineWidth = 1.8;
   ctx.lineCap = 'round';
 
@@ -1209,7 +1209,7 @@ export function drawPaperEyeSlider(
   }
 
   // 4. Lẫy giấy kéo thanh trượt mini (Paper pull-tab handle)
-  ctx.fillStyle = '#E3D7BF';
+  ctx.fillStyle = '#EDE5D2';
   ctx.strokeStyle = 'rgba(25, 35, 30, 0.35)';
   ctx.lineWidth = 0.6;
   const tabDir = isLeft ? -1 : 1;
@@ -1289,7 +1289,7 @@ export function drawPaperEmotionWheel(
   ctx.stroke();
 
   // Tai kéo xoay bằng giấy chìa ra ngoài mép đĩa (Dial Finger Tab)
-  ctx.fillStyle = '#FFD166';
+  ctx.fillStyle = '#CFA85B';
   ctx.strokeStyle = 'rgba(40, 30, 20, 0.5)';
   ctx.lineWidth = 0.8;
   ctx.beginPath();
@@ -1298,7 +1298,7 @@ export function drawPaperEmotionWheel(
   ctx.stroke();
 
   // Lỗ bấm trên tai kéo
-  ctx.fillStyle = '#1B2A2F';
+  ctx.fillStyle = '#26292B';
   ctx.beginPath();
   ctx.arc(radius + 1, 0, 0.8, 0, Math.PI * 2);
   ctx.fill();
@@ -1307,8 +1307,8 @@ export function drawPaperEmotionWheel(
 
   // 4. Biểu cảm miệng hiển thị qua cửa sổ giấy
   ctx.save();
-  ctx.strokeStyle = '#C8412F'; // Màu son đỏ thủ công truyền thống
-  ctx.fillStyle = '#C8412F';
+  ctx.strokeStyle = '#A84D3D'; // Màu son đỏ thủ công truyền thống
+  ctx.fillStyle = '#A84D3D';
   ctx.lineWidth = 1.8;
   ctx.lineCap = 'round';
 
@@ -1316,7 +1316,7 @@ export function drawPaperEmotionWheel(
     ctx.beginPath();
     ctx.ellipse(0, 1, 4, 3 + mouthOpen * 2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#FF8FA3';
+    ctx.fillStyle = '#D48C7F';
     ctx.beginPath();
     ctx.ellipse(0, 2.2, 2.5, 1.5, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -1344,15 +1344,15 @@ export function drawPaperEmotionWheel(
   ctx.restore();
 
   // 5. Đinh tán xoay kim loại mini ở tâm bánh xe (Split-Pin Rivet Core)
-  ctx.fillStyle = '#FFE18A';
+  ctx.fillStyle = '#EDE5D2';
   ctx.beginPath();
   ctx.arc(0, 0, 1.8, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#1B2A2F';
+  ctx.strokeStyle = '#26292B';
   ctx.lineWidth = 0.8;
   ctx.stroke();
 
-  ctx.fillStyle = '#1B2A2F';
+  ctx.fillStyle = '#26292B';
   ctx.beginPath();
   ctx.arc(0, 0, 0.6, 0, Math.PI * 2);
   ctx.fill();
@@ -1712,8 +1712,8 @@ export function drawPaperPuppet(
           );
 
           ctx.save();
-          ctx.strokeStyle = '#1B2A2F';
-          ctx.fillStyle   = '#1B2A2F';
+          ctx.strokeStyle = '#26292B';
+          ctx.fillStyle   = '#26292B';
           ctx.lineWidth   = Math.max(1, er * 0.4);
           ctx.lineCap     = 'round';
 
@@ -1748,7 +1748,7 @@ export function drawPaperPuppet(
                 ctx.beginPath();
                 ctx.arc(ex - er * 0.2, ey - er * 0.2, er * 0.2, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = '#1B2A2F';
+                ctx.fillStyle = '#26292B';
                 break;
               case 'normal':
               default:
@@ -1764,7 +1764,7 @@ export function drawPaperPuppet(
                   ctx.beginPath();
                   ctx.arc(ex + (isLeft ? -er * 0.1 : -er * 0.3), ey - er * 0.2, er * 0.18, 0, Math.PI * 2);
                   ctx.fill();
-                  ctx.fillStyle = '#1B2A2F';
+                  ctx.fillStyle = '#26292B';
                 }
                 break;
             }
@@ -1791,8 +1791,8 @@ export function drawPaperPuppet(
           );
 
           ctx.save();
-          ctx.strokeStyle = '#C8412F';
-          ctx.fillStyle   = '#C8412F';
+          ctx.strokeStyle = '#A84D3D';
+          ctx.fillStyle   = '#A84D3D';
           ctx.lineWidth   = Math.max(1, mr * 0.35);
           ctx.lineCap     = 'round';
 
@@ -1801,7 +1801,7 @@ export function drawPaperPuppet(
               ctx.beginPath();
               ctx.ellipse(mx, my + mr * 0.2, mr * 0.75, mr * 0.6 + pose.mouthOpen * mr * 0.5, 0, 0, Math.PI * 2);
               ctx.fill();
-              ctx.fillStyle = '#FF8FA3';
+              ctx.fillStyle = '#D48C7F';
               ctx.beginPath();
               ctx.ellipse(mx, my + mr * 0.5, mr * 0.45, mr * 0.3, 0, 0, Math.PI * 2);
               ctx.fill();
@@ -1831,7 +1831,7 @@ export function drawPaperPuppet(
               ctx.beginPath();
               ctx.arc(mx, my - mr * 0.05, mr * 0.6, 0.1 * Math.PI, 0.9 * Math.PI, false);
               ctx.stroke();
-              ctx.fillStyle = '#FF8FA3';
+              ctx.fillStyle = '#D48C7F';
               ctx.beginPath();
               ctx.ellipse(mx, my + mr * 0.35, mr * 0.3, mr * 0.4, 0, 0, Math.PI * 2);
               ctx.fill();
@@ -1898,7 +1898,7 @@ export function drawInteractiveSkeleton(
   ctx.save();
 
   // 1. Vẽ các đường xương kết nối (Bones)
-  ctx.strokeStyle = '#F4A259';
+  ctx.strokeStyle = '#5C4D43';
   ctx.lineWidth = 2.2;
   ctx.setLineDash([4, 3]);
 
@@ -1935,16 +1935,16 @@ export function drawInteractiveSkeleton(
     const isRight = j.type.endsWith('_r');
     const isFace = ['eye_l', 'eye_r', 'nose', 'mouth'].includes(j.type);
 
-    let pinColor = '#FFD166'; // Trục giữa (Vàng ấm)
-    if (isFace) pinColor = '#EF476F';       // Ngũ quan (Hồng san hô)
-    else if (isLeft) pinColor = '#06D6A0';  // Chi trái (Xanh ngọc)
-    else if (isRight) pinColor = '#118AB2'; // Chi phải (Xanh lam)
+    let pinColor = '#CFA85B'; // Trục giữa (Muted Ochre)
+    if (isFace) pinColor = '#A84D3D';       // Ngũ quan (Brick Red)
+    else if (isLeft) pinColor = '#7E9A85';  // Chi trái (Dusty Sage)
+    else if (isRight) pinColor = '#6B818C'; // Chi phải (Dusty Blue)
 
     // Hào quang vòng ngoài
     ctx.fillStyle = isActive
-      ? 'rgba(255, 209, 102, 0.8)'
+      ? 'rgba(207, 168, 91, 0.8)'
       : isHover
-      ? 'rgba(244, 162, 89, 0.65)'
+      ? 'rgba(92, 77, 67, 0.65)'
       : `${pinColor}44`;
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, isActive ? 13 : isHover ? 11 : isFace ? 6.5 : 8, 0, Math.PI * 2);
@@ -1956,7 +1956,7 @@ export function drawInteractiveSkeleton(
     ctx.arc(pos.x, pos.y, isActive ? 6.5 : isFace ? 3.5 : 4.5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = '#1B2A2F';
+    ctx.strokeStyle = '#26292B';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -1970,15 +1970,15 @@ export function drawInteractiveSkeleton(
       const badgeX = pos.x - badgeW / 2;
       const badgeY = pos.y - 24;
 
-      ctx.fillStyle = 'rgba(15, 25, 28, 0.9)';
-      ctx.strokeStyle = '#FFD166';
+      ctx.fillStyle = 'rgba(20, 28, 30, 0.9)';
+      ctx.strokeStyle = '#CFA85B';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 6);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = '#FFE18A';
+      ctx.fillStyle = '#F4EEDD';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(j.name, pos.x, badgeY + badgeH / 2);
@@ -2023,7 +2023,7 @@ export function drawReferenceMannequin(
   const targetId = activeJointId || hoverJointId;
 
   // 1. Vẽ các đường xương nối trên hình nhân
-  ctx.strokeStyle = '#4A6953';
+  ctx.strokeStyle = '#5A6544';
   ctx.lineWidth = 2;
   ctx.setLineDash([2, 2]);
 
@@ -2034,7 +2034,7 @@ export function drawReferenceMannequin(
       const isBoneActive = targetId === idA || targetId === idB;
       if (isBoneActive) {
         ctx.save();
-        ctx.strokeStyle = '#FFD166';
+        ctx.strokeStyle = '#CFA85B';
         ctx.lineWidth = 2.5;
         ctx.setLineDash([]);
         ctx.beginPath();
@@ -2062,14 +2062,14 @@ export function drawReferenceMannequin(
     const isRight = j.type.endsWith('_r');
     const isFace = ['eye_l', 'eye_r', 'nose', 'mouth'].includes(j.type);
 
-    let color = '#FFD166';
-    if (isFace) color = '#EF476F';
-    else if (isLeft) color = '#06D6A0';
-    else if (isRight) color = '#118AB2';
+    let color = '#CFA85B';
+    if (isFace) color = '#A84D3D';
+    else if (isLeft) color = '#7E9A85';
+    else if (isRight) color = '#6B818C';
 
     if (isTarget) {
       // Hào quang rực rỡ khi được chọn
-      ctx.fillStyle = 'rgba(255, 209, 102, 0.7)';
+      ctx.fillStyle = 'rgba(207, 168, 91, 0.7)';
       ctx.beginPath();
       ctx.arc(jx, jy, 8, 0, Math.PI * 2);
       ctx.fill();
@@ -2085,13 +2085,13 @@ export function drawReferenceMannequin(
       ctx.fill();
     }
 
-    ctx.strokeStyle = '#1B2A2F';
+    ctx.strokeStyle = '#26292B';
     ctx.lineWidth = 1;
     ctx.stroke();
   });
 
   // Nhãn hướng dẫn góc
-  ctx.fillStyle = 'rgba(246, 235, 212, 0.6)';
+  ctx.fillStyle = 'rgba(244, 238, 221, 0.6)';
   ctx.font = '8px system-ui';
   ctx.textAlign = 'center';
   ctx.fillText('HÌNH NHÂN ĐỐI CHIẾU', w / 2, h - 6);
@@ -2468,8 +2468,8 @@ export function drawSkeletonWireframe(
     rotationY
   );
 
-  // 2. Vẽ các khúc xương nối giữa các khớp (Bones với hiệu ứng nét đứt vàng ánh kim)
-  ctx.strokeStyle = '#F4A259';
+  // 2. Vẽ các khúc xương nối giữa các khớp (Bones với hiệu ứng nét đứt vàng đất)
+  ctx.strokeStyle = '#5C4D43';
   ctx.lineWidth = 2.4;
   ctx.setLineDash([4, 3]);
 
@@ -2494,10 +2494,10 @@ export function drawSkeletonWireframe(
     const isRight = j.type.endsWith('_r');
     const isFace = ['eye_l', 'eye_r', 'nose', 'mouth'].includes(j.type);
 
-    let pinColor = '#FFD166'; // Trục giữa (Vàng ấm)
-    if (isFace) pinColor = '#EF476F';       // Ngũ quan (Hồng san hô)
-    else if (isLeft) pinColor = '#06D6A0';  // Chi trái (Xanh ngọc)
-    else if (isRight) pinColor = '#118AB2'; // Chi phải (Xanh lam)
+    let pinColor = '#CFA85B'; // Trục giữa (Muted Ochre)
+    if (isFace) pinColor = '#A84D3D';       // Ngũ quan (Brick Red)
+    else if (isLeft) pinColor = '#7E9A85';  // Chi trái (Dusty Sage)
+    else if (isRight) pinColor = '#6B818C'; // Chi phải (Dusty Blue)
 
     // Hào quang tỏa sáng của chốt ghim
     ctx.fillStyle = `${pinColor}55`;
@@ -2511,10 +2511,102 @@ export function drawSkeletonWireframe(
     ctx.arc(pos.x, pos.y, isFace ? 2.5 : 3.8, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = '#1B2A2F';
+    ctx.strokeStyle = '#26292B';
     ctx.lineWidth = 1.2;
     ctx.stroke();
   });
 
   ctx.restore();
+}
+
+const croppedImageCache = new Map<string, string>();
+
+export function autoCropCharacterDataUrl(
+  sourceDataUrl: string,
+  padding = 6
+): Promise<string> {
+  if (typeof window === 'undefined' || !sourceDataUrl) {
+    return Promise.resolve(sourceDataUrl);
+  }
+  if (croppedImageCache.has(sourceDataUrl)) {
+    return Promise.resolve(croppedImageCache.get(sourceDataUrl)!);
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const w = img.naturalWidth || img.width;
+          const h = img.naturalHeight || img.height;
+          if (w === 0 || h === 0) {
+            resolve(sourceDataUrl);
+            return;
+          }
+
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = w;
+          tempCanvas.height = h;
+          const ctx = tempCanvas.getContext('2d');
+          if (!ctx) {
+            resolve(sourceDataUrl);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0);
+          const { data } = ctx.getImageData(0, 0, w, h);
+
+          let minX = w,
+            minY = h,
+            maxX = 0,
+            maxY = 0;
+          let found = false;
+
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              const a = data[(y * w + x) * 4 + 3];
+              if (a > 25) {
+                found = true;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+              }
+            }
+          }
+
+          if (!found || maxX <= minX || maxY <= minY) {
+            resolve(sourceDataUrl);
+            return;
+          }
+
+          const cropX = Math.max(0, minX - padding);
+          const cropY = Math.max(0, minY - padding);
+          const cropW = Math.min(w - cropX, maxX - minX + 1 + padding * 2);
+          const cropH = Math.min(h - cropY, maxY - minY + 1 + padding * 2);
+
+          const outCanvas = document.createElement('canvas');
+          outCanvas.width = cropW;
+          outCanvas.height = cropH;
+          const outCtx = outCanvas.getContext('2d');
+          if (!outCtx) {
+            resolve(sourceDataUrl);
+            return;
+          }
+
+          outCtx.drawImage(tempCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+          const croppedUrl = outCanvas.toDataURL('image/png');
+          croppedImageCache.set(sourceDataUrl, croppedUrl);
+          resolve(croppedUrl);
+        } catch {
+          resolve(sourceDataUrl);
+        }
+      };
+      img.onerror = () => resolve(sourceDataUrl);
+      img.src = sourceDataUrl;
+    } catch {
+      resolve(sourceDataUrl);
+    }
+  });
 }

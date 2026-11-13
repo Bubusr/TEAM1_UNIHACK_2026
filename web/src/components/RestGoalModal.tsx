@@ -107,7 +107,7 @@ export default function RestGoalModal({ goal, onClose, onFinished }: RestGoalMod
         particleCount: 110,
         spread: 85,
         origin: { y: 0.5 },
-        colors: ['#E63946', '#FFD166', '#F4A259', '#6B8F71'],
+        colors: ['#A84D3D', '#CFA85B', '#5C4D43', '#7E9A85'],
       });
     } catch (err: any) {
       setIsMinting(false);

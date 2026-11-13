@@ -53,7 +53,7 @@ export default function S09JourneySheet({
         <div className="mt-5 space-y-4">
           <div>
             <label className="block text-[11px] font-semibold text-dongho-paper/70 mb-1.5">
-              Tên hành trình cùng Măng Non:
+              Journey with Mang Non:
             </label>
             {isEditing ? (
               <form onSubmit={handleSaveTitle} className="flex gap-2">
@@ -87,18 +87,18 @@ export default function S09JourneySheet({
           {/* Dates & Companion details */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-3 rounded-2xl bg-forest-darker/70 border border-bamboo-soft/20">
-              <span className="text-[10px] text-dongho-paper/60 block">Bắt đầu cùng nhau</span>
+              <span className="text-[10px] text-dongho-paper/60 block">Walked together since</span>
               <span className="font-semibold text-dongho-paper mt-0.5 block">
-                {new Date(mangnon.createdAt).toLocaleDateString('vi-VN')}
+                {new Date(mangnon.createdAt).toLocaleDateString('en-US')}
               </span>
             </div>
             <div className="p-3 rounded-2xl bg-forest-darker/70 border border-bamboo-soft/20">
-              <span className="text-[10px] text-dongho-paper/60 block">Tính cách</span>
+              <span className="text-[10px] text-dongho-paper/60 block">Personality</span>
               <span className="font-semibold text-warm-amber mt-0.5 block">
-                {mangnon.personality === 'tomo' ? '🌿 Trầm tư'
-                  : mangnon.personality === 'diemtinh' ? '🍃 Điềm tĩnh'
-                  : mangnon.personality === 'haohung' ? '🌻 Háo hức'
-                  : '🌸 Nhút nhát'}
+                {mangnon.personality === 'tomo' ? '🌿 Curious'
+                  : mangnon.personality === 'diemtinh' ? '🍃 Tranquil'
+                  : mangnon.personality === 'haohung' ? '🌻 Playful'
+                  : '🌸 Shy'}
               </span>
             </div>
           </div>

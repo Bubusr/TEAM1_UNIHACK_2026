@@ -2,15 +2,34 @@ import { SkeletonRig, FaceExpression } from './auto-rig';
 import { ImageDB } from './image-db';
 
 export type Personality = 'tomo' | 'diemtinh' | 'haohung' | 'nhutnhat';
-export type Stage = 1 | 2 | 3 | 4;
+export type Stage = 1 | 2 | 3 | 4 | 5;
+export type GrowthLevel = 1 | 2 | 3 | 4;
+
+export interface MangnonStats {
+  intelligence: number; // 🧠 Hiểu biết
+  perseverance: number; // 🔥 Kiên trì
+  fitness: number;      // 🌱 Sức sống
+  creativity: number;   // 🎨 Tự do / Sáng tạo
+}
 
 export type SerializableFaceExpression = Omit<FaceExpression, 'customFaceCanvas'>;
+
+export interface UserWalletProfile {
+  username: string;
+  walletAddress: string;
+  walletType: 'embedded' | 'injected';
+  encryptedPrivateKey?: string;
+  hasClaimedStarter: boolean;
+  lastCheckInSpot?: string;
+}
 
 export interface Mangnon {
   id: string;
   name: string;
   personality: Personality;
-  stage: Stage;
+  stage: Stage; // Vòng đời ấp nở: 1 (Mầm) -> 2 (Đang lớn 2p) -> 3 (Đốt sáng) -> 4 (Mở ống ngủ) -> 5 (Bước ra rừng tre)
+  growthLevel?: GrowthLevel; // Cấp độ nhận thức theo số phiên học/chat: 1 (Mới nở) -> 2 (5 phiên) -> 3 (15 phiên) -> 4 (35 phiên)
+  incubationStartedAt?: number; // Timestamp (ms) lúc bấm mở khóa mầm măng (-20 💧)
   imageId?: string;
   imageUri: string;
   imageSource: 'draw' | 'photo' | 'upload' | 'sample';
@@ -29,6 +48,10 @@ export interface Mangnon {
   rigData?: SkeletonRig;
   faceExpr?: SerializableFaceExpression;
   nftTxHash?: string;
+  stats?: MangnonStats;
+  linkedMangnonId?: string; // ID của Goal/Sinh linh khác được nối rễ cộng hưởng
+  synergyTxHash?: string; // On-chain hash ghi nhận liên kết Rễ Tre (Composable SBT Graph)
+  goalTxHash?: string; // On-chain hash đăng ký mục tiêu trên GoalRegistry
 }
 
 export interface MemoryItem {
@@ -73,12 +96,15 @@ const STORAGE_KEY = 'mangnon_app_state_v2';
 
 export interface AppStateData {
   currentScreen: string;
+  userProfile?: UserWalletProfile;
   activeMangnon: Mangnon | null;
   restingMangnons: Mangnon[];
   memories: MemoryItem[];
   messages: ChatMessage[];
   villageLeaves: number;
   villageThreshold: number;
+  dewdrops: number;
+  incubationStartedAt?: number;
   lastBloomedAt?: string;
   lastSeenBloomAt?: string;
   settings: AppSettings;
@@ -94,6 +120,7 @@ const DEFAULT_STATE: AppStateData = {
   messages: [],
   villageLeaves: 310, // Mức nền 62% cộng đồng giả lập
   villageThreshold: 500,
+  dewdrops: 100, // Quỹ giọt sương ban đầu
   settings: {
     demoMode: false, // Ẩn mặc định theo Prompt §6 S13; bật ở Cài đặt hoặc Ctrl+Shift+D
     timeOverride: 'real', // Đổi theo giờ thật ngoài đời (Prompt §7.7)
@@ -144,6 +171,7 @@ export const AppStore = {
       return {
         ...DEFAULT_STATE,
         ...parsed,
+        dewdrops: typeof parsed.dewdrops === 'number' ? parsed.dewdrops : 100,
         settings: {
           ...DEFAULT_STATE.settings,
           ...(parsed.settings || {}),

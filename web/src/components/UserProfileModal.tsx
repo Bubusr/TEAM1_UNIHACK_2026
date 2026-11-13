@@ -1,76 +1,68 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, ShieldCheck, Wallet, Copy, Check, LogOut, X, Sparkles, GraduationCap, Zap, Shield } from 'lucide-react';
+import {
+  User,
+  ShieldCheck,
+  Wallet,
+  Copy,
+  Check,
+  LogOut,
+  X,
+  Sparkles,
+  ExternalLink,
+  GraduationCap,
+  RefreshCw,
+} from 'lucide-react';
 import { SoundEngine } from '@/lib/sound-engine';
+import {
+  getFujiProvider,
+  connectInjectedWallet,
+  getOrCreateEmbeddedWallet,
+} from '@/lib/avalanche-contracts';
+import { ethers } from 'ethers';
 
 export interface UserAccount {
   email: string;
   name: string;
   avatarUrl?: string;
   embeddedAddress: string;
-  provider: 'google';
+  walletType?: 'embedded' | 'injected';
+  provider: 'google' | 'guest' | 'injected' | 'embedded';
   connectedAt: string;
   isStudent?: boolean;
   studentEmail?: string;
   studentBoost?: number;
   shieldsCount?: number;
+  dewdrops: number; // 💧 Giọt Sương credits (mặc định 100)
 }
 
 const STORAGE_KEY_USER = 'mangnon_user_account';
-
-/** Helper to generate a deterministic Avalanche Fuji address from an email */
-function generateEmbeddedAddress(email: string): string {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) {
-    hash = (hash << 5) - hash + email.charCodeAt(i);
-    hash |= 0;
-  }
-  const hexPart = Math.abs(hash).toString(16).padStart(8, '0');
-  return `0x7E34${hexPart}8BF5B3c3a2D267df6a22f87E3F9ebb0AA`.slice(0, 42);
-}
 
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUserChange?: (user: UserAccount | null) => void;
+  villageLeaves?: number;
+  dewdrops?: number;
 }
 
 export default function UserProfileModal({
   isOpen,
   onClose,
   onUserChange,
+  villageLeaves = 310,
+  dewdrops = 100,
 }: UserProfileModalProps) {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
-  const [customEmail, setCustomEmail] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [avaxBalance, setAvaxBalance] = useState<string>('0.000');
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [isSwitchingWallet, setIsSwitchingWallet] = useState(false);
   const [studentEduEmail, setStudentEduEmail] = useState('');
   const [isVerifyingStudent, setIsVerifyingStudent] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleVerifyStudent = (sampleEdu?: string) => {
-    if (!currentUser) return;
-    setIsVerifyingStudent(true);
-    SoundEngine.playBambooKnock();
-
-    setTimeout(() => {
-      const email =
-        sampleEdu || studentEduEmail.trim() || `${currentUser.email.split('@')[0]}@hcmut.edu.vn`;
-      const updatedUser: UserAccount = {
-        ...currentUser,
-        isStudent: true,
-        studentEmail: email,
-        studentBoost: 1.5,
-        shieldsCount: 3,
-      };
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updatedUser));
-      setCurrentUser(updatedUser);
-      if (onUserChange) onUserChange(updatedUser);
-      setIsVerifyingStudent(false);
-      SoundEngine.playBlessingChime();
-    }, 500);
-  };
-
+  // Load user from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const stored = localStorage.getItem(STORAGE_KEY_USER);
@@ -83,286 +75,316 @@ export default function UserProfileModal({
     }
   }, [onUserChange]);
 
+  // Fetch real Fuji AVAX balance
+  useEffect(() => {
+    if (!currentUser?.embeddedAddress) return;
+    let isCancelled = false;
+
+    const fetchBalance = async () => {
+      setIsLoadingBalance(true);
+      try {
+        const provider = getFujiProvider();
+        const bal = await provider.getBalance(currentUser.embeddedAddress);
+        if (!isCancelled) {
+          const formatted = parseFloat(ethers.formatEther(bal)).toFixed(4);
+          setAvaxBalance(formatted);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch Fuji balance:', e);
+        if (!isCancelled) setAvaxBalance('0.000');
+      } finally {
+        if (!isCancelled) setIsLoadingBalance(false);
+      }
+    };
+
+    fetchBalance();
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentUser?.embeddedAddress]);
+
   if (!isOpen) return null;
-
-  const handleGoogleLogin = (emailChoice?: string) => {
-    setIsLoggingIn(true);
-    SoundEngine.playBambooKnock();
-
-    setTimeout(() => {
-      const email = emailChoice || customEmail.trim() || 'ban.dong.hanh@gmail.com';
-      const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-      const embeddedAddress = generateEmbeddedAddress(email);
-
-      const newUser: UserAccount = {
-        email,
-        name,
-        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`,
-        embeddedAddress,
-        provider: 'google',
-        connectedAt: new Date().toISOString(),
-      };
-
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(newUser));
-      setCurrentUser(newUser);
-      if (onUserChange) onUserChange(newUser);
-      setIsLoggingIn(false);
-      SoundEngine.playBlessingChime();
-    }, 600);
-  };
-
-  const handleLogout = () => {
-    SoundEngine.playBambooKnock();
-    localStorage.removeItem(STORAGE_KEY_USER);
-    setCurrentUser(null);
-    if (onUserChange) onUserChange(null);
-  };
 
   const handleCopy = (text: string) => {
     if (typeof navigator !== 'undefined') {
       navigator.clipboard.writeText(text);
       setCopied(true);
+      SoundEngine.playBambooKnock();
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
+  const handleLogout = () => {
+    SoundEngine.playBambooKnock();
+    localStorage.removeItem(STORAGE_KEY_USER);
+    localStorage.removeItem('mangnon_wallet_type');
+    setCurrentUser(null);
+    if (onUserChange) onUserChange(null);
+    onClose();
+  };
+
+  const handleSwitchToInjected = async () => {
+    setIsSwitchingWallet(true);
+    SoundEngine.playBambooKnock();
+    try {
+      const session = await connectInjectedWallet();
+      localStorage.setItem('mangnon_wallet_type', 'injected');
+      const updatedUser: UserAccount = {
+        ...(currentUser || {
+          email: 'user@avax.fuji',
+          name: 'Avalanche Scholar',
+          connectedAt: new Date().toISOString(),
+          dewdrops: 100,
+          provider: 'injected',
+        }),
+        embeddedAddress: session.address,
+        walletType: 'injected',
+        provider: 'injected',
+      };
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      if (onUserChange) onUserChange(updatedUser);
+      SoundEngine.playBlessingChime();
+    } catch (err: any) {
+      alert(err.message || 'Không thể kết nối Ví Web3.');
+    } finally {
+      setIsSwitchingWallet(false);
+    }
+  };
+
+  const handleSwitchToEmbedded = () => {
+    setIsSwitchingWallet(true);
+    SoundEngine.playBambooKnock();
+    try {
+      const { wallet } = getOrCreateEmbeddedWallet();
+      localStorage.setItem('mangnon_wallet_type', 'embedded');
+      const updatedUser: UserAccount = {
+        ...(currentUser || {
+          email: 'hoc.gia@mangnon.vn',
+          name: 'Học Giả Măng Non',
+          connectedAt: new Date().toISOString(),
+          dewdrops: 100,
+          provider: 'embedded',
+        }),
+        embeddedAddress: wallet.address,
+        walletType: 'embedded',
+        provider: 'embedded',
+      };
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      if (onUserChange) onUserChange(updatedUser);
+      SoundEngine.playBlessingChime();
+    } catch (err: any) {
+      alert('Lỗi tạo ví ẩn.');
+    } finally {
+      setIsSwitchingWallet(false);
+    }
+  };
+
+  const handleVerifyStudent = () => {
+    if (!currentUser) return;
+    setIsVerifyingStudent(true);
+    SoundEngine.playBambooKnock();
+
+    setTimeout(() => {
+      const email = studentEduEmail.trim() || 'hoc.vien@daihoc.edu.vn';
+      const updatedUser: UserAccount = {
+        ...currentUser,
+        isStudent: true,
+        studentEmail: email,
+        studentBoost: 1.5,
+      };
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      if (onUserChange) onUserChange(updatedUser);
+      setIsVerifyingStudent(false);
+      SoundEngine.playBlessingChime();
+    }, 450);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-abyss/85 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-sm bg-forest-deep border-2 border-warm-amber/60 rounded-3xl p-5 text-dongho-paper shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#191B1D]/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-sm bg-[#F4EEDD] border-[3px] border-[#26292B] shadow-[5px_5px_0px_#26292B] rounded-2xl p-5 text-[#26292B]">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-bamboo-mid/30">
+        <div className="flex items-center justify-between pb-3 border-b-2 border-[#26292B]">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🌿</span>
-            <h3 className="text-sm font-bold text-warm-glow">
-              Hồ Sơ Người Bạn Rừng
-            </h3>
+            <span className="text-xl">🎋</span>
+            <div>
+              <h3 className="text-sm font-black text-[#26292B] uppercase tracking-wide">
+                Túi Gấm Học Giả
+              </h3>
+              <p className="text-[10px] text-[#5C4D43]">Hồ sơ định danh &amp; Ví Avalanche Fuji</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-dongho-paper/60 hover:text-dongho-paper hover:bg-forest-darker transition"
+            className="p-1.5 rounded-lg border-2 border-[#26292B] bg-[#CFA85B] hover:bg-[#b8954f] text-[#26292B] shadow-[2px_2px_0px_#26292B] transition active:translate-x-[1px] active:translate-y-[1px]"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="mt-4 space-y-4">
-          {currentUser ? (
-            /* Logged in state */
-            <div className="space-y-4">
-              <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-forest-darker/90 border border-warm-amber/40 shadow">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={currentUser.avatarUrl}
-                  alt={currentUser.name}
-                  className="w-12 h-12 rounded-full border-2 border-warm-amber bg-forest-deep p-1 shadow"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-sm text-warm-glow truncate">
-                      {currentUser.name}
-                    </span>
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-bamboo-soft/20 text-bamboo-soft font-semibold">
-                      Google
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-dongho-paper/70 truncate flex items-center gap-1 mt-0.5">
-                    <Mail className="w-3 h-3 text-warm-amber/80" />
-                    <span>{currentUser.email}</span>
-                  </p>
+        {currentUser ? (
+          <div className="mt-3.5 space-y-3">
+            {/* Identity badge */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#EDE5D2] border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={currentUser.avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=mangnon'}
+                alt={currentUser.name}
+                className="w-11 h-11 rounded-full border-2 border-[#26292B] bg-[#CFA85B] p-0.5"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-xs text-[#26292B] truncate">
+                    {currentUser.name}
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded font-black border border-[#26292B] bg-[#CFA85B] text-[#26292B]">
+                    {currentUser.walletType === 'injected' ? '🦊 Core/MetaMask' : '🌱 Ví Ẩn AES'}
+                  </span>
+                </div>
+                <div className="text-[10px] text-[#5C4D43] truncate mt-0.5">
+                  {currentUser.email}
                 </div>
               </div>
+            </div>
 
-              {/* Embedded Avalanche Wallet */}
-              <div className="p-3.5 rounded-2xl bg-forest-darker/70 border border-bamboo-mid/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-warm-amber flex items-center gap-1">
-                    <Wallet className="w-3 h-3 text-warm-amber" />
-                    <span>Ví Nhúng Avalanche (Fuji)</span>
-                  </span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-warm-amber/20 text-warm-amber font-mono font-bold">
-                    0.50 AVAX
-                  </span>
-                </div>
+            {/* Wallet on Avalanche Fuji */}
+            <div className="p-3 rounded-xl bg-[#EDE5D2] border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B] space-y-2">
+              <div className="flex items-center justify-between text-[10px] font-black">
+                <span className="flex items-center gap-1 text-[#26292B]">
+                  <Wallet className="w-3.5 h-3.5 text-[#A84D3D]" />
+                  <span>VÍ AVALANCHE FUJI (C-CHAIN)</span>
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-[#F4EEDD] border border-[#26292B] text-[#A84D3D] font-mono">
+                  {isLoadingBalance ? '...' : `${avaxBalance} AVAX`}
+                </span>
+              </div>
 
-                <div className="flex items-center justify-between p-2 rounded-xl bg-forest-deep border border-bamboo-mid/20 text-[10px] font-mono">
-                  <span className="truncate mr-2 text-dongho-paper/80">
-                    {currentUser.embeddedAddress}
-                  </span>
+              {/* Address bar */}
+              <div className="flex items-center justify-between p-2 rounded-lg bg-[#F4EEDD] border border-[#26292B] text-[10px] font-mono">
+                <span className="truncate mr-2 text-[#26292B] select-all">
+                  {currentUser.embeddedAddress}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => handleCopy(currentUser.embeddedAddress)}
-                    className="p-1 rounded text-warm-amber hover:text-warm-glow shrink-0"
+                    className="p-1 rounded bg-[#EDE5D2] border border-[#26292B] text-[#26292B] hover:bg-[#CFA85B]"
                     title="Sao chép địa chỉ ví"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-bamboo-soft" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <Check className="w-3 h-3 text-[#5A6544]" /> : <Copy className="w-3 h-3" />}
                   </button>
+                  <a
+                    href={`https://testnet.snowtrace.io/address/${currentUser.embeddedAddress}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-1 rounded bg-[#EDE5D2] border border-[#26292B] text-[#26292B] hover:bg-[#CFA85B]"
+                    title="Tra cứu trên Snowtrace Testnet"
+                  >
+                    <ExternalLink className="w-3 h-3 text-[#26292B]" />
+                  </a>
                 </div>
-                <p className="text-[9px] text-dongho-paper/50 italic">
-                  ☁️ Dữ liệu và Mầm Lực tự động lưu trữ và đồng bộ cùng Gmail của bạn.
-                </p>
               </div>
-
-              {/* Student Verification (.edu.vn) & Privileges */}
-              <div className="p-3.5 rounded-2xl bg-forest-darker/90 border border-warm-amber/40 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-warm-glow flex items-center gap-1.5">
-                    <GraduationCap className="w-3.5 h-3.5 text-warm-amber" />
-                    <span>Xác Thực Sinh Viên (.edu.vn)</span>
-                  </span>
-                  {currentUser.isStudent ? (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-bamboo-soft/20 text-bamboo-soft font-bold flex items-center gap-1">
-                      <Check className="w-2.5 h-2.5" />
-                      <span>Đã xác thực</span>
-                    </span>
-                  ) : (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-warm-amber/20 text-warm-amber font-medium">
-                      Chưa kích hoạt
-                    </span>
-                  )}
-                </div>
-
-                {currentUser.isStudent ? (
-                  <div className="space-y-2 pt-1">
-                    <div className="p-2 rounded-xl bg-forest-deep border border-bamboo-mid/30 flex items-center justify-between text-[11px]">
-                      <span className="text-dongho-paper/80 font-mono text-[10px] truncate">
-                        🎓 {currentUser.studentEmail}
-                      </span>
-                      <span className="text-[9px] text-warm-amber font-bold shrink-0">Verified</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                      <div className="p-2 rounded-xl bg-forest-deep border border-warm-amber/30 text-warm-glow flex items-center gap-1.5">
-                        <Zap className="w-3 h-3 text-warm-amber" />
-                        <div>
-                          <span className="font-bold block">Student Boost</span>
-                          <span className="text-[9px] text-dongho-paper/60">x1.5 Mầm Lực</span>
-                        </div>
-                      </div>
-                      <div className="p-2 rounded-xl bg-forest-deep border border-bamboo-soft/30 text-bamboo-soft flex items-center gap-1.5">
-                        <Shield className="w-3 h-3 text-bamboo-soft" />
-                        <div>
-                          <span className="font-bold block">Khiên Mùa Thi</span>
-                          <span className="text-[9px] text-dongho-paper/60">3 Khiên/Tháng</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2 pt-1 text-[11px]">
-                    <p className="text-[10px] text-dongho-paper/70 leading-relaxed">
-                      Nhận hệ số nhân x1.5 Mầm Lực và ưu đãi giảm 20% tại các quán cà phê Trạm Tre.
-                    </p>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="email"
-                        value={studentEduEmail}
-                        onChange={(e) => setStudentEduEmail(e.target.value)}
-                        placeholder="masv@hcmut.edu.vn"
-                        className="flex-1 px-2.5 py-1.5 rounded-xl bg-forest-deep border border-bamboo-mid/40 text-[11px] text-dongho-paper placeholder:text-dongho-paper/40 focus:outline-none focus:border-warm-amber"
-                      />
-                      <button
-                        onClick={() => handleVerifyStudent(studentEduEmail)}
-                        disabled={isVerifyingStudent}
-                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-[10px] transition shrink-0"
-                      >
-                        {isVerifyingStudent ? '...' : 'Xác thực'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Sign out */}
-              <button
-                onClick={handleLogout}
-                className="w-full py-2.5 rounded-xl bg-forest-darker hover:bg-forest-mist border border-dongho-red/40 text-dongho-paper/80 hover:text-dongho-red text-xs font-semibold flex items-center justify-center gap-2 transition"
-              >
-                <LogOut className="w-3.5 h-3.5 text-dongho-red" />
-                <span>Đăng xuất tài khoản Gmail</span>
-              </button>
             </div>
-          ) : (
-            /* Log in state */
-            <div className="space-y-4">
-              <div className="text-center py-2">
-                <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-warm-amber to-warm-glow flex items-center justify-center text-2xl shadow-lg mb-2">
-                  🎋
+
+            {/* In-game Tokens Grid */}
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="p-2 rounded-xl bg-[#EDE5D2] border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B]">
+                <div className="text-[10px] font-bold text-[#5C4D43] flex items-center justify-center gap-1">
+                  <span>💧</span>
+                  <span>Giọt Sương</span>
                 </div>
-                <h4 className="text-xs font-bold text-warm-glow">
-                  Đăng nhập để giữ trọn vẹn kỷ niệm
-                </h4>
-                <p className="text-[11px] text-dongho-paper/70 mt-1 leading-relaxed">
-                  Liên kết tài khoản Google giúp đồng bộ Măng Non của bạn trên mọi thiết bị và tự động mở ví Avalanche.
-                </p>
+                <div className="text-base font-black text-[#26292B] mt-0.5">
+                  {currentUser.dewdrops ?? dewdrops} 💧
+                </div>
               </div>
 
-              {/* Primary Google Login Button */}
-              <button
-                onClick={() => handleGoogleLogin('nguyen.an@gmail.com')}
-                disabled={isLoggingIn}
-                className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs shadow-xl flex items-center justify-center gap-2.5 transition active:scale-95"
-              >
-                {/* Google Multi-color G Icon */}
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                  />
-                </svg>
-                <span>{isLoggingIn ? 'Đang kết nối Google...' : 'Tiếp tục với Google'}</span>
-              </button>
-
-              {/* Or enter personal Gmail */}
-              <div className="pt-2">
-                <div className="relative flex items-center justify-center my-2">
-                  <div className="border-t border-bamboo-mid/20 w-full" />
-                  <span className="bg-forest-deep px-2 text-[10px] text-dongho-paper/50 uppercase tracking-wider">
-                    hoặc nhập Gmail của bạn
-                  </span>
+              <div className="p-2 rounded-xl bg-[#EDE5D2] border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B]">
+                <div className="text-[10px] font-bold text-[#5C4D43] flex items-center justify-center gap-1">
+                  <span>🍃</span>
+                  <span>Mầm Lực</span>
                 </div>
+                <div className="text-base font-black text-[#5A6544] mt-0.5">
+                  {villageLeaves} 🍃
+                </div>
+              </div>
+            </div>
 
-                <div className="flex gap-2 mt-2">
+            {/* Switch Wallet Mode Button */}
+            <div className="pt-1">
+              {currentUser.walletType === 'embedded' ? (
+                <button
+                  onClick={handleSwitchToInjected}
+                  disabled={isSwitchingWallet}
+                  className="w-full py-2 px-3 rounded-xl bg-[#A84D3D] hover:bg-[#934233] text-white font-black text-[11px] border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B] flex items-center justify-center gap-1.5 transition"
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  <span>Chuyển sang Kết Nối Ví Core / MetaMask</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSwitchToEmbedded}
+                  disabled={isSwitchingWallet}
+                  className="w-full py-2 px-3 rounded-xl bg-[#5A6544] hover:bg-[#4C563A] text-[#F4EEDD] font-black text-[11px] border-2 border-[#26292B] shadow-[2px_2px_0px_#26292B] flex items-center justify-center gap-1.5 transition"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Chuyển sang Dùng Ví Ẩn Nội Bộ (AES-CTR)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Student Verification */}
+            {!currentUser.isStudent ? (
+              <div className="p-2.5 rounded-xl bg-[#DCE5DC] border border-[#5A6544]/40 text-[10px] space-y-1.5">
+                <div className="flex items-center gap-1 font-black text-[#5A6544]">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>Xác nhận Học Giả Sinh Viên (+50% Mầm Lực)</span>
+                </div>
+                <div className="flex gap-1.5">
                   <input
                     type="email"
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    placeholder="tenban@gmail.com"
-                    className="flex-1 px-3 py-2 rounded-xl bg-forest-darker border border-bamboo-mid/40 text-xs text-dongho-paper placeholder:text-dongho-paper/40 focus:outline-none focus:border-warm-amber"
+                    value={studentEduEmail}
+                    onChange={(e) => setStudentEduEmail(e.target.value)}
+                    placeholder="email@truong.edu.vn"
+                    className="flex-1 px-2 py-1 text-[10px] rounded border border-[#26292B] bg-[#F4EEDD] outline-none"
                   />
                   <button
-                    onClick={() => handleGoogleLogin(customEmail)}
-                    disabled={!customEmail.trim() || isLoggingIn}
-                    className="px-3.5 py-2 rounded-xl bg-warm-amber hover:bg-warm-glow text-forest-abyss font-bold text-xs transition disabled:opacity-40"
+                    onClick={handleVerifyStudent}
+                    disabled={isVerifyingStudent}
+                    className="px-2 py-1 rounded bg-[#5A6544] text-[#F4EEDD] font-bold text-[9px] border border-[#26292B]"
                   >
-                    Vào
+                    Xác nhận
                   </button>
                 </div>
               </div>
-
-              <div className="p-2.5 rounded-xl bg-forest-darker/50 border border-bamboo-soft/20 text-[10px] text-dongho-paper/60 space-y-1">
-                <p className="flex items-center gap-1 text-warm-amber font-semibold">
-                  <ShieldCheck className="w-3 h-3 text-warm-amber" />
-                  <span>An toàn &amp; Không áp lực</span>
-                </p>
-                <p>Măng Non không bao giờ gửi email làm phiền hay nhắc nhở streak.</p>
+            ) : (
+              <div className="p-2 rounded-lg bg-[#DCE5DC] border border-[#5A6544] text-[10px] text-[#5A6544] font-bold flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Đã kích hoạt Đặc quyền Học Giả Sinh Viên (1.5x)</span>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="w-full py-2 rounded-xl bg-transparent hover:bg-[#A84D3D]/10 text-[#A84D3D] font-black text-xs border border-[#A84D3D]/40 flex items-center justify-center gap-1.5 transition"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Đăng xuất / Ngắt kết nối</span>
+            </button>
+          </div>
+        ) : (
+          <div className="py-6 text-center space-y-3">
+            <p className="text-xs text-[#5C4D43]">Chưa kết nối Túi Gấm Học Giả.</p>
+            <button
+              onClick={onClose}
+              className="btn-woodblock px-4 py-2 text-xs font-black"
+            >
+              Đóng
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

@@ -96,7 +96,7 @@ export default function S07StoryChat({
   };
 
   return (
-    <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-hidden select-none">
+    <div className="relative w-full h-full bg-[#222E30] text-dongho-paper flex flex-col justify-between overflow-hidden select-none">
       {/* Top Bar Header */}
       <div className="pt-10 pb-3 px-4 flex items-center justify-between border-b border-bamboo-mid/25 bg-forest-darker/90 backdrop-blur-md z-20">
         <div className="flex items-center gap-3">
@@ -127,14 +127,14 @@ export default function S07StoryChat({
           </div>
         </div>
 
-        {/* Button to S08: Điều Măng Non nhớ */}
+        {/* Button to S08: Memories */}
         <button
           onClick={onOpenMemories}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest-deep/80 border border-warm-amber/35 hover:border-warm-glow text-[11px] font-semibold text-warm-glow shadow transition"
-          title="Điều Măng Non nhớ"
+          title="What Mang Non Remembers"
         >
           <BookOpen className="w-3.5 h-3.5" />
-          <span>Ký ức</span>
+          <span>Memories</span>
         </button>
       </div>
 
@@ -151,7 +151,7 @@ export default function S07StoryChat({
         {messages.length === 0 && (
           <div className="text-center py-10 px-6">
             <p className="text-dongho-paper/60 text-xs italic">
-              {mangnon.name} đang ngồi trong rừng tre, lặng lẽ chờ nghe cậu kể...
+              {mangnon.name} is resting quietly in the bamboo grove, waiting to listen to your story...
             </p>
           </div>
         )}
@@ -166,7 +166,7 @@ export default function S07StoryChat({
               <div
                 className={`max-w-[85%] p-3.5 rounded-2xl shadow leading-relaxed ${
                   isUser
-                    ? 'bg-[#F6EBD4] text-[#1B2A2F] font-medium rounded-tr-sm shadow-md'
+                    ? 'bg-[#F4EEDD] text-[#26292B] font-medium rounded-tr-sm shadow-md'
                     : 'bg-forest-deep text-dongho-paper border border-bamboo-soft/40 rounded-tl-sm relative shadow-md'
                 }`}
               >
@@ -185,7 +185,7 @@ export default function S07StoryChat({
           <div className="flex justify-start items-center gap-2 py-1">
             <div className="px-3.5 py-2 rounded-2xl bg-forest-deep/80 border border-bamboo-soft/30 text-warm-glow text-xs flex items-center gap-2">
               <span className="inline-block animate-bounce text-sm">🎋</span>
-              <span className="text-[11px] text-dongho-paper/70 italic">Măng Non đang ngẫm nghĩ...</span>
+              <span className="text-[11px] text-dongho-paper/70 italic">Mang Non is pondering gently...</span>
             </div>
           </div>
         )}

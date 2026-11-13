@@ -12,7 +12,7 @@ interface S04NamingPersonalityProps {
 }
 
 export default function S04NamingPersonality({ imageUri, onNext }: S04NamingPersonalityProps) {
-  const [name, setName] = useState('Măng');
+  const [name, setName] = useState('Mang');
   const [personality, setPersonality] = useState<Personality>('haohung');
   const [creatureReaction, setCreatureReaction] = useState<'idle' | 'tilt' | 'bounce' | 'shy'>('idle');
 
@@ -45,7 +45,7 @@ export default function S04NamingPersonality({ imageUri, onNext }: S04NamingPers
   ];
 
   return (
-    <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-y-auto select-none p-5">
+    <div className="relative w-full h-full bg-[#222E30] text-dongho-paper flex flex-col justify-between overflow-y-auto select-none p-5">
       {/* Top Half: Breathing Creature with Reactive Animation */}
       <div className="flex flex-col items-center pt-8">
         <div className="relative w-36 h-36 rounded-full bg-forest-darker/90 border border-warm-amber/40 shadow-xl flex items-center justify-center overflow-hidden">
@@ -53,7 +53,7 @@ export default function S04NamingPersonality({ imageUri, onNext }: S04NamingPers
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUri}
-            alt="Măng Non"
+            alt="Mang Non"
             className={`w-28 h-28 object-contain transition-all duration-500 ease-soft ${
               creatureReaction === 'bounce'
                 ? '-translate-y-4 scale-110'
@@ -122,11 +122,11 @@ export default function S04NamingPersonality({ imageUri, onNext }: S04NamingPers
       {/* Button Next */}
       <div className="pb-4">
         <button
-          onClick={() => onNext(name.trim() || 'Măng', personality)}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-warm-amber via-warm-glow to-warm-amber text-forest-abyss font-bold text-sm shadow-xl hover:brightness-105 transition flex items-center justify-center gap-2"
+          onClick={() => onNext(name.trim() || 'Mang', personality)}
+          className="w-full py-3.5 btn-woodblock text-sm flex items-center justify-center gap-2"
         >
           <span>{content.s04_namingPersonality.btnMeet}</span>
-          <ArrowRight className="w-4 h-4 text-forest-abyss" />
+          <ArrowRight className="w-4 h-4 text-[#26292B]" />
         </button>
       </div>
     </div>

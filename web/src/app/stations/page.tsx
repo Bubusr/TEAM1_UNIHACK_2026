@@ -21,7 +21,7 @@ export default function StationsPage() {
       particleCount: 60,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#FFD166', '#E8837A', '#6B8F71'],
+      colors: ['#CFA85B', '#D48C7F', '#7E9A85'],
     });
   };
 
@@ -32,7 +32,7 @@ export default function StationsPage() {
       particleCount: 80,
       spread: 90,
       origin: { y: 0.5 },
-      colors: ['#FFD166', '#F4A259', '#34A853'],
+      colors: ['#CFA85B', '#5C4D43', '#5A6544'],
     });
   };
 
@@ -63,7 +63,7 @@ export default function StationsPage() {
     }
 
     if (!navigator.geolocation) {
-      setGpsError('Trình duyệt không hỗ trợ định vị GPS.');
+      setGpsError('Browser does not support GPS location.');
       setCheckingInId(null);
       return;
     }
@@ -77,7 +77,7 @@ export default function StationsPage() {
           station.lng
         );
 
-        // Cho phép sai số trong bán kính 300m (tùy điều kiện GPS trong nhà)
+        // Allow up to 300m radius for indoor student cafe GPS drift
         const MAX_RADIUS_METERS = 300;
 
         if (dist <= MAX_RADIUS_METERS) {
@@ -89,12 +89,12 @@ export default function StationsPage() {
               particleCount: 80,
               spread: 70,
               origin: { y: 0.6 },
-              colors: ['#FFD166', '#F4A259', '#6B8F71', '#E63946'],
+              colors: ['#CFA85B', '#5C4D43', '#7E9A85', '#A84D3D'],
             });
           }
         } else {
           setGpsError(
-            `Cậu đang cách trạm khoảng ${Math.round(dist)}m. Cần đến gần trạm hơn (≤${MAX_RADIUS_METERS}m) để check-in nhé.`
+            `You are approximately ${Math.round(dist)}m away. Move closer (within ${MAX_RADIUS_METERS}m) to check in.`
           );
         }
         setCheckingInId(null);
@@ -103,16 +103,16 @@ export default function StationsPage() {
         setCheckingInId(null);
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setGpsError('Cậu cần cho phép truy cập vị trí để check-in. Kiểm tra cài đặt trình duyệt nhé.');
+            setGpsError('Location permission required for station check-in. Please check your browser settings.');
             break;
           case error.POSITION_UNAVAILABLE:
-            setGpsError('Không xác định được vị trí. Thử lại ở nơi có tín hiệu GPS tốt hơn nhé.');
+            setGpsError('GPS signal unavailable. Please try again with clearer signal.');
             break;
           case error.TIMEOUT:
-            setGpsError('Hết thời gian chờ GPS. Cậu thử lại nhé.');
+            setGpsError('GPS request timed out. Please try again.');
             break;
           default:
-            setGpsError('Lỗi GPS không xác định. Cậu thử lại nhé.');
+            setGpsError('GPS verification error. Please try again.');
         }
       },
       {
@@ -130,13 +130,13 @@ export default function StationsPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <span className="text-2xl">🏮</span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-warm-glow">Trạm Tre (Đối Tác Đời Thực)</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-warm-glow">Study Stations (Partner Hubs)</h1>
             <span className="text-xs px-2.5 py-0.5 rounded-md bg-forest-deep border border-bamboo-soft text-warm-amber font-semibold">
-              Không gian học tập &amp; Ưu đãi
+              Study Sanctuaries &amp; Perks
             </span>
           </div>
           <p className="text-xs sm:text-sm text-dongho-paper/70 mt-1 italic">
-            Quán cà phê và trung tâm giáo dục đối tác. Check-in GPS nhẹ nhàng để nhận ưu đãi thực tế và kích hoạt phản ứng từ Măng Non.
+            Partner student cafes and campus study hubs. Gentle GPS check-in unlocks study perks and companion reflections.
           </p>
         </div>
       </div>
@@ -145,7 +145,7 @@ export default function StationsPage() {
       <div className="mt-6 p-4 rounded-2xl bg-forest-deep border border-bamboo-mid/40 flex items-start gap-3 text-xs text-dongho-paper/80">
         <ShieldCheck className="w-5 h-5 text-warm-amber flex-shrink-0 mt-0.5" />
         <div>
-          <strong className="text-warm-glow">Tôn trọng quyền riêng tư (Privacy-first):</strong> Cơ chế check-in chỉ xác thực toạ độ tương đối tại trạm đối tác để chống gian lận voucher — tuyệt đối không theo dõi hành trình di chuyển hay lưu GPS cá nhân lên blockchain.
+          <strong className="text-warm-glow">Privacy-first verification:</strong> Check-in verifies relative coordinates at partner hubs to prevent double-spending vouchers — zero tracking of personal routes or GPS history on-chain.
         </div>
       </div>
 
@@ -159,7 +159,7 @@ export default function StationsPage() {
               onClick={() => setGpsError(null)}
               className="ml-2 text-warm-amber underline hover:text-warm-glow"
             >
-              Đóng
+              Close
             </button>
           </div>
         </div>
@@ -180,11 +180,11 @@ export default function StationsPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-forest-darker border border-bamboo-soft text-warm-glow flex items-center gap-1">
                   <Coffee className="w-3.5 h-3.5 text-warm-amber" />
-                  Trạm Tre
+                  Study Station
                 </span>
                 {st.claimed && (
                   <span className="text-xs font-bold text-warm-glow flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-warm-glow" /> Đã nhận ưu đãi
+                    <CheckCircle2 className="w-3.5 h-3.5 text-warm-glow" /> Voucher Claimed
                   </span>
                 )}
               </div>
@@ -205,7 +205,7 @@ export default function StationsPage() {
                   <Ticket className="w-5 h-5 text-warm-amber" />
                 </div>
                 <div>
-                  <div className="text-[11px] text-warm-amber font-semibold">Ưu đãi đối tác:</div>
+                  <div className="text-[11px] text-warm-amber font-semibold">Partner Study Perk:</div>
                   <div className="text-xs font-bold text-dongho-paper mt-0.5">{st.voucherReward}</div>
                 </div>
               </div>
@@ -215,7 +215,7 @@ export default function StationsPage() {
             <div className="mt-6 pt-4 border-t border-bamboo-mid/20">
               {st.claimed ? (
                 <div className="flex items-center justify-between text-xs font-mono bg-forest-darker px-3.5 py-2 rounded-xl border border-bamboo-mid/30">
-                  <span className="text-dongho-paper/60">Mã voucher:</span>
+                  <span className="text-dongho-paper/60">Voucher code:</span>
                   <span className="text-warm-glow font-bold">{st.voucherCode}</span>
                 </div>
               ) : (
@@ -225,7 +225,7 @@ export default function StationsPage() {
                   className="w-full py-2.5 rounded-xl bg-warm-amber hover:bg-warm-glow text-forest-abyss font-bold text-xs shadow-lg transition flex items-center justify-center gap-1.5 disabled:opacity-40"
                 >
                   <MapPin className="w-4 h-4 text-forest-abyss" />
-                  {checkingInId === st.id ? 'Đang xác thực GPS...' : 'Check-in GPS tại quán'}
+                  {checkingInId === st.id ? 'Verifying GPS...' : 'GPS Check-in at Venue'}
                 </button>
               )}
             </div>
@@ -239,14 +239,14 @@ export default function StationsPage() {
           <div className="flex items-center gap-2.5">
             <span className="text-2xl">🎁</span>
             <h2 className="text-xl sm:text-2xl font-extrabold text-warm-glow">
-              Gian Đổi Quà Học Tập &amp; Quỹ Khuyến Học Sinh Viên
+              Study Perks &amp; Community Scholarship Pool
             </h2>
             <span className="text-xs px-2.5 py-0.5 rounded-md bg-forest-deep border border-warm-amber/40 text-warm-amber font-semibold">
               B2B Sponsor Pool
             </span>
           </div>
           <p className="text-xs sm:text-sm text-dongho-paper/70 mt-1 italic">
-            Quy đổi thành quả giờ học tập trung thành ưu đãi thực tế và đóng góp trực tiếp vào quỹ học bổng cộng đồng trên Avalanche.
+            Channel your quiet focus hours into partner perks and community scholarships recorded on Avalanche.
           </p>
         </div>
 
@@ -257,28 +257,28 @@ export default function StationsPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-forest-darker text-warm-amber flex items-center gap-1">
                   <Coffee className="w-3.5 h-3.5 text-warm-amber" />
-                  Voucher Cà Phê
+                  Cafe Study Perk
                 </span>
-                <span className="text-xs font-mono font-bold text-warm-glow">10 Mầm Lực</span>
+                <span className="text-xs font-mono font-bold text-warm-glow">10 Mam Luc</span>
               </div>
-              <h3 className="font-bold text-base text-dongho-paper">Giảm 20% Highlands &amp; The Coffee House</h3>
+              <h3 className="font-bold text-base text-dongho-paper">20% Off Highlands &amp; The Coffee House</h3>
               <p className="text-xs text-dongho-paper/70 mt-2 leading-relaxed">
-                Áp dụng tại mọi chi nhánh quanh các trường đại học khi chạy deadline hoặc học nhóm.
+                Valid at all partner cafes near university campuses during study sessions and deadline marathons.
               </p>
             </div>
 
             <div className="mt-5 pt-4 border-t border-bamboo-mid/20">
               {claimedVouchers['fb-voucher'] ? (
                 <div className="p-2.5 rounded-xl bg-forest-darker border border-bamboo-soft/40 text-center font-mono text-xs text-warm-glow font-bold">
-                  Mã: MN-STUDY-FNB20
+                  Code: MN-STUDY-FNB20
                 </div>
               ) : (
                 <button
-                  onClick={() => handleClaimReward('fb-voucher', 'Voucher Cà Phê')}
+                  onClick={() => handleClaimReward('fb-voucher', 'Cafe Voucher')}
                   className="w-full py-2.5 rounded-xl bg-warm-amber hover:bg-warm-glow text-forest-abyss font-bold text-xs shadow transition flex items-center justify-center gap-1.5"
                 >
                   <Gift className="w-4 h-4" />
-                  <span>Đổi Voucher Ưu Đãi</span>
+                  <span>Claim Study Voucher</span>
                 </button>
               )}
             </div>
@@ -290,28 +290,28 @@ export default function StationsPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-forest-darker text-bamboo-soft flex items-center gap-1">
                   <BookOpen className="w-3.5 h-3.5 text-bamboo-soft" />
-                  Sách &amp; Giáo Trình
+                  Books &amp; Courses
                 </span>
-                <span className="text-xs font-mono font-bold text-warm-glow">25 Mầm Lực</span>
+                <span className="text-xs font-mono font-bold text-warm-glow">25 Mam Luc</span>
               </div>
-              <h3 className="font-bold text-base text-dongho-paper">Bộ Sách &amp; Học Liệu Fahasa / Coursera</h3>
+              <h3 className="font-bold text-base text-dongho-paper">Curated Book &amp; Course Pack (Fahasa / Coursera)</h3>
               <p className="text-xs text-dongho-paper/70 mt-2 leading-relaxed">
-                Tài trợ từ đối tác giáo dục dành cho những bạn có ít nhất 10 giờ học tập trung được xác thực.
+                Sponsored by education partners for dedicated learners with verified quiet study hours.
               </p>
             </div>
 
             <div className="mt-5 pt-4 border-t border-bamboo-mid/20">
               {claimedVouchers['book-voucher'] ? (
                 <div className="p-2.5 rounded-xl bg-forest-darker border border-bamboo-soft/40 text-center font-mono text-xs text-bamboo-soft font-bold">
-                  Mã: MN-FAHASA-EDU50
+                  Code: MN-FAHASA-EDU50
                 </div>
               ) : (
                 <button
-                  onClick={() => handleClaimReward('book-voucher', 'Bộ Sách Fahasa')}
+                  onClick={() => handleClaimReward('book-voucher', 'Fahasa Book Pack')}
                   className="w-full py-2.5 rounded-xl bg-forest-darker hover:bg-forest-mist border border-warm-amber/50 text-warm-glow font-bold text-xs shadow transition flex items-center justify-center gap-1.5"
                 >
                   <Award className="w-4 h-4 text-warm-amber" />
-                  <span>Nhận Học Liệu Tài Trợ</span>
+                  <span>Claim Learning Pack</span>
                 </button>
               )}
             </div>
@@ -323,13 +323,13 @@ export default function StationsPage() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-bamboo-soft/20 text-bamboo-soft flex items-center gap-1">
                   <HeartHandshake className="w-3.5 h-3.5 text-bamboo-soft" />
-                  Quỹ Khuyến Học
+                  Scholarship Pool
                 </span>
-                <span className="text-xs font-mono font-bold text-warm-glow">{donatedAmount} Mầm Lực</span>
+                <span className="text-xs font-mono font-bold text-warm-glow">{donatedAmount} Mam Luc</span>
               </div>
-              <h3 className="font-bold text-base text-dongho-paper">Góp Quỹ Khuyến Học Làng Phù Đổng</h3>
+              <h3 className="font-bold text-base text-dongho-paper">Phù Đổng Student Scholarship Pool</h3>
               <p className="text-xs text-dongho-paper/70 mt-2 leading-relaxed">
-                Mỗi 10 Mầm Lực đóng góp được doanh nghiệp bảo trợ quy đổi thành 50.000đ tài trợ học bổng vượt khó cho sinh viên nghèo.
+                Every 10 Mam Luc donated is matched by corporate CSR sponsors to fund direct student aid for underprivileged scholars.
               </p>
             </div>
 
@@ -339,7 +339,7 @@ export default function StationsPage() {
                 className="w-full py-2.5 rounded-xl bg-gradient-to-r from-bamboo-deep to-forest-darker hover:brightness-110 border border-bamboo-soft/50 text-warm-glow font-bold text-xs shadow transition flex items-center justify-center gap-1.5"
               >
                 <Sparkles className="w-4 h-4 text-warm-amber" />
-                <span>Quyên Góp +10 Mầm Lực</span>
+                <span>Donate +10 Mam Luc</span>
               </button>
             </div>
           </div>

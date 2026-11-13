@@ -38,7 +38,7 @@ export default function S13Settings({
   onBack,
 }: S13SettingsProps) {
   const [isRenaming, setIsRenaming] = useState(false);
-  const [nameInput, setNameInput] = useState(mangnon?.name || 'Măng');
+  const [nameInput, setNameInput] = useState(mangnon?.name || 'Mang');
   const [showLore, setShowLore] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
@@ -93,13 +93,13 @@ export default function S13Settings({
   };
 
   return (
-    <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-hidden select-none">
+    <div className="relative w-full h-full bg-[#222E30] text-dongho-paper flex flex-col justify-between overflow-hidden select-none">
       {/* Top Header */}
       <div className="pt-10 pb-3 px-4 flex items-center justify-between border-b border-bamboo-mid/25 bg-forest-darker/90 backdrop-blur-md z-20">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            aria-label="Quay lại"
+            aria-label="Back"
             className="p-1.5 rounded-xl text-dongho-paper/70 hover:text-warm-glow hover:bg-forest-deep transition"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -130,10 +130,10 @@ export default function S13Settings({
               )}
               <div>
                 <span className="text-xs font-bold text-warm-glow block">
-                  {userAccount ? userAccount.name : 'Tài khoản Google'}
+                  {userAccount ? userAccount.name : 'Google Account'}
                 </span>
                 <span className="text-[10px] text-dongho-paper/60 block">
-                  {userAccount ? userAccount.email : 'Chưa liên kết Gmail'}
+                  {userAccount ? userAccount.email : 'Gmail not linked'}
                 </span>
               </div>
             </div>
@@ -142,7 +142,7 @@ export default function S13Settings({
               onClick={() => setShowUserModal(true)}
               className="px-3 py-1.5 rounded-xl bg-forest-deep hover:bg-forest-mist border border-warm-amber/40 text-warm-glow text-xs font-semibold transition"
             >
-              {userAccount ? 'Quản lý' : 'Đăng nhập'}
+              {userAccount ? 'Manage' : 'Sign in'}
             </button>
           </div>
         </div>
@@ -214,7 +214,7 @@ export default function S13Settings({
               <Bell className="w-4 h-4 text-warm-amber" />
               <div>
                 <span>{content.s13_settings.reminder}</span>
-                <p className="text-[10px] text-dongho-paper/50">Mặc định tắt, tối đa 1 lần/ngày</p>
+                <p className="text-[10px] text-dongho-paper/50">Off by default, max 1 prompt/day</p>
               </div>
             </div>
             <button
@@ -257,7 +257,7 @@ export default function S13Settings({
               <PlaySquare className="w-4 h-4 text-warm-amber" />
               <div>
                 <span>{content.s13_settings.demoModeToggle}</span>
-                <p className="text-[10px] text-dongho-paper/50">Hiện nút tròn S14 ở góc</p>
+                <p className="text-[10px] text-dongho-paper/50">Show floating S14 control button</p>
               </div>
             </div>
             <button
@@ -286,7 +286,7 @@ export default function S13Settings({
               {content.s13_settings.loreIntro}
             </span>
           </div>
-          <span className="text-[11px] text-warm-amber">Đọc</span>
+          <span className="text-[11px] text-warm-amber">Read</span>
         </button>
 
         {/* Clear All Data Button */}
@@ -307,13 +307,13 @@ export default function S13Settings({
           <div className="w-full max-w-xs bg-forest-deep border-2 border-warm-amber/60 rounded-3xl p-6 text-dongho-paper shadow-2xl space-y-4">
             <h3 className="text-sm font-bold text-warm-glow flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-warm-amber" />
-              Thế Giới Măng Non
+              The World of Mang Non
             </h3>
             <p className="text-xs text-dongho-paper/85 leading-relaxed">
               {content.common.loreQuote}
             </p>
             <p className="text-[11px] text-dongho-paper/70 leading-relaxed">
-              Măng Non là nơi cậu trú ngụ tâm hồn, không chấm điểm, không thúc ép. Mọi điều cậu kể đều nuôi lớn sinh linh và cùng thắp sáng Cây Đa Làng Phù Đổng.
+              Mang Non is a quiet sanctuary for your mind — no scoring, no pressure. Every story you share nurtures your companion and illuminates the Phu Dong Village Tree.
             </p>
             <button
               onClick={() => setShowLore(false)}
@@ -331,7 +331,7 @@ export default function S13Settings({
           <div className="w-full max-w-xs bg-forest-deep border-2 border-dongho-red/70 rounded-3xl p-6 text-dongho-paper shadow-2xl space-y-4">
             <div className="flex items-center gap-2 text-dongho-pink">
               <ShieldAlert className="w-5 h-5" />
-              <h4 className="text-xs font-bold">Xác nhận bước 1</h4>
+              <h4 className="text-xs font-bold">Confirmation Step 1</h4>
             </div>
             <p className="text-xs text-dongho-paper/90 leading-relaxed">
               {content.s13_settings.clearDataConfirm1}
@@ -359,16 +359,16 @@ export default function S13Settings({
           <div className="w-full max-w-xs bg-forest-deep border-2 border-dongho-red rounded-3xl p-6 text-dongho-paper shadow-2xl space-y-4">
             <div className="flex items-center gap-2 text-dongho-pink">
               <ShieldAlert className="w-5 h-5" />
-              <h4 className="text-xs font-bold">Xác nhận bước 2</h4>
+              <h4 className="text-xs font-bold">Confirmation Step 2</h4>
             </div>
             <p className="text-xs text-dongho-paper/90 leading-relaxed">
-              {content.s13_settings.clearDataConfirm2} <strong className="text-warm-glow">{mangnon?.name || 'Măng'}</strong>
+              {content.s13_settings.clearDataConfirm2} <strong className="text-warm-glow">{mangnon?.name || 'Mang'}</strong>
             </p>
             <input
               type="text"
               value={confirmNameInput}
               onChange={(e) => setConfirmNameInput(e.target.value)}
-              placeholder="Gõ tên để xác nhận"
+              placeholder="Type companion name to confirm"
               className="w-full py-2 px-3 rounded-xl bg-forest-darker border border-dongho-red text-xs text-dongho-paper outline-none"
             />
             <div className="flex gap-2.5 pt-2">
@@ -382,11 +382,11 @@ export default function S13Settings({
                 {content.common.cancel}
               </button>
               <button
-                disabled={confirmNameInput.trim().toLowerCase() !== (mangnon?.name || 'măng').toLowerCase()}
+                disabled={confirmNameInput.trim().toLowerCase() !== (mangnon?.name || 'mang').toLowerCase()}
                 onClick={handleExecuteReset}
                 className="flex-1 py-2.5 rounded-xl bg-dongho-red disabled:opacity-40 hover:bg-dongho-red/90 text-white font-bold text-xs shadow"
               >
-                Xoá hết
+                Reset All
               </button>
             </div>
           </div>

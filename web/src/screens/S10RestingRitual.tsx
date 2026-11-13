@@ -30,9 +30,9 @@ export default function S10RestingRitual({
     .map((m) => m.text);
 
   const fallbackMemories = [
-    `Cậu kể: Về hành trình ${mangnon.goalTitle}`,
-    'Cậu kể: Một buổi chiều gió mát trong rừng tre',
-    'Cậu kể: Cảm giác nhẹ nhõm sau khi chia sẻ',
+    `You shared: About the journey of ${mangnon.goalTitle}`,
+    'You shared: A cool breeze on a quiet afternoon among bamboo',
+    'You shared: A sense of peace after unburdening your heart',
   ];
 
   const ritualMemories = topMemories.length > 0 ? topMemories : fallbackMemories;
@@ -41,13 +41,13 @@ export default function S10RestingRitual({
   const getLastWords = () => {
     switch (mangnon.personality) {
       case 'tomo':
-        return 'Đi cùng cậu, mình đã biết thế giới bên ngoài bao la và đẹp đẽ đến nhường nào. Giờ mình chợp mắt một giấc thật ngon bên dòng suối trong vắt nhé...';
+        return 'Walking beside you, I learned how vast and beautiful the world truly is. Now, I shall take a sweet, gentle rest by the clear stream...';
       case 'diemtinh':
-        return 'Cảm ơn cậu vì đã luôn kiên nhẫn. Mọi điều cậu kể đều đọng lại như những giọt sương mai. Giờ mình chìm vào giấc ngủ êm đềm nhé...';
+        return 'Thank you for your steady patience. Everything you shared lingers gently like morning dew. Now I drift into peaceful sleep...';
       case 'haohung':
-        return 'Khoảng thời gian bên cậu vui ơi là vui!! Dù có ngủ dưới lòng suối, mình vẫn sẽ luôn nhớ nụ cười của cậu!';
+        return 'Our time together was so wonderful!! Even sleeping by the river stones, I will always remember your bright smile!';
       case 'nhutnhat':
-        return '...Cảm ơn cậu vì đã chọn mình. Ở cạnh cậu, mình thấy ấm áp lắm. Giờ mình hoá thành phiến đá nhỏ bên suối, mãi dõi theo cậu...';
+        return '...Thank you for choosing me. Sitting near you brought so much warmth. Now I become a smooth stone beside the stream, watching over you softly...';
     }
   };
 
@@ -56,7 +56,7 @@ export default function S10RestingRitual({
   const handleMintOnChain = async () => {
     const eth = (window as any).ethereum;
     if (!eth) {
-      alert('Chưa tìm thấy ví Core hoặc MetaMask. Bạn vẫn có thể tiếp tục và lưu vào Suối Ký Ức bình thường.');
+      alert('No Core or MetaMask wallet detected. You can still proceed and rest peacefully into the Stream of Memories.');
       return;
     }
     setMintStatus('minting');
@@ -111,15 +111,15 @@ export default function S10RestingRitual({
   };
 
   return (
-    <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-hidden select-none p-6">
+    <div className="relative w-full h-full bg-[#222E30] text-dongho-paper flex flex-col justify-between overflow-hidden select-none p-6">
       {/* Background ambient lighting */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0F191C] via-[#1B2A2F] to-[#0A1113] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#141C1E] via-[#222E30] to-[#141C1E] pointer-events-none" />
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-warm-amber/15 blur-3xl pointer-events-none animate-pulse" />
 
       {/* Top indicator */}
       <div className="pt-8 text-center z-10">
         <span className="text-[10px] uppercase font-bold tracking-widest text-warm-amber/80">
-          Nghi Thức An Nghỉ · Nhịp {phase}/5
+          Resting Ritual · Phase {phase}/5
         </span>
       </div>
 
@@ -181,10 +181,10 @@ export default function S10RestingRitual({
               {[...Array(60)].map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-2 h-2 rounded-full bg-[#FFFDF0]"
+                  className="absolute w-2 h-2 rounded-full bg-[#F4EEDD]"
                   style={{
                     transform: `translate(${(Math.random() - 0.5) * 220}px, ${(Math.random() - 0.5) * 220}px) scale(${Math.random() * 1.5 + 0.5})`,
-                    boxShadow: '0 0 10px #FFD166, 0 0 20px #F4A259',
+                    boxShadow: '0 0 10px #CFA85B, 0 0 20px #5C4D43',
                     opacity: Math.random() * 0.9 + 0.1,
                     transition: 'all 3s cubic-bezier(.22, 1, .36, 1)',
                   }}
@@ -192,7 +192,7 @@ export default function S10RestingRitual({
               ))}
 
               {/* Emerging Smooth River Stone */}
-              <div className="w-28 h-20 rounded-[45%] bg-[#3E5C45]/80 border-2 border-warm-amber/60 shadow-[0_0_30px_#FFD166] flex items-center justify-center animate-pulse">
+              <div className="w-28 h-20 rounded-[45%] bg-[#5A6544]/80 border-2 border-warm-amber/60 shadow-[0_0_30px_#CFA85B] flex items-center justify-center animate-pulse">
                 <span className="text-2xl opacity-60">✨</span>
               </div>
             </div>
@@ -214,15 +214,15 @@ export default function S10RestingRitual({
                 {content.s10_restingRitual.step5Contribution}
               </p>
               <p className="text-[11px] text-dongho-paper/70 mt-1">
-                Một chiếc lá vàng đã thắp sáng trên tán Cây Đa Phù Đổng.
+                A glowing leaf has been kindled on the canopy of the Sacred Banyan Tree.
               </p>
             </div>
 
-            {/* Khắc dấu lên Avalanche Fuji */}
+            {/* Imprint onto Avalanche Fuji */}
             <div className="p-3 rounded-2xl bg-forest-deep/90 border border-bamboo-mid/40 text-left">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-warm-amber">
-                  ⛓️ Khắc Dấu On-Chain
+                  ⛓️ Imprint On-Chain
                 </span>
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-warm-amber/20 text-warm-amber">
                   Fuji Testnet
@@ -235,13 +235,13 @@ export default function S10RestingRitual({
                   className="w-full py-2 px-3 rounded-xl bg-forest-darker hover:bg-forest-mist border border-warm-amber/50 text-[11px] font-bold text-warm-glow flex items-center justify-center gap-1.5 transition active:scale-95"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-warm-amber" />
-                  <span>Khắc dấu lên Avalanche Fuji (Tùy chọn)</span>
+                  <span>Imprint onto Avalanche Fuji (Optional)</span>
                 </button>
               )}
 
               {mintStatus === 'minting' && (
                 <div className="py-2 text-center text-[11px] text-warm-amber animate-pulse font-medium">
-                  ⏳ Đang gửi giao dịch lên Avalanche Fuji...
+                  ⏳ Submitting transaction to Avalanche Fuji...
                 </div>
               )}
 
@@ -249,7 +249,7 @@ export default function S10RestingRitual({
                 <div className="p-2 rounded-xl bg-forest-darker border border-bamboo-soft/40 text-[10px] space-y-1">
                   <div className="text-bamboo-soft font-bold flex items-center gap-1">
                     <span>✨</span>
-                    <span>Đã khắc dấu Journey NFT thành công!</span>
+                    <span>Journey NFT imprinted permanently!</span>
                   </div>
                   <a
                     href={`https://testnet.snowtrace.io/tx/${mintTxHash}`}
@@ -257,14 +257,14 @@ export default function S10RestingRitual({
                     rel="noreferrer"
                     className="text-warm-amber underline truncate block hover:brightness-110 font-mono text-[9px]"
                   >
-                    Xem trên Snowtrace: {mintTxHash.slice(0, 10)}...{mintTxHash.slice(-6)}
+                    View on Snowtrace: {mintTxHash.slice(0, 10)}...{mintTxHash.slice(-6)}
                   </a>
                 </div>
               )}
 
               {mintStatus === 'error' && (
                 <div className="text-[10px] text-dongho-red text-center py-1 font-medium">
-                  Chưa thể gửi lệnh (ví từ chối hoặc lỗi mạng). Bạn vẫn có thể tiếp tục bình thường.
+                  Transaction skipped. You can continue resting peacefully into the stream.
                 </div>
               )}
             </div>
@@ -286,7 +286,7 @@ export default function S10RestingRitual({
               onClick={handleNextPhase}
               className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-lg hover:brightness-105 transition"
             >
-              Lắng nghe bạn ấy
+              Listen to companion
             </button>
           </div>
         )}
@@ -296,7 +296,7 @@ export default function S10RestingRitual({
             onClick={handleNextPhase}
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow-lg hover:brightness-105 transition flex items-center justify-center gap-2"
           >
-            <span>Tiếp tục</span>
+            <span>Continue</span>
             <ArrowRight className="w-4 h-4 text-forest-abyss" />
           </button>
         )}

@@ -93,7 +93,7 @@ export default function FocusSessionModal({
       particleCount: 50,
       spread: 60,
       origin: { y: 0.7 },
-      colors: ['#FFD166', '#6B8F71', '#F4A259'],
+      colors: ['#CFA85B', '#7E9A85', '#5C4D43'],
     });
     setStep(3);
   };
@@ -114,16 +114,16 @@ export default function FocusSessionModal({
     SoundEngine.playBambooKnock();
 
     setTimeout(() => {
-      const note = studyNote.trim() || 'Học bài và hoàn thành trang vở mới';
-      let reply = 'Cậu giỏi quá! Nhìn bài vở của cậu là mình biết cậu đã tập trung rất nhiều.';
+      const note = studyNote.trim() || 'Studied quietly and completed fresh notes';
+      let reply = 'You did wonderfully! Seeing your notes tells me how deeply you focused today.';
       if (mangnon?.personality === 'tomo') {
-        reply = `Oa! Cậu vừa học xong phần này à? Những dòng này trông kỳ diệu quá, cảm ơn cậu đã chia sẻ cùng mình!`;
+        reply = `Oh wow! You just finished this? These lines look so curious and magical, thank you for showing me!`;
       } else if (mangnon?.personality === 'haohung') {
-        reply = `Tuyệt vời luôn cậu ơi!! Một phiên học cực kỳ năng suất, Măng Non tự hào về cậu lắm!`;
+        reply = `Brilliant effort, my friend!! That was such a fruitful focus session, I am beaming with joy for you!`;
       } else if (mangnon?.personality === 'diemtinh') {
-        reply = `Những giờ phút tĩnh lặng này thật đáng quý. Từng con chữ của cậu đều đã góp phần nuôi lớn khu rừng.`;
+        reply = `These quiet hours are truly precious. Every stroke of your pen breathes new life into the grove.`;
       } else if (mangnon?.personality === 'nhutnhat') {
-        reply = `...Cậu vất vả rồi. Thấy cậu học chăm chỉ, mình cũng có thêm dũng khí...`;
+        reply = `...You worked so diligently today. Seeing your quiet patience gives me courage too...`;
       }
 
       setAiFeedback(reply);
@@ -150,14 +150,14 @@ export default function FocusSessionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-abyss/85 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-sm bg-forest-deep border-2 border-warm-amber/60 rounded-3xl p-6 text-dongho-paper shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-abyss/85 animate-fade-in">
+      <div className="relative w-full max-w-sm bamboo-card p-6 text-[#26292B]">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-bamboo-mid/30">
+        <div className="flex items-center justify-between pb-3 border-b-2 border-[#26292B]">
           <div className="flex items-center gap-2">
             <span className="text-xl">⏳</span>
-            <h3 className="text-sm font-bold text-warm-glow">
-              Giờ Tự Học Tĩnh Lặng
+            <h3 className="text-sm font-bold text-[#26292B]">
+              Quiet Focus Sanctuary
             </h3>
           </div>
           <button
@@ -176,19 +176,19 @@ export default function FocusSessionModal({
                 📖
               </div>
               <h4 className="text-xs font-bold text-warm-glow">
-                Cùng Măng Non ngồi học một lúc nhé?
+                Shall we study quietly together?
               </h4>
               <p className="text-[11px] text-dongho-paper/70 mt-1 leading-relaxed">
-                Không chuông báo làm phiền, không phạt khi tra cứu tài liệu. Măng Non sẽ ngồi tĩnh lặng bên bạn.
+                No noisy alarms, no penalties for checking references. Măng Non will sit quietly by your side.
               </p>
             </div>
 
             {/* Duration Options */}
             <div className="grid grid-cols-3 gap-2 text-xs">
               {[
-                { mins: 15, label: '15 Phút', desc: 'Đọc nhanh' },
-                { mins: 25, label: '25 Phút', desc: 'Pomodoro' },
-                { mins: 45, label: '45 Phút', desc: 'Deep Work' },
+                { mins: 15, label: '15 Min', desc: 'Gentle Read' },
+                { mins: 25, label: '25 Min', desc: 'Pomodoro' },
+                { mins: 45, label: '45 Min', desc: 'Deep Focus' },
               ].map((opt) => (
                 <button
                   key={opt.mins}
@@ -207,13 +207,13 @@ export default function FocusSessionModal({
               className="w-full py-2 px-3 rounded-xl bg-warm-amber/20 hover:bg-warm-amber/30 border border-warm-amber/50 text-[11px] font-bold text-warm-amber flex items-center justify-center gap-1.5 transition"
             >
               <Sparkles className="w-3.5 h-3.5 text-warm-amber" />
-              <span>Chạy thử nhanh 10 giây (Dành cho Giám khảo)</span>
+              <span>Quick 10-second trial (For Judges)</span>
             </button>
 
             {isStudent && (
               <div className="p-2.5 rounded-xl bg-bamboo-soft/10 border border-bamboo-soft/30 text-[10px] text-bamboo-soft flex items-center gap-2">
                 <GraduationCap className="w-4 h-4 shrink-0" />
-                <span>Kích hoạt <strong>Student Boost x1.5 Mầm Lực</strong> cho phiên học này!</span>
+                <span>Active <strong>Student Boost 1.5x Mam Luc</strong> for this study session!</span>
               </div>
             )}
           </div>
@@ -227,12 +227,12 @@ export default function FocusSessionModal({
                 {formatTime(secondsRemaining)}
               </span>
               <span className="text-[10px] text-dongho-paper/60 uppercase tracking-widest mt-1">
-                Tĩnh Lặng Tuyệt Đối
+                Quiet Silence Mode
               </span>
             </div>
 
             <p className="text-xs text-dongho-paper/75 italic max-w-xs mx-auto">
-              &quot;Rừng tre đang yên gió. Mọi sự nỗ lực của cậu đều được đất trời ghi nhận...&quot;
+              &quot;The bamboo grove breathes softly. Every quiet effort you make is woven into the earth...&quot;
             </p>
 
             <div className="pt-2 flex justify-center gap-3">
@@ -240,13 +240,13 @@ export default function FocusSessionModal({
                 onClick={() => setStep(3)}
                 className="py-2.5 px-5 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow hover:brightness-105 transition"
               >
-                Hoàn thành sớm
+                Conclude early
               </button>
               <button
                 onClick={() => setStep(1)}
                 className="py-2.5 px-4 rounded-2xl bg-forest-darker border border-bamboo-mid/40 text-dongho-paper/60 text-xs font-medium hover:text-dongho-paper transition"
               >
-                Dừng lại
+                Pause
               </button>
             </div>
           </div>
@@ -258,10 +258,10 @@ export default function FocusSessionModal({
             <div className="text-center py-1">
               <span className="text-2xl">🎉</span>
               <h4 className="text-xs font-bold text-warm-glow mt-1">
-                Hoàn thành phiên tập trung!
+                Session completed peacefully!
               </h4>
               <p className="text-[11px] text-dongho-paper/70">
-                Khoe thành quả trang vở hoặc màn hình code với Măng Non nhé (Tùy chọn).
+                Show your notes or code snippet to Măng Non (Optional).
               </p>
             </div>
 
@@ -278,7 +278,7 @@ export default function FocusSessionModal({
             {photoPreview ? (
               <div className="relative w-full h-32 rounded-2xl overflow-hidden border border-warm-amber/60 bg-forest-darker">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photoPreview} alt="Thành quả" className="w-full h-full object-cover" />
+                <img src={photoPreview} alt="Work output" className="w-full h-full object-cover" />
                 <button
                   onClick={() => setPhotoPreview(null)}
                   className="absolute top-2 right-2 p-1 rounded-full bg-forest-abyss/80 text-dongho-paper"
@@ -293,7 +293,7 @@ export default function FocusSessionModal({
                   className="flex-1 py-3 px-3 rounded-2xl bg-forest-darker hover:bg-forest-mist border border-dashed border-warm-amber/50 text-xs text-warm-glow flex flex-col items-center justify-center gap-1 transition"
                 >
                   <Camera className="w-4 h-4 text-warm-amber" />
-                  <span className="text-[10px] font-semibold">Chụp ảnh trang vở / code</span>
+                  <span className="text-[10px] font-semibold">Snap photo of notes or code</span>
                 </button>
               </div>
             )}
@@ -301,13 +301,13 @@ export default function FocusSessionModal({
             {/* Note input */}
             <div>
               <label className="block text-[10px] text-dongho-paper/60 uppercase tracking-wider mb-1">
-                Tâm sự với Măng Non (1 câu ngắn):
+                A whisper to Măng Non (short note):
               </label>
               <input
                 type="text"
                 value={studyNote}
                 onChange={(e) => setStudyNote(e.target.value)}
-                placeholder="VD: Vừa giải xong 3 bài Toán / Viết xong hàm Sort..."
+                placeholder="e.g. Solved 3 calculus questions / wrote sorting logic..."
                 className="w-full px-3 py-2.5 rounded-xl bg-forest-darker border border-bamboo-mid/40 text-xs text-dongho-paper placeholder:text-dongho-paper/40 outline-none focus:border-warm-amber"
               />
             </div>
@@ -318,14 +318,14 @@ export default function FocusSessionModal({
                 onClick={handleCompleteAndClose}
                 className="flex-1 py-3 rounded-2xl bg-forest-darker border border-bamboo-mid/40 text-xs font-semibold text-dongho-paper/70"
               >
-                Bỏ qua
+                Skip
               </button>
               <button
                 onClick={handleSubmitShowAndTell}
                 disabled={isAnalyzing}
                 className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow hover:brightness-105 transition"
               >
-                {isAnalyzing ? 'Đang đọc...' : 'Khoe với Măng Non'}
+                {isAnalyzing ? 'Looking warmly...' : 'Show Măng Non'}
               </button>
             </div>
           </div>
@@ -345,7 +345,7 @@ export default function FocusSessionModal({
 
             <div className="p-3.5 rounded-2xl bg-forest-darker/90 border border-warm-amber/40 shadow text-left">
               <span className="text-[10px] text-warm-amber font-bold uppercase tracking-wider block mb-1">
-                {mangnon?.name || 'Măng Non'} bảo là:
+                {mangnon?.name || 'Măng Non'} whispers:
               </span>
               <p className="text-xs text-dongho-paper leading-relaxed italic">
                 &quot;{aiFeedback}&quot;
@@ -356,16 +356,16 @@ export default function FocusSessionModal({
             <div className="p-3 rounded-2xl bg-forest-deep border border-bamboo-soft/40 flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-warm-glow font-bold">
                 <span>🍃</span>
-                <span>+{isStudent ? '7.5' : '5'} Mầm Lực</span>
+                <span>+{isStudent ? '7.5' : '5'} Mam Luc</span>
               </div>
-              <span className="text-[10px] text-bamboo-soft">Đã gửi lên Cây Đa Làng</span>
+              <span className="text-[10px] text-bamboo-soft">Gifted to the Village Tree</span>
             </div>
 
             <button
               onClick={handleCompleteAndClose}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-warm-amber via-warm-glow to-warm-amber text-forest-abyss font-bold text-xs shadow hover:brightness-105 transition"
+              className="w-full py-3 btn-woodblock text-xs"
             >
-              Về lại Rừng Tre
+              Return to Bamboo Grove
             </button>
           </div>
         )}

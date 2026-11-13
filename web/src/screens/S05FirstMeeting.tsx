@@ -33,7 +33,7 @@ export default function S05FirstMeeting({
   const greeting = content.s04_namingPersonality.personalities[personality].sample;
 
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'mangnon', text: `Chào cậu, mình là ${name}! ${greeting}` },
+    { role: 'mangnon', text: `Hello friend, I am ${name}! ${greeting}` },
   ]);
 
   const handleChooseGoalChip = (chipText: string) => {
@@ -64,10 +64,10 @@ export default function S05FirstMeeting({
 
   const handleSkipGoal = () => {
     SoundEngine.playBambooKnock();
-    setGoalTitle('Hành trình tự do');
+    setGoalTitle('Free Journey');
     setMessages((prev) => [
       ...prev,
-      { role: 'user', text: 'Để sau nhé Măng Non' },
+      { role: 'user', text: 'Maybe later, Mang Non' },
       { role: 'mangnon', text: content.s05_firstMeeting.turn3_askDuration },
     ]);
     setTurn(3);
@@ -79,17 +79,17 @@ export default function S05FirstMeeting({
     setMessages((prev) => [
       ...prev,
       { role: 'user', text: label },
-      { role: 'mangnon', text: 'Vậy mình bắt đầu nhé. Mình sẽ ở đây chờ cậu.' },
+      { role: 'mangnon', text: 'Let us begin, then. I will be right here waiting for you.' },
     ]);
     setTurn(4);
 
     setTimeout(() => {
-      onComplete(goalTitle || 'Hành trình tự do', days);
+      onComplete(goalTitle || 'Free Journey', days);
     }, 1800);
   };
 
   return (
-    <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between select-none p-5 overflow-hidden">
+    <div className="relative w-full h-full bg-[#222E30] text-dongho-paper flex flex-col justify-between select-none p-5 overflow-hidden">
       {/* Top Bar with mini avatar */}
       <div className="pt-6 pb-3 flex items-center gap-3 border-b border-bamboo-mid/20">
         <div className="w-12 h-12 rounded-full bg-forest-darker border border-warm-amber/50 flex items-center justify-center p-1 overflow-hidden shadow">
@@ -98,7 +98,7 @@ export default function S05FirstMeeting({
         </div>
         <div>
           <h3 className="text-xs font-bold text-warm-glow">{name}</h3>
-          <p className="text-[10px] text-dongho-paper/60">Lần đầu gặp gỡ tại Rừng Tre</p>
+          <p className="text-[10px] text-dongho-paper/60">First encounter in the Bamboo Grove</p>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export default function S05FirstMeeting({
             <div
               className={`max-w-[85%] p-3.5 rounded-2xl shadow leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-[#F6EBD4] text-[#1B2A2F] font-medium rounded-tr-sm'
+                  ? 'bg-[#F4EEDD] text-[#26292B] font-medium rounded-tr-sm'
                   : 'bg-forest-deep text-dongho-paper border border-bamboo-soft/40 rounded-tl-sm relative'
               }`}
             >
@@ -135,10 +135,10 @@ export default function S05FirstMeeting({
               ]);
               setTurn(2);
             }}
-            className="w-full py-3 rounded-2xl bg-gradient-to-r from-warm-amber to-warm-glow text-forest-abyss font-bold text-xs shadow hover:brightness-105 transition flex items-center justify-center gap-1.5"
+            className="w-full py-3.5 btn-woodblock text-xs flex items-center justify-center gap-1.5"
           >
-            <span>Lắng nghe bạn ấy</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>Listen to your companion</span>
+            <ArrowRight className="w-4 h-4 text-[#26292B]" />
           </button>
         )}
 
@@ -192,10 +192,10 @@ export default function S05FirstMeeting({
             </p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { days: 7, label: '7 ngày' },
-                { days: 14, label: '14 ngày' },
-                { days: 30, label: '30 ngày' },
-                { days: null, label: 'Mình tự báo khi xong' },
+                { days: 7, label: '7 days' },
+                { days: 14, label: '14 days' },
+                { days: 30, label: '30 days' },
+                { days: null, label: 'I will share when finished' },
               ].map((opt, idx) => (
                 <button
                   key={idx}
@@ -212,7 +212,7 @@ export default function S05FirstMeeting({
         {/* Turn 4: Finishing transition */}
         {turn === 4 && (
           <div className="text-center py-2 text-xs font-bold text-warm-glow animate-pulse">
-            Đang bước vào Rừng Tre Cổ...
+            Entering the Ancient Bamboo Grove...
           </div>
         )}
       </div>

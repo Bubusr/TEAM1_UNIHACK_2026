@@ -11,20 +11,21 @@ interface BambooCanvasProps {
 export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState('#6B8F71'); // Xanh tre tự nhiên
+  const [color, setColor] = useState('#7E9A85'); // Dusty sage green
   const [brushSize, setBrushSize] = useState(8);
   const [isEraser, setIsEraser] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [hasContent, setHasContent] = useState(false);
 
-  // Bảng màu mộc bản Đông Hồ & Rừng tre theo mục 5.2
+  // Bảng màu Muted Pastel & Rough Doodle theo Master Style Guide
   const colors = [
-    { name: 'Xanh Tre Trầm', hex: '#3E5C45' },
-    { name: 'Xanh Tre Tự Nhiên', hex: '#6B8F71' },
-    { name: 'Vàng Cam Ấm (Ống Nứa)', hex: '#F4A259' },
-    { name: 'Vàng Trăng Rằm', hex: '#FFD166' },
-    { name: 'Đỏ Hoa Gạo (Đông Hồ)', hex: '#E63946' },
-    { name: 'Mực Tàu Đen', hex: '#1B2A2F' },
+    { name: 'Xanh Tre Trầm (Muted Olive)', hex: '#5A6544' },
+    { name: 'Xanh Khói (Dusty Sage)', hex: '#7E9A85' },
+    { name: 'Xanh Lam Tro (Dusty Blue)', hex: '#6B818C' },
+    { name: 'Hoàng Thổ (Muted Ochre)', hex: '#CFA85B' },
+    { name: 'Đỏ Gạch (Brick Red)', hex: '#A84D3D' },
+    { name: 'Nâu Đất (Desaturated Brown)', hex: '#5C4D43' },
+    { name: 'Mực Than (Soft Charcoal)', hex: '#26292B' },
   ];
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
 
   const drawStarterGhost = (ctx: CanvasRenderingContext2D) => {
     ctx.save();
-    ctx.strokeStyle = '#52795B';
+    ctx.strokeStyle = '#5A6544';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     // Thân măng
@@ -97,7 +98,7 @@ export default function BambooCanvas({ onSave, initialImage }: BambooCanvasProps
     const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
 
     ctx.lineTo(x, y);
-    ctx.strokeStyle = isEraser ? '#132024' : color;
+    ctx.strokeStyle = isEraser ? '#1A2426' : color;
     ctx.lineWidth = brushSize;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';

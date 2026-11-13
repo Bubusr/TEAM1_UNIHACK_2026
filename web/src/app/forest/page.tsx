@@ -42,18 +42,18 @@ export default function ForestPage() {
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] p-3 sm:p-5 lg:p-6 max-w-7xl mx-auto flex flex-col text-dongho-paper">
-      {/* Header bar gọn gàng kiểu game */}
+      {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-bamboo-mid/30">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎋</span>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-warm-glow">Rừng Tre Cổ (Interactive World)</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-warm-glow">Ancient Bamboo Grove (Interactive World)</h1>
             <span className="text-xs px-2.5 py-0.5 rounded-md bg-forest-deep border border-bamboo-soft text-bamboo-light font-semibold">
-              {activeGoals.length}/5 Măng Non đang dạo chơi
+              {activeGoals.length}/5 Mang Non wandering
             </span>
           </div>
           <p className="text-xs text-dongho-paper/70 mt-0.5 italic">
-            Thế giới mở sinh động: Măng Non tự do nhảy nhót và khám phá khu rừng. Nhấp vào mặt đất để gọi sinh linh hoặc nhấp trực tiếp để tâm sự!
+            Living open sanctuary: Mang Non roams freely exploring the bamboo grove. Tap the ground to call your companion or tap them directly to converse!
           </p>
         </div>
 
@@ -65,7 +65,7 @@ export default function ForestPage() {
             className="px-4 py-2 rounded-xl bg-warm-amber hover:bg-warm-glow disabled:opacity-40 text-forest-abyss text-xs font-bold transition flex items-center gap-1.5 shadow-lg"
           >
             <Plus className="w-4 h-4 text-forest-abyss" />
-            Vẽ Măng Non thả vào rừng
+            Draw a Mang Non to join the grove
           </button>
         </div>
       </div>
@@ -81,12 +81,12 @@ export default function ForestPage() {
         />
       </div>
 
-      {/* Danh sách thẻ sinh linh nhỏ bên dưới để xem nhanh chỉ số */}
+      {/* Companions list */}
       {activeGoals.length > 0 && (
         <div className="mt-4">
           <div className="text-xs font-semibold text-dongho-paper/80 mb-2 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-warm-glow" />
-            Sinh linh đang sống trong khu rừng của bạn:
+            Companions currently living in your grove:
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {activeGoals.map((g) => (
@@ -107,10 +107,10 @@ export default function ForestPage() {
                     {g.name}
                   </div>
                   <div className="text-[10px] text-dongho-paper/60 mt-0.5">
-                    {g.interactionCount} lần tâm sự · {g.personality}
+                    {g.interactionCount} conversations · {g.personality}
                   </div>
                   <div className="text-[10px] text-warm-amber font-mono mt-1">
-                    Trí tuệ: {g.stats.intelligence} | Kiên trì: {g.stats.perseverance}
+                    Intellect: {g.stats.intelligence} | Perseverance: {g.stats.perseverance}
                   </div>
                 </div>
               </div>

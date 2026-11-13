@@ -75,51 +75,44 @@ export default function S02OpenBamboo({
   }, [onComplete, allowSkip, isReducedMotion]);
 
   return (
-    <div className="relative w-full h-full bg-[#1B2A2F] overflow-hidden flex flex-col items-center justify-center select-none">
+    <div className="relative w-full h-full bg-[#222E30] overflow-hidden flex flex-col items-center justify-center select-none">
       {/* Nút Bỏ qua chỉ hiện từ Măng Non thứ 2 trở đi */}
       {allowSkip && canSkip && (
         <button
           onClick={onComplete}
-          aria-label="Bỏ qua hoạt ảnh mở ống nứa"
-          className="absolute top-12 right-6 z-50 text-xs px-3 py-1.5 rounded-full bg-forest-deep/80 border border-warm-amber/30 text-dongho-paper/80 hover:text-warm-glow hover:border-warm-amber transition"
+          aria-label="Skip bamboo opening animation"
+          className="absolute top-12 right-6 z-50 text-xs px-3 py-1.5 rounded-full bg-[#1A2426]/80 border border-[#CFA85B]/30 text-[#F4EEDD]/80 hover:text-[#CFA85B] hover:border-[#CFA85B] transition"
         >
           {content.s02_openBamboo.skip}
         </button>
       )}
 
-      {/* Lớp ánh sáng lan toả chuyển sang S03 */}
+      {/* Light burst overlay transitioning to S03 (Flat Paper Golden Wash) */}
       <div
-        className={`absolute inset-0 bg-gradient-to-b from-[#FFF5DC] via-[#FFE18A] to-[#F4A259] z-40 transition-opacity duration-1000 pointer-events-none ${
+        className={`absolute inset-0 bg-[#F4EEDD] z-40 transition-opacity duration-1000 pointer-events-none ${
           phase === 'burst' ? 'opacity-95' : 'opacity-0'
         }`}
       />
 
-      {/* Ánh sáng ấm nền */}
+      {/* 2D Cutout Bamboo Splitting & Particles */}
       <div
-        className={`absolute inset-0 bg-warm-amber/20 blur-3xl transition-opacity duration-1000 pointer-events-none ${
-          phase !== 'shake' ? 'opacity-100' : 'opacity-30'
-        }`}
-      />
-
-      {/* Ống nứa tách đôi & hạt sáng */}
-      <div
-        className={`relative flex flex-col items-center justify-center transition-transform duration-1000 ${
+        className={`relative flex flex-col items-center justify-center transition-transform duration-700 ${
           !isReducedMotion && (phase === 'open' || phase === 'particles') ? 'scale-110' : 'scale-100'
-        } ${!isReducedMotion && phase === 'shake' ? 'animate-bounce' : ''}`}
+        } ${!isReducedMotion && phase === 'shake' ? 'animate-wiggle-2d' : ''}`}
       >
-        {/* Đám mây hạt sáng (≤ 60 hạt, tắt khi Reduced Motion) */}
+        {/* Stepped 2D Paper Particles (≤ 60 hạt phẳng, không blur) */}
         {!isReducedMotion && (phase === 'particles' || phase === 'burst') && (
           <div className="absolute inset-0 w-80 h-80 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 pointer-events-none z-30">
             {particles.map((p, i) => (
               <div
                 key={i}
-                className="absolute w-2 h-2 rounded-full bg-[#FFFDF0]"
+                className="absolute w-2.5 h-2.5 rounded-full bg-[#CFA85B] border border-[#26292B]"
                 style={{
                   top: '50%',
                   left: '50%',
                   transform: `translate(${p.x}px, ${p.y}px) scale(${p.scale})`,
-                  boxShadow: '0 0 12px #FFD166, 0 0 24px #F4A259',
-                  transition: 'all 2s cubic-bezier(.22, 1, .36, 1)',
+                  boxShadow: '2px 2px 0px #26292B',
+                  transition: 'all 1.5s steps(4, end)',
                   opacity: p.opacity,
                 }}
               />
@@ -127,15 +120,16 @@ export default function S02OpenBamboo({
           </div>
         )}
 
-        {/* Hình bóng sinh linh nhỏ chớm hiện */}
+        {/* 2D Cutout Silhouette of Emerging Companion */}
         {(phase === 'particles' || phase === 'burst') && (
-          <div className="absolute z-20 flex flex-col items-center transition-opacity duration-1000">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#FFD166] to-[#FFF8E7] blur-md shadow-[0_0_50px_#FFD166]" />
-            <div className="w-16 h-20 -mt-10 rounded-t-full bg-[#FFE18A]/90 blur-sm" />
+          <div className="absolute z-20 flex flex-col items-center transition-opacity duration-700 animate-wiggle-2d">
+            <div className="w-24 h-24 rounded-full bg-[#CFA85B] border-2 border-[#26292B] shadow-woodblock flex items-center justify-center text-3xl">
+              🌱
+            </div>
           </div>
         )}
 
-        {/* Hai nửa thân nứa tách ra */}
+        {/* Bamboo halves separating */}
         <div className="relative w-44 h-72 flex items-center justify-center">
           <div
             className={`transition-all duration-1000 transform ${
@@ -145,13 +139,13 @@ export default function S02OpenBamboo({
             }`}
           >
             <svg width="45" height="180" viewBox="0 0 45 180" fill="none">
-              <path d="M45 0 C25 5, 10 20, 5 45 L5 135 C10 160, 25 175, 45 180 Z" fill="#F4A259" />
-              <path d="M45 0 C30 5, 20 20, 15 45 L15 135 C20 160, 30 175, 45 180 Z" fill="#FFE18A" opacity="0.6" />
+              <path d="M45 0 C25 5, 10 20, 5 45 L5 135 C10 160, 25 175, 45 180 Z" fill="#5A6544" stroke="#26292B" strokeWidth="2" />
+              <path d="M45 0 C30 5, 20 20, 15 45 L15 135 C20 160, 30 175, 45 180 Z" fill="#7E9A85" opacity="0.6" />
             </svg>
           </div>
 
           <div
-            className={`w-12 h-64 bg-gradient-to-b from-[#FFFDF0] via-[#FFD166] to-transparent rounded-full blur-md transition-all duration-700 ${
+            className={`w-12 h-64 bg-gradient-to-b from-[#F4EEDD] via-[#CFA85B] to-transparent rounded-full blur-md transition-all duration-700 ${
               phase === 'crack'
                 ? 'scale-y-100 opacity-80'
                 : phase === 'open' || phase === 'particles'
@@ -168,8 +162,8 @@ export default function S02OpenBamboo({
             }`}
           >
             <svg width="45" height="180" viewBox="0 0 45 180" fill="none">
-              <path d="M0 0 C20 5, 35 20, 40 45 L40 135 C35 160, 20 175, 0 180 Z" fill="#F4A259" />
-              <path d="M0 0 C15 5, 25 20, 30 45 L30 135 C25 160, 15 175, 0 180 Z" fill="#FFE18A" opacity="0.6" />
+              <path d="M0 0 C20 5, 35 20, 40 45 L40 135 C35 160, 20 175, 0 180 Z" fill="#5A6544" stroke="#26292B" strokeWidth="2" />
+              <path d="M0 0 C15 5, 25 20, 30 45 L30 135 C25 160, 15 175, 0 180 Z" fill="#7E9A85" opacity="0.6" />
             </svg>
           </div>
         </div>
@@ -179,7 +173,7 @@ export default function S02OpenBamboo({
           <p className="text-sm font-semibold text-warm-glow">
             {content.s02_openBamboo.title}
           </p>
-          <p className="text-xs text-dongho-paper/70 mt-1">
+          <p className="text-xs text-[#F4EEDD]/70 mt-1">
             {content.s02_openBamboo.subtitle}
           </p>
         </div>

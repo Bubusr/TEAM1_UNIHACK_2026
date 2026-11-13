@@ -3,6 +3,7 @@ import io
 import math
 import base64
 import tempfile
+import shutil
 import subprocess
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
@@ -612,6 +613,8 @@ async def animate_drawing(
         except Exception as ffmpeg_err:
             print(f"FFmpeg encoding fallback: {ffmpeg_err}")
             video_base64 = None
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
         return JSONResponse({
             "status": "success",

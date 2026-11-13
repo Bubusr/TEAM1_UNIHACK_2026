@@ -24,8 +24,8 @@ export default function S08Memories({
   const [forgetCandidate, setForgetCandidate] = useState<MemoryItem | null>(null);
 
   const stageInfo = content.s08_memories.stages[mangnon.stage] || {
-    name: 'Đồng hành',
-    poetic: 'Mình đang lắng nghe từng điều cậu kể.',
+    name: 'Companionship',
+    poetic: 'I am quietly listening to everything you share.',
   };
 
   const activeMemories = memories.filter((m) => !m.forgotten);
@@ -39,7 +39,7 @@ export default function S08Memories({
   };
 
   return (
-    <div className="relative w-full h-full bg-[#1B2A2F] text-dongho-paper flex flex-col justify-between overflow-hidden select-none">
+    <div className="relative w-full h-full bg-[#222E30] text-dongho-paper flex flex-col justify-between overflow-hidden select-none">
       {/* Top Bar */}
       <div className="pt-10 pb-3 px-4 flex items-center justify-between border-b border-bamboo-mid/25 bg-forest-darker/90 backdrop-blur-md z-20">
         <div className="flex items-center gap-3">
@@ -70,7 +70,7 @@ export default function S08Memories({
                 <span
                   key={idx}
                   className={`text-sm ${
-                    idx < mangnon.stage ? 'text-warm-amber drop-shadow-[0_0_6px_#FFD166]' : 'text-dongho-paper/20'
+                    idx < mangnon.stage ? 'text-warm-amber drop-shadow-[0_0_6px_#CFA85B]' : 'text-dongho-paper/20'
                   }`}
                 >
                   🎋
@@ -89,7 +89,7 @@ export default function S08Memories({
         {/* Memory Timeline Title */}
         <div className="pt-2 px-1">
           <span className="text-[11px] font-bold uppercase tracking-wider text-warm-amber">
-            Những điều mình đã ghi nhớ ({activeMemories.length})
+            Things I remember ({activeMemories.length})
           </span>
         </div>
 
@@ -119,7 +119,7 @@ export default function S08Memories({
                 </div>
 
                 <div className="mt-3 flex items-center justify-between text-[10px] text-dongho-paper/60 border-t border-bamboo-mid/20 pt-2">
-                  <span>{new Date(mem.createdAt).toLocaleDateString('vi-VN')}</span>
+                  <span>{new Date(mem.createdAt).toLocaleDateString('en-US')}</span>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => {
@@ -148,13 +148,13 @@ export default function S08Memories({
         )}
       </div>
 
-      {/* Gentle Confirmation Modal for "Quên điều này" */}
+      {/* Gentle Confirmation Modal for "Forget this" */}
       {forgetCandidate && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-5 bg-forest-abyss/85 backdrop-blur-sm">
           <div className="w-full max-w-xs bg-forest-deep border border-warm-amber/60 rounded-3xl p-5 text-dongho-paper shadow-2xl">
             <div className="flex items-center gap-2 text-warm-amber mb-3">
               <AlertCircle className="w-5 h-5" />
-              <h4 className="text-xs font-bold text-warm-glow">Lời nhắn dịu dàng</h4>
+              <h4 className="text-xs font-bold text-warm-glow">A Gentle Note</h4>
             </div>
 
             <p className="text-xs text-dongho-paper/85 leading-relaxed">
