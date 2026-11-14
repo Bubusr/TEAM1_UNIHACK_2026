@@ -63,6 +63,7 @@ export default function S06HomeForest({
   onLinkMangnon,
 }: S06HomeForestProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const speechBubbleBtnRef = useRef<HTMLButtonElement | null>(null);
   const [speechBubble, setSpeechBubble] = useState<string | null>(null);
   const [showFocusModal, setShowFocusModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -509,6 +510,17 @@ export default function S06HomeForest({
           ctx.arc(px, py, 3.5, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
+        }
+
+        // Cập nhật vị trí Bong Bóng Thoại "Tâm sự" bay theo đỉnh đầu nhân vật theo thời gian thực (60fps)
+        if (speechBubbleBtnRef.current) {
+          const creatureX = c.x;
+          const hop = c.action === 'happy_jump' || c.action === 'run' ? Math.abs(Math.sin(tick * 0.15)) * 14 : 0;
+          const creatureHeadY = c.y - 65 - hop;
+          const bubbleX = Math.max(72, Math.min(390 - 72, creatureX + 34));
+          const floatY = Math.sin(tick * 0.06) * 4;
+          const bubbleY = Math.max(95, creatureHeadY - 12 + floatY);
+          speechBubbleBtnRef.current.style.transform = `translate3d(${bubbleX}px, ${bubbleY}px, 0) translate(-50%, -100%)`;
         }
       }
 
@@ -1011,6 +1023,99 @@ export default function S06HomeForest({
         </button>
       </div>
 
+      {/* FLOATING HAND-DRAWN SPEECH BUBBLE BUTTON (Đi theo đầu nhân vật ở Stage 5) */}
+      {currentStage === 5 && (
+        <button
+          ref={speechBubbleBtnRef}
+          type="button"
+          onClick={() => {
+            SoundEngine.playBambooKnock();
+            onOpenStoryChat();
+          }}
+          aria-label="Tâm sự cùng Sinh Linh"
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            transform: 'translate3d(195px, 380px, 0) translate(-50%, -100%)',
+            willChange: 'transform',
+          }}
+          className="group z-20 pointer-events-auto focus:outline-none cursor-pointer select-none"
+        >
+          <div className="relative flex items-center justify-center w-28 h-20 transition-transform duration-150 group-hover:scale-105 group-active:scale-95">
+            <svg
+              viewBox="0 0 150 115"
+              fill="none"
+              className="w-full h-full overflow-visible drop-shadow-[2px_3px_0px_#14110E]"
+            >
+              {/* 1. Các nét vạch rung vẽ tay bên ngoài viền (Outer Sketch Motion Lines) */}
+              <path
+                d="M16 42 C12 30, 18 18, 30 12 M22 36 C19 27, 24 19, 33 15"
+                stroke="#2B2118"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M128 24 C138 35, 140 52, 134 66 M123 30 C130 39, 132 50, 128 60"
+                stroke="#2B2118"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M28 76 C38 86, 54 91, 70 89"
+                stroke="#2B2118"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+
+              {/* 2. Lớp bóng dày có gạch sọc Cross-hatching ở cạnh dưới bên phải */}
+              <path
+                d="M66 83 C95 86, 124 73, 128 48 C131 68, 104 91, 64 89 L46 105 L53 84 Z"
+                fill="#DFD5C3"
+                stroke="#2B2118"
+                strokeWidth="2.8"
+                strokeLinejoin="round"
+              />
+              {/* Các vạch gạch bóng cross-hatching thủ công */}
+              <path
+                d="M72 84 L70 89 M82 83 L80 88 M92 81 L91 87 M102 78 L101 84 M111 73 L112 79 M119 66 L121 72"
+                stroke="#2B2118"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+
+              {/* 3. Thân Bong Bóng Thoại chính (Dáng bầu dục vẽ tay hơi méo tự nhiên + Đuôi nhọn chỉ xuống) */}
+              <path
+                d="M24 47 C22 22, 52 10, 82 13 C114 16, 131 31, 127 54 C123 75, 96 85, 65 82 L46 103 L52 79 C33 74, 25 62, 24 47 Z"
+                fill="#F6EBD4"
+                stroke="#2B2118"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* 4. Dấu ngoặc bóng sáng nhỏ bên trong góc bong bóng */}
+              <path
+                d="M104 25 C112 28, 116 34, 116 41 M101 30 C106 32, 109 36, 109 40"
+                stroke="#2B2118"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
+
+            {/* Nội dung chữ hoặc lời thủ thỉ ngắn bên trong bong bóng */}
+            <div className="absolute inset-0 pb-3 pr-1 flex flex-col items-center justify-center text-center pointer-events-none">
+              <span className="font-hand font-extrabold text-[13px] text-[#2B2118] leading-tight">
+                Tâm sự...
+              </span>
+              <span className="text-[9px] font-bold text-[#6E5A4F] leading-none mt-0.5">
+                (Chạm trò chuyện)
+              </span>
+            </div>
+          </div>
+        </button>
+      )}
+
       {/* Speech Bubble when tapped */}
       {speechBubble && (
         <div
@@ -1026,7 +1131,7 @@ export default function S06HomeForest({
         </div>
       )}
 
-      {/* STAGE 5 FLOATING DOCK (3 NÚT GỌN GÀNG Ở ĐÁY) */}
+      {/* STAGE 5 FLOATING DOCK (2 NÚT GỌN GÀNG Ở ĐÁY) */}
       {currentStage === 5 && mangnon && (
         <div className="absolute bottom-20 left-4 right-4 z-20 flex flex-col items-center">
           {/* Popover 4 chỉ số & Rễ tre On-chain */}
@@ -1077,37 +1182,27 @@ export default function S06HomeForest({
             </div>
           )}
 
-          {/* Dock 3 Nút */}
-          <div className="flex items-center justify-center gap-2 w-full max-w-xs">
-            {/* Nút Trái: Tâm sự */}
-            <button
-              onClick={onOpenStoryChat}
-              className="btn-woodblock-paper flex-1 py-2.5 px-3 rounded-2xl text-[11px] font-black flex items-center justify-center gap-1.5 transition"
-              title="Trò chuyện & đố vui cùng bạn đồng hành"
-            >
-              <span>💬</span>
-              <span>Tâm sự</span>
-            </button>
-
-            {/* Nút Giữa: Học Focus */}
+          {/* Dock 2 Nút (Rút gọn từ 3 nút vì Tâm Sự đã thành Bong Bóng Thoại bay trên đầu) */}
+          <div className="flex items-center justify-center gap-2.5 w-full max-w-xs">
+            {/* Nút Chính: Học Focus */}
             <button
               onClick={() => setShowFocusModal(true)}
-              className="btn-woodblock flex-[1.3] py-3 px-3.5 rounded-2xl bg-[#CFA85B] text-[#1F2224] text-xs font-black flex items-center justify-center gap-1.5 transition"
+              className="btn-woodblock flex-[1.3] py-3 px-4 rounded-2xl bg-[#CFA85B] text-[#1F2224] text-xs font-black flex items-center justify-center gap-2 transition hover:scale-[1.02] active:translate-y-0.5"
               title="Bắt đầu phiên học tập trung không phạt"
             >
-              <span>🧘</span>
+              <span className="text-sm">🧘</span>
               <span>Tập trung (+🍃)</span>
             </button>
 
-            {/* Nút Phải: Rễ Tre */}
+            {/* Nút Phụ: Rễ Tre */}
             <button
               onClick={() => setShowStatsPopover(!showStatsPopover)}
-              className={`btn-woodblock-paper flex-1 py-2.5 px-3 rounded-2xl text-[11px] font-black flex items-center justify-center gap-1.5 transition ${
+              className={`btn-woodblock-paper flex-1 py-3 px-3.5 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition hover:scale-[1.02] active:translate-y-0.5 ${
                 showStatsPopover ? 'bg-[#CFA85B]' : ''
               }`}
               title="Xem 4 chỉ số và nối rễ kỹ năng"
             >
-              <span>🔗</span>
+              <span className="text-sm">🔗</span>
               <span>Rễ Tre ({(mangnon.stats?.intelligence || 10) + (mangnon.stats?.perseverance || 10) + (mangnon.stats?.fitness || 10) + (mangnon.stats?.creativity || 10)})</span>
             </button>
           </div>
