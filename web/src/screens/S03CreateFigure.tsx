@@ -1551,8 +1551,9 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
   // =========================================================================
   useEffect(() => {
     if (step !== 5 || !currentImageUri || !loadedImgRef.current) return;
-    let animId: number;
+    let animId: number | null = null;
     let tick = 0;
+    let isMounted = true;
 
     const cvs = previewCanvasRef.current;
     if (!cvs) return;
@@ -1569,6 +1570,14 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
     }));
 
     const render = () => {
+      if (!isMounted) return;
+
+      // Không vẽ gì nếu người dùng ẩn tab hoặc gập máy (giải phóng GPU/CPU)
+      if (document.hidden) {
+        animId = requestAnimationFrame(render);
+        return;
+      }
+
       tick++;
       const w = cvs.width;
       const h = cvs.height;
@@ -1885,8 +1894,21 @@ export default function S03CreateFigure({ onConfirm }: S03CreateFigureProps) {
       animId = requestAnimationFrame(render);
     };
 
-    render();
-    return () => cancelAnimationFrame(animId);
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMounted) {
+        if (animId) cancelAnimationFrame(animId);
+        animId = requestAnimationFrame(render);
+      }
+    };
+
+    animId = requestAnimationFrame(render);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      if (animId) cancelAnimationFrame(animId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [step, currentImageUri, worldMode, turntableRotation, isAutoSpin, previewMotion, showSkeletonWireframe, showCreasePattern, rigData, faceExpr]);
 
   return (

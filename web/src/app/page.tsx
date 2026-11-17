@@ -24,6 +24,7 @@ import S12PhuDongVillage from '@/screens/S12PhuDongVillage';
 import S13Settings from '@/screens/S13Settings';
 import WelcomeLoginModal from '@/components/WelcomeLoginModal';
 import UserProfileModal, { UserAccount } from '@/components/UserProfileModal';
+import { setupLocalhostMemoryCleanup } from '@/lib/memory-cleanup';
 import {
   registerGoalOnChain,
   linkGoalsOnChain,
@@ -159,6 +160,9 @@ export default function MangNonApp() {
 
   // Load initial state + hydrate images from IndexedDB
   useEffect(() => {
+    // Tự động giải phóng RAM khi đóng tab / reload trên localhost
+    setupLocalhostMemoryCleanup();
+
     const loaded = AppStore.load();
 
     // Check user account for Avalanche wallet

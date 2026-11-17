@@ -171,6 +171,7 @@ export default function InteractiveForestCanvas({
     if (!ctx) return;
 
     let tick = 0;
+    let isMounted = true;
 
     const speechPhrases = [
       'Gió đêm mát quá cậu ơi...',
@@ -183,6 +184,14 @@ export default function InteractiveForestCanvas({
     ];
 
     const render = () => {
+      if (!isMounted) return;
+
+      // Không vẽ gì nếu người dùng ẩn tab hoặc gập máy (giải phóng GPU/CPU)
+      if (document.hidden) {
+        animationFrameRef.current = requestAnimationFrame(render);
+        return;
+      }
+
       tick++;
       const { width, height } = canvasDimensions;
 
@@ -263,9 +272,20 @@ export default function InteractiveForestCanvas({
       animationFrameRef.current = requestAnimationFrame(render);
     };
 
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMounted) {
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = requestAnimationFrame(render);
+      }
+    };
+
     animationFrameRef.current = requestAnimationFrame(render);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      isMounted = false;
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [canvasDimensions, isNight, hasGlowingBamboo]);
 

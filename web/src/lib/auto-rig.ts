@@ -91,11 +91,29 @@ export interface FaceExpression {
   customFaceDataUrl?: string | null;           // Bản lưu PNG DataURL để truyền sang S06 Home
 }
 
+const isLocalhostEnv =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.endsWith('.local'));
+
 const customFaceImageCache = new Map<string, HTMLImageElement>();
+
+/** Xóa sạch bộ nhớ đệm hình ảnh trong RAM (dùng cho localhost) */
+export function clearAutoRigCaches(): void {
+  customFaceImageCache.clear();
+  croppedImageCache.clear();
+}
+
 function getCachedCustomFaceImage(dataUrl: string): HTMLImageElement | null {
   if (typeof window === 'undefined' || !dataUrl) return null;
   let img = customFaceImageCache.get(dataUrl);
   if (!img) {
+    // Trên localhost: giới hạn tối đa 8 ảnh trong RAM để tránh rò rỉ bộ nhớ
+    if (isLocalhostEnv && customFaceImageCache.size >= 8) {
+      const oldestKey = customFaceImageCache.keys().next().value;
+      if (oldestKey) customFaceImageCache.delete(oldestKey);
+    }
     img = new window.Image();
     img.src = dataUrl;
     customFaceImageCache.set(dataUrl, img);
@@ -2597,6 +2615,11 @@ export function autoCropCharacterDataUrl(
 
           outCtx.drawImage(tempCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
           const croppedUrl = outCanvas.toDataURL('image/png');
+          // Trên localhost: giới hạn tối đa 8 bản crop trong RAM
+          if (isLocalhostEnv && croppedImageCache.size >= 8) {
+            const oldestKey = croppedImageCache.keys().next().value;
+            if (oldestKey) croppedImageCache.delete(oldestKey);
+          }
           croppedImageCache.set(sourceDataUrl, croppedUrl);
           resolve(croppedUrl);
         } catch {

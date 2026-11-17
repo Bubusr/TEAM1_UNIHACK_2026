@@ -191,7 +191,7 @@ export default function S06HomeForest({
         const u = JSON.parse(stored);
         if (typeof u.dewdrops === 'undefined') u.dewdrops = 100;
         setUserAccount(u);
-      } catch {}
+      } catch { }
     }
   }, []);
 
@@ -233,7 +233,7 @@ export default function S06HomeForest({
           try {
             const stored = await ImageDB.get(idbKey);
             if (stored) rawUri = stored;
-          } catch {}
+          } catch { }
         }
       }
       if (!rawUri && typeof window !== 'undefined') {
@@ -247,7 +247,7 @@ export default function S06HomeForest({
               rawUri = parsed.draftImageUri;
             }
           }
-        } catch {}
+        } catch { }
       }
       if (!rawUri || rawUri.includes('<ellipse')) {
         // Mẫu sinh linh Áo Yếm dân gian mặc định
@@ -325,8 +325,9 @@ export default function S06HomeForest({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationId: number;
+    let animationId: number | null = null;
     let tick = 0;
+    let isMounted = true;
 
     // Create ambient particles (fireflies or leaves) using deterministic positions
     const particleCount = timeOfDay === 'night' ? 24 : 16;
@@ -346,6 +347,14 @@ export default function S06HomeForest({
     });
 
     const render = () => {
+      if (!isMounted) return;
+
+      // Không vẽ gì nếu người dùng ẩn tab hoặc gập máy (giải phóng GPU/CPU)
+      if (document.hidden) {
+        animationId = requestAnimationFrame(render);
+        return;
+      }
+
       tick++;
       const w = 390;
       const h = 844;
@@ -527,10 +536,22 @@ export default function S06HomeForest({
       animationId = requestAnimationFrame(render);
     };
 
-    render();
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMounted) {
+        if (animationId) cancelAnimationFrame(animationId);
+        animationId = requestAnimationFrame(render);
+      }
+    };
+
+    animationId = requestAnimationFrame(render);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      cancelAnimationFrame(animationId);
+      isMounted = false;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [mangnon, timeOfDay, season, currentStage]);
 
@@ -585,408 +606,408 @@ export default function S06HomeForest({
           {currentStage === 1 && (
             /* STAGE 1: BÚP MĂNG NON (IDLE / CLICK TO UNLOCK) */
             <div className="flex flex-col items-center">
-            {/* Animated hint label */}
-            <div className="mb-2 px-3 py-1 bg-[#F4EEDD] text-[#26292B] text-[11px] font-black border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] rounded-full flex items-center gap-1.5 animate-bounce">
-              <span>🎋 Mầm măng say ngủ</span>
-              <span className="text-[9px] text-[#A84D3D] font-black underline">Chạm thức tỉnh (-20 💧)</span>
+              {/* Animated hint label */}
+              <div className="mb-2 px-3 py-1 bg-[#F4EEDD] text-[#26292B] text-[11px] font-black border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] rounded-full flex items-center gap-1.5 animate-bounce">
+                <span>🎋 Mầm măng say ngủ</span>
+                <span className="text-[9px] text-[#A84D3D] font-black underline">Chạm thức tỉnh (-20 💧)</span>
+              </div>
+              {/* STAGE 1: BÚP MĂNG NON (ROUGH DOODLE & MUTED PASTEL) */}
+              <svg
+                viewBox="0 0 140 160"
+                className="interactive-cutout h-36 w-32 overflow-visible"
+              >
+                {/* 1. Khung búp măng tổng thể (Dusty sage green #7E9A85) */}
+                <path
+                  d="M70,14 C44,50 30,96 34,142 C58,150 82,150 106,142 C110,96 96,50 70,14 Z"
+                  fill="#8FA996"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+
+                {/* 2. Chóp măng non màu thổ hoàng nhạt (#CFA85B) */}
+                <path
+                  d="M70,14 C57,34 49,54 46,72 C60,64 73,50 84,35 C80,26 75,19 70,14 Z"
+                  fill="#CFA85B"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+
+                {/* 3. Bẹ măng trái ôm chéo (#7E9A85) */}
+                <path
+                  d="M42,58 C33,86 31,115 34,142 C54,148 74,148 92,144 C78,118 58,88 42,58 Z"
+                  fill="#7E9A85"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+
+                {/* 4. Bẹ măng phải ôm trọn phần gốc (Muted olive #5A6544) */}
+                <path
+                  d="M100,66 C78,98 54,122 34,136 L34,142 C58,150 82,150 106,142 C108,116 106,90 100,66 Z"
+                  fill="#5A6544"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+
+                {/* 5. Nét gân phác thảo doodle mộc */}
+                <path
+                  d="M68,26 C63,40 59,52 57,62 M86,98 C82,114 76,128 70,140"
+                  fill="none"
+                  stroke="#26292B"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              </svg>
             </div>
-            {/* STAGE 1: BÚP MĂNG NON (ROUGH DOODLE & MUTED PASTEL) */}
-            <svg
-              viewBox="0 0 140 160"
-              className="interactive-cutout h-36 w-32 overflow-visible"
-            >
-              {/* 1. Khung búp măng tổng thể (Dusty sage green #7E9A85) */}
-              <path
-                d="M70,14 C44,50 30,96 34,142 C58,150 82,150 106,142 C110,96 96,50 70,14 Z"
-                fill="#8FA996"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
+          )}
 
-              {/* 2. Chóp măng non màu thổ hoàng nhạt (#CFA85B) */}
-              <path
-                d="M70,14 C57,34 49,54 46,72 C60,64 73,50 84,35 C80,26 75,19 70,14 Z"
-                fill="#CFA85B"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
+          {currentStage === 2 && (
+            /* STAGE 2: MĂNG ĐANG VƯƠN THÀNH TRE NON (2-MINUTE GROWING) */
+            <div className="flex flex-col items-center">
+              <svg
+                viewBox="0 0 160 220"
+                className="interactive-cutout h-52 w-40 overflow-visible"
+              >
+                {/* Lá tre non vươn ra bên phải (Dusty sage light) */}
+                <path
+                  d="M96,92 C118,80 136,82 146,94 C130,104 112,102 96,92 Z"
+                  fill="#8FA996"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                {/* Lá tre non vươn ra bên trái */}
+                <path
+                  d="M64,142 C42,130 24,132 14,144 C30,154 48,152 64,142 Z"
+                  fill="#8FA996"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
 
-              {/* 3. Bẹ măng trái ôm chéo (#7E9A85) */}
-              <path
-                d="M42,58 C33,86 31,115 34,142 C54,148 74,148 92,144 C78,118 58,88 42,58 Z"
-                fill="#7E9A85"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
+                {/* Đốt tre gốc (Muted olive #5A6544) */}
+                <path
+                  d="M52,144 C56,168 54,188 48,206 C70,212 90,212 112,206 C106,188 104,168 108,144 Z"
+                  fill="#5A6544"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                {/* Bẹ măng còn ôm ở sát gốc (#7E9A85) */}
+                <path
+                  d="M48,206 C68,186 86,168 106,156 L112,206 C90,212 70,212 48,206 Z"
+                  fill="#7E9A85"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
 
-              {/* 4. Bẹ măng phải ôm trọn phần gốc (Muted olive #5A6544) */}
-              <path
-                d="M100,66 C78,98 54,122 34,136 L34,142 C58,150 82,150 106,142 C108,116 106,90 100,66 Z"
-                fill="#5A6544"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
+                {/* Đốt tre giữa (#7E9A85) */}
+                <path
+                  d="M56,92 C60,110 60,126 54,144 L106,144 C100,126 100,110 104,92 Z"
+                  fill="#7E9A85"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
 
-              {/* 5. Nét gân phác thảo doodle mộc */}
-              <path
-                d="M68,26 C63,40 59,52 57,62 M86,98 C82,114 76,128 70,140"
-                fill="none"
-                stroke="#26292B"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-        )}
+                {/* Búp măng ngọn trên cùng (#8FA996) */}
+                <path
+                  d="M80,14 C62,40 56,66 56,92 L104,92 C104,66 98,40 80,14 Z"
+                  fill="#8FA996"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                {/* Chóp trên đỉnh màu thổ hoàng (#CFA85B) */}
+                <path
+                  d="M80,14 C70,30 64,46 62,60 C74,52 84,40 92,28 C88,22 84,17 80,14 Z"
+                  fill="#CFA85B"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
 
-        {currentStage === 2 && (
-          /* STAGE 2: MĂNG ĐANG VƯƠN THÀNH TRE NON (2-MINUTE GROWING) */
-          <div className="flex flex-col items-center">
-            <svg
-              viewBox="0 0 160 220"
-              className="interactive-cutout h-52 w-40 overflow-visible"
-            >
-              {/* Lá tre non vươn ra bên phải (Dusty sage light) */}
-              <path
-                d="M96,92 C118,80 136,82 146,94 C130,104 112,102 96,92 Z"
-                fill="#8FA996"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              {/* Lá tre non vươn ra bên trái */}
-              <path
-                d="M64,142 C42,130 24,132 14,144 C30,154 48,152 64,142 Z"
-                fill="#8FA996"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
+                {/* Hai mắt đốt tre nét mực đen thô mộc */}
+                <rect x="48" y="88" width="64" height="8" rx="4" fill="#CFA85B" stroke="#26292B" strokeWidth="3.2" />
+                <rect x="46" y="140" width="68" height="8" rx="4" fill="#CFA85B" stroke="#26292B" strokeWidth="3.2" />
 
-              {/* Đốt tre gốc (Muted olive #5A6544) */}
-              <path
-                d="M52,144 C56,168 54,188 48,206 C70,212 90,212 112,206 C106,188 104,168 108,144 Z"
-                fill="#5A6544"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              {/* Bẹ măng còn ôm ở sát gốc (#7E9A85) */}
-              <path
-                d="M48,206 C68,186 86,168 106,156 L112,206 C90,212 70,212 48,206 Z"
-                fill="#7E9A85"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
+                {/* Gân nét doodle trên thân tre */}
+                <path
+                  d="M72,104 L70,130 M90,156 L92,186"
+                  fill="none"
+                  stroke="#26292B"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {/* Bộ đếm 2 phút */}
+              <div className="mt-1 px-3 py-1 bg-[#F4EEDD] text-[#26292B] text-[11px] font-bold border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] rounded-full flex items-center gap-1.5 animate-pulse">
+                <Clock className="w-3 h-3 text-[#A84D3D]" />
+                <span>{Math.floor(growingTimeLeft / 60).toString().padStart(2, '0')}:{(growingTimeLeft % 60).toString().padStart(2, '0')}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsTimerRunning(false);
+                    setGrowingTimeLeft(0);
+                    changeStage(3);
+                    SoundEngine.playBlessingChime();
+                    setSpeechBubble('Cây tre đã trưởng thành! Đốt nứa thần kỳ đang phát sáng...');
+                    setTimeout(() => setSpeechBubble(null), 4000);
+                  }}
+                  className="text-[9px] text-[#A84D3D] underline ml-1 hover:text-[#26292B] font-bold cursor-pointer"
+                  title="Bỏ qua thời gian chờ để lên Cây Tre ngay"
+                >
+                  xong ngay
+                </button>
+              </div>
+            </div>
+          )}
 
-              {/* Đốt tre giữa (#7E9A85) */}
-              <path
-                d="M56,92 C60,110 60,126 54,144 L106,144 C100,126 100,110 104,92 Z"
-                fill="#7E9A85"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
+          {currentStage === 3 && (
+            /* STAGE 3: TIME'S UP - CÂY TRE VỚI 1 ĐỐT NỨA PHÁT SÁNG (CLICK TO OPEN) */
+            <div className="flex flex-col items-center">
+              <svg
+                viewBox="0 0 160 220"
+                className="interactive-cutout h-56 w-40 overflow-visible"
+              >
+                {/* Lá tre non vươn ra bên phải (#8FA996) */}
+                <path
+                  d="M96,92 C118,80 136,82 146,94 C130,104 112,102 96,92 Z"
+                  fill="#8FA996"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                {/* Lá tre non vươn ra bên trái */}
+                <path
+                  d="M64,142 C42,130 24,132 14,144 C30,154 48,152 64,142 Z"
+                  fill="#8FA996"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
 
-              {/* Búp măng ngọn trên cùng (#8FA996) */}
-              <path
-                d="M80,14 C62,40 56,66 56,92 L104,92 C104,66 98,40 80,14 Z"
-                fill="#8FA996"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              {/* Chóp trên đỉnh màu thổ hoàng (#CFA85B) */}
-              <path
-                d="M80,14 C70,30 64,46 62,60 C74,52 84,40 92,28 C88,22 84,17 80,14 Z"
-                fill="#CFA85B"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
+                {/* Đốt tre gốc (Muted olive #5A6544) */}
+                <path
+                  d="M52,144 C56,168 54,188 48,206 C70,212 90,212 112,206 C106,188 104,168 108,144 Z"
+                  fill="#5A6544"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                {/* Bẹ măng ôm sát gốc */}
+                <path
+                  d="M48,206 C68,186 86,168 106,156 L112,206 C90,212 70,212 48,206 Z"
+                  fill="#7E9A85"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
 
-              {/* Hai mắt đốt tre nét mực đen thô mộc */}
-              <rect x="48" y="88" width="64" height="8" rx="4" fill="#CFA85B" stroke="#26292B" strokeWidth="3.2" />
-              <rect x="46" y="140" width="68" height="8" rx="4" fill="#CFA85B" stroke="#26292B" strokeWidth="3.2" />
+                {/* Búp măng ngọn trên cùng */}
+                <path
+                  d="M80,14 C62,40 56,66 56,92 L104,92 C104,66 98,40 80,14 Z"
+                  fill="#5A6544"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                {/* Chóp trên đỉnh */}
+                <path
+                  d="M80,14 C70,30 64,46 62,60 C74,52 84,40 92,28 C88,22 84,17 80,14 Z"
+                  fill="#7E9A85"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
 
-              {/* Gân nét doodle trên thân tre */}
-              <path
-                d="M72,104 L70,130 M90,156 L92,186"
-                fill="none"
-                stroke="#26292B"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            {/* Bộ đếm 2 phút */}
-            <div className="mt-1 px-3 py-1 bg-[#F4EEDD] text-[#26292B] text-[11px] font-bold border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] rounded-full flex items-center gap-1.5 animate-pulse">
-              <Clock className="w-3 h-3 text-[#A84D3D]" />
-              <span>{Math.floor(growingTimeLeft / 60).toString().padStart(2, '0')}:{(growingTimeLeft % 60).toString().padStart(2, '0')}</span>
+                {/* ĐỐT NỨA THẦN KỲ PHÁT SÁNG Ở GIỮA (Muted ochre #CFA85B) */}
+                <path
+                  d="M56,92 C50,110 50,126 54,144 L106,144 C110,126 110,110 104,92 Z"
+                  fill="#CFA85B"
+                  stroke="#26292B"
+                  strokeWidth="4"
+                  strokeLinejoin="round"
+                />
+                {/* Khe nứt ánh sáng báo hiệu linh vật chuẩn bị thức tỉnh */}
+                <path
+                  d="M80,98 L74,114 L85,124 L78,138"
+                  fill="none"
+                  stroke="#F4EEDD"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M74,114 L65,112 M85,124 L94,126"
+                  fill="none"
+                  stroke="#F4EEDD"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+
+                {/* Hai mắt đốt tre viền mực đen nét thô mộc */}
+                <rect x="48" y="88" width="64" height="8" rx="4" fill="#5C4D43" stroke="#26292B" strokeWidth="3.2" />
+                <rect x="46" y="140" width="68" height="8" rx="4" fill="#5C4D43" stroke="#26292B" strokeWidth="3.2" />
+              </svg>
+              <div className="mt-1 px-3 py-0.5 bg-[#CFA85B] text-[#1F2224] text-[10px] font-black border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] rounded-full animate-bounce">
+                ✨ Chạm mở đốt nứa
+              </div>
+            </div>
+          )}
+
+          {currentStage === 4 && (
+            /* STAGE 4: ỐNG TRE MỞ NẮP + NHÂN VẬT DO NGƯỜI CHƠI TỰ THIẾT KẾ */
+            <div className="flex flex-col items-center">
+              <svg
+                viewBox="0 0 180 240"
+                className="interactive-cutout h-64 w-48 overflow-visible"
+              >
+                {/* 1. Cành lá tre hai bên (Dusty sage green) */}
+                <path
+                  d="M116,66 C140,52 160,54 170,68 C150,78 130,76 116,66 Z"
+                  fill="#8FA996"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M64,172 C40,158 20,160 10,174 C30,184 50,182 64,172 Z"
+                  fill="#8FA996"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+
+                {/* 2. Đốt ngọn trên cùng */}
+                <path
+                  d="M90,10 C72,32 64,50 64,68 L116,68 C116,50 108,32 90,10 Z"
+                  fill="#5A6544"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M90,10 C76,28 68,46 66,58 C82,48 96,34 104,22 C100,16 95,12 90,10 Z"
+                  fill="#7E9A85"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+
+                {/* 3. Đốt gốc dưới cùng (Muted olive) */}
+                <path
+                  d="M62,170 C64,192 60,210 54,228 C78,234 102,234 126,228 C120,210 116,192 118,170 Z"
+                  fill="#5A6544"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M54,228 C78,204 100,186 118,176 L126,228 C102,234 78,234 54,228 Z"
+                  fill="#7E9A85"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+
+                {/* 4. MẢNH NẮP VỎ TRE BẬT MỞ SANG BÊN PHẢI */}
+                <path
+                  d="M118,74 C146,82 158,112 150,158 C140,166 126,168 114,166 C122,136 122,104 118,74 Z"
+                  fill="#7E9A85"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M118,78 C136,86 144,112 138,154 C130,160 120,162 114,162 C120,134 120,104 118,78 Z"
+                  fill="#5C4D43"
+                  stroke="#26292B"
+                  strokeWidth="2.8"
+                  strokeLinejoin="round"
+                />
+
+                {/* 5. THÂN ĐỐT TRE BỔ DỌC + THÀNH GỖ DÀY + LÒNG ỐNG TRE RỖNG */}
+                <path
+                  d="M58,70 C50,102 50,136 58,168 L122,168 C130,136 130,102 122,70 Z"
+                  fill="#5A6544"
+                  stroke="#26292B"
+                  strokeWidth="3.5"
+                  strokeLinejoin="round"
+                />
+                {/* Thành thịt tre màu mộc trầm (#5C4D43) */}
+                <rect
+                  x="60"
+                  y="72"
+                  width="60"
+                  height="94"
+                  rx="24"
+                  fill="#5C4D43"
+                  stroke="#26292B"
+                  strokeWidth="3.2"
+                />
+                {/* Khoang rỗng lòng ống tre màu giấy Dó kem (#F4EEDD) */}
+                <rect
+                  x="66"
+                  y="78"
+                  width="48"
+                  height="82"
+                  rx="19"
+                  fill="#F4EEDD"
+                  stroke="#26292B"
+                  strokeWidth="3"
+                />
+                {/* Vòm bóng cel shading 2D trong lòng ống */}
+                <path
+                  d="M66,96 C66,84 76,78 90,78 C104,78 114,84 114,96 C102,90 78,90 66,96 Z"
+                  fill="#EDE5D2"
+                />
+                <ellipse cx="90" cy="148" rx="19" ry="9" fill="#CFA85B" />
+
+                {/* 6. NHÂN VẬT DO NGƯỜI CHƠI TỰ VẼ (Đã Auto-Crop & Auto-Fit vừa khít lòng ống x=69..111, y=84..152) */}
+                {(croppedUri || mangnon?.imageUri) && (
+                  <g className="origin-center animate-[breathe_3.6s_ease-in-out_infinite]">
+                    <image
+                      href={croppedUri || mangnon?.imageUri}
+                      x="69"
+                      y="84"
+                      width="42"
+                      height="68"
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                    <text x="103" y="94" fill="#26292B" fontSize="11" fontWeight="bold">z</text>
+                    <text x="110" y="85" fill="#A84D3D" fontSize="14" fontWeight="bold">Z</text>
+                  </g>
+                )}
+
+                {/* 7. Hai mắt đốt tre khóa trên và dưới */}
+                <rect x="52" y="65" width="76" height="9" rx="4.5" fill="#5C4D43" stroke="#26292B" strokeWidth="3.5" />
+                <rect x="52" y="165" width="76" height="9" rx="4.5" fill="#5C4D43" stroke="#26292B" strokeWidth="3.5" />
+              </svg>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsTimerRunning(false);
-                  setGrowingTimeLeft(0);
-                  changeStage(3);
                   SoundEngine.playBlessingChime();
-                  setSpeechBubble('Cây tre đã trưởng thành! Đốt nứa thần kỳ đang phát sáng...');
-                  setTimeout(() => setSpeechBubble(null), 4000);
+                  changeStage(5);
+                  if (creatureRef?.current) {
+                    creatureRef.current.action = 'happy_jump';
+                    creatureRef.current.actionTimer = 150;
+                  }
+                  setSpeechBubble(`${mangnon?.name || 'Măng Non'} đã thức tỉnh và bước ra Rừng Tre!`);
+                  setTimeout(() => setSpeechBubble(null), 3500);
                 }}
-                className="text-[9px] text-[#A84D3D] underline ml-1 hover:text-[#26292B] font-bold cursor-pointer"
-                title="Bỏ qua thời gian chờ để lên Cây Tre ngay"
+                className="btn-woodblock mt-2 px-4 py-2 rounded-2xl bg-[#CFA85B] text-[#1F2224] font-black text-xs flex items-center gap-1.5 animate-bounce border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D]"
               >
-                xong ngay
+                <span>✨ Đánh thức {mangnon?.name || 'Sinh Linh'} bước ra Rừng Tre!</span>
               </button>
             </div>
-          </div>
-        )}
-
-        {currentStage === 3 && (
-          /* STAGE 3: TIME'S UP - CÂY TRE VỚI 1 ĐỐT NỨA PHÁT SÁNG (CLICK TO OPEN) */
-          <div className="flex flex-col items-center">
-            <svg
-              viewBox="0 0 160 220"
-              className="interactive-cutout h-56 w-40 overflow-visible"
-            >
-              {/* Lá tre non vươn ra bên phải (#8FA996) */}
-              <path
-                d="M96,92 C118,80 136,82 146,94 C130,104 112,102 96,92 Z"
-                fill="#8FA996"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              {/* Lá tre non vươn ra bên trái */}
-              <path
-                d="M64,142 C42,130 24,132 14,144 C30,154 48,152 64,142 Z"
-                fill="#8FA996"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-
-              {/* Đốt tre gốc (Muted olive #5A6544) */}
-              <path
-                d="M52,144 C56,168 54,188 48,206 C70,212 90,212 112,206 C106,188 104,168 108,144 Z"
-                fill="#5A6544"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              {/* Bẹ măng ôm sát gốc */}
-              <path
-                d="M48,206 C68,186 86,168 106,156 L112,206 C90,212 70,212 48,206 Z"
-                fill="#7E9A85"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-
-              {/* Búp măng ngọn trên cùng */}
-              <path
-                d="M80,14 C62,40 56,66 56,92 L104,92 C104,66 98,40 80,14 Z"
-                fill="#5A6544"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              {/* Chóp trên đỉnh */}
-              <path
-                d="M80,14 C70,30 64,46 62,60 C74,52 84,40 92,28 C88,22 84,17 80,14 Z"
-                fill="#7E9A85"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-
-              {/* ĐỐT NỨA THẦN KỲ PHÁT SÁNG Ở GIỮA (Muted ochre #CFA85B) */}
-              <path
-                d="M56,92 C50,110 50,126 54,144 L106,144 C110,126 110,110 104,92 Z"
-                fill="#CFA85B"
-                stroke="#26292B"
-                strokeWidth="4"
-                strokeLinejoin="round"
-              />
-              {/* Khe nứt ánh sáng báo hiệu linh vật chuẩn bị thức tỉnh */}
-              <path
-                d="M80,98 L74,114 L85,124 L78,138"
-                fill="none"
-                stroke="#F4EEDD"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M74,114 L65,112 M85,124 L94,126"
-                fill="none"
-                stroke="#F4EEDD"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-
-              {/* Hai mắt đốt tre viền mực đen nét thô mộc */}
-              <rect x="48" y="88" width="64" height="8" rx="4" fill="#5C4D43" stroke="#26292B" strokeWidth="3.2" />
-              <rect x="46" y="140" width="68" height="8" rx="4" fill="#5C4D43" stroke="#26292B" strokeWidth="3.2" />
-            </svg>
-            <div className="mt-1 px-3 py-0.5 bg-[#CFA85B] text-[#1F2224] text-[10px] font-black border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D] rounded-full animate-bounce">
-              ✨ Chạm mở đốt nứa
-            </div>
-          </div>
-        )}
-
-        {currentStage === 4 && (
-          /* STAGE 4: ỐNG TRE MỞ NẮP + NHÂN VẬT DO NGƯỜI CHƠI TỰ THIẾT KẾ */
-          <div className="flex flex-col items-center">
-            <svg
-              viewBox="0 0 180 240"
-              className="interactive-cutout h-64 w-48 overflow-visible"
-            >
-              {/* 1. Cành lá tre hai bên (Dusty sage green) */}
-              <path
-                d="M116,66 C140,52 160,54 170,68 C150,78 130,76 116,66 Z"
-                fill="#8FA996"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M64,172 C40,158 20,160 10,174 C30,184 50,182 64,172 Z"
-                fill="#8FA996"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-
-              {/* 2. Đốt ngọn trên cùng */}
-              <path
-                d="M90,10 C72,32 64,50 64,68 L116,68 C116,50 108,32 90,10 Z"
-                fill="#5A6544"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M90,10 C76,28 68,46 66,58 C82,48 96,34 104,22 C100,16 95,12 90,10 Z"
-                fill="#7E9A85"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-
-              {/* 3. Đốt gốc dưới cùng (Muted olive) */}
-              <path
-                d="M62,170 C64,192 60,210 54,228 C78,234 102,234 126,228 C120,210 116,192 118,170 Z"
-                fill="#5A6544"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M54,228 C78,204 100,186 118,176 L126,228 C102,234 78,234 54,228 Z"
-                fill="#7E9A85"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-
-              {/* 4. MẢNH NẮP VỎ TRE BẬT MỞ SANG BÊN PHẢI */}
-              <path
-                d="M118,74 C146,82 158,112 150,158 C140,166 126,168 114,166 C122,136 122,104 118,74 Z"
-                fill="#7E9A85"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M118,78 C136,86 144,112 138,154 C130,160 120,162 114,162 C120,134 120,104 118,78 Z"
-                fill="#5C4D43"
-                stroke="#26292B"
-                strokeWidth="2.8"
-                strokeLinejoin="round"
-              />
-
-              {/* 5. THÂN ĐỐT TRE BỔ DỌC + THÀNH GỖ DÀY + LÒNG ỐNG TRE RỖNG */}
-              <path
-                d="M58,70 C50,102 50,136 58,168 L122,168 C130,136 130,102 122,70 Z"
-                fill="#5A6544"
-                stroke="#26292B"
-                strokeWidth="3.5"
-                strokeLinejoin="round"
-              />
-              {/* Thành thịt tre màu mộc trầm (#5C4D43) */}
-              <rect
-                x="60"
-                y="72"
-                width="60"
-                height="94"
-                rx="24"
-                fill="#5C4D43"
-                stroke="#26292B"
-                strokeWidth="3.2"
-              />
-              {/* Khoang rỗng lòng ống tre màu giấy Dó kem (#F4EEDD) */}
-              <rect
-                x="66"
-                y="78"
-                width="48"
-                height="82"
-                rx="19"
-                fill="#F4EEDD"
-                stroke="#26292B"
-                strokeWidth="3"
-              />
-              {/* Vòm bóng cel shading 2D trong lòng ống */}
-              <path
-                d="M66,96 C66,84 76,78 90,78 C104,78 114,84 114,96 C102,90 78,90 66,96 Z"
-                fill="#EDE5D2"
-              />
-              <ellipse cx="90" cy="148" rx="19" ry="9" fill="#CFA85B" />
-
-              {/* 6. NHÂN VẬT DO NGƯỜI CHƠI TỰ VẼ (Đã Auto-Crop & Auto-Fit vừa khít lòng ống x=69..111, y=84..152) */}
-              {(croppedUri || mangnon?.imageUri) && (
-                <g className="origin-center animate-[breathe_3.6s_ease-in-out_infinite]">
-                  <image
-                    href={croppedUri || mangnon?.imageUri}
-                    x="69"
-                    y="84"
-                    width="42"
-                    height="68"
-                    preserveAspectRatio="xMidYMid meet"
-                  />
-                  <text x="103" y="94" fill="#26292B" fontSize="11" fontWeight="bold">z</text>
-                  <text x="110" y="85" fill="#A84D3D" fontSize="14" fontWeight="bold">Z</text>
-                </g>
-              )}
-
-              {/* 7. Hai mắt đốt tre khóa trên và dưới */}
-              <rect x="52" y="65" width="76" height="9" rx="4.5" fill="#5C4D43" stroke="#26292B" strokeWidth="3.5" />
-              <rect x="52" y="165" width="76" height="9" rx="4.5" fill="#5C4D43" stroke="#26292B" strokeWidth="3.5" />
-            </svg>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                SoundEngine.playBlessingChime();
-                changeStage(5);
-                if (creatureRef?.current) {
-                  creatureRef.current.action = 'happy_jump';
-                  creatureRef.current.actionTimer = 150;
-                }
-                setSpeechBubble(`${mangnon?.name || 'Măng Non'} đã thức tỉnh và bước ra Rừng Tre!`);
-                setTimeout(() => setSpeechBubble(null), 3500);
-              }}
-              className="btn-woodblock mt-2 px-4 py-2 rounded-2xl bg-[#CFA85B] text-[#1F2224] font-black text-xs flex items-center gap-1.5 animate-bounce border-2 border-[#26292B] shadow-[2px_2px_0px_#191B1D]"
-            >
-              <span>✨ Đánh thức {mangnon?.name || 'Sinh Linh'} bước ra Rừng Tre!</span>
-            </button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
 
       {/* TOP RIGHT ICONS (Hành trình, Cài đặt & Nút chuyển đổi Giai đoạn 1..5) */}
@@ -1197,9 +1218,8 @@ export default function S06HomeForest({
             {/* Nút Phụ: Rễ Tre */}
             <button
               onClick={() => setShowStatsPopover(!showStatsPopover)}
-              className={`btn-woodblock-paper flex-1 py-3 px-3.5 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition hover:scale-[1.02] active:translate-y-0.5 ${
-                showStatsPopover ? 'bg-[#CFA85B]' : ''
-              }`}
+              className={`btn-woodblock-paper flex-1 py-3 px-3.5 rounded-2xl text-xs font-black flex items-center justify-center gap-1.5 transition hover:scale-[1.02] active:translate-y-0.5 ${showStatsPopover ? 'bg-[#CFA85B]' : ''
+                }`}
               title="Xem 4 chỉ số và nối rễ kỹ năng"
             >
               <span className="text-sm">🔗</span>
@@ -1307,11 +1327,10 @@ export default function S06HomeForest({
                   setSpeechBubble('Đã kích hoạt Khế Ước Rễ Tre! Năng lượng đang cộng hưởng...');
                   setTimeout(() => setSpeechBubble(null), 3500);
                 }}
-                className={`p-2.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${
-                  mangnon?.linkedMangnonId === 'root-phudong'
+                className={`p-2.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${mangnon?.linkedMangnonId === 'root-phudong'
                     ? 'border-[#5A6544] bg-[#5A6544]/10'
                     : 'border-[#26292B]/20 bg-white/50 hover:border-[#26292B]'
-                }`}
+                  }`}
               >
                 <div>
                   <div className="text-xs font-black text-[#26292B]">🌳 Đại Thụ Tri Thức Phù Đổng</div>
@@ -1334,11 +1353,10 @@ export default function S06HomeForest({
                     setSpeechBubble(`Đã nối rễ với tiền bối ${r.name}! Chỉ số đang truyền dẫn...`);
                     setTimeout(() => setSpeechBubble(null), 3500);
                   }}
-                  className={`p-2.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${
-                    mangnon?.linkedMangnonId === r.id
+                  className={`p-2.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${mangnon?.linkedMangnonId === r.id
                       ? 'border-[#5A6544] bg-[#5A6544]/10'
                       : 'border-[#26292B]/20 bg-white/50 hover:border-[#26292B]'
-                  }`}
+                    }`}
                 >
                   <div>
                     <div className="text-xs font-black text-[#26292B]">🎋 {r.name} ({r.goalTitle})</div>

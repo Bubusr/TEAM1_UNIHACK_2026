@@ -85,8 +85,17 @@ export default function InteractiveVillageCanvas({
     if (!ctx) return;
 
     let tick = 0;
+    let isMounted = true;
 
     const render = () => {
+      if (!isMounted) return;
+
+      // Không vẽ gì nếu người dùng ẩn tab hoặc gập máy (giải phóng GPU/CPU)
+      if (document.hidden) {
+        animationRef.current = requestAnimationFrame(render);
+        return;
+      }
+
       tick++;
       const { width, height } = dimensions;
 
@@ -122,9 +131,20 @@ export default function InteractiveVillageCanvas({
       animationRef.current = requestAnimationFrame(render);
     };
 
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMounted) {
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        animationRef.current = requestAnimationFrame(render);
+      }
+    };
+
     animationRef.current = requestAnimationFrame(render);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      isMounted = false;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [dimensions, currentEnergy, threshold, isBlessed]);
 

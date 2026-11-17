@@ -8,6 +8,12 @@ const DB_NAME = 'mangnon_media_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'images';
 
+const isLocalhostEnv =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.endsWith('.local'));
+
 // In-memory cache for fast synchronous access after hydration
 const memoryCache = new Map<string, string>();
 
@@ -30,9 +36,19 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 export const ImageDB = {
+  /** Xóa sạch bộ nhớ đệm RAM (dùng cho dọn dẹp localhost) */
+  clearMemoryCache(): void {
+    memoryCache.clear();
+  },
+
   /** Lưu ảnh dataUri / blob vào IndexedDB theo id */
   async save(id: string, dataUri: string): Promise<void> {
     if (!id || !dataUri) return;
+    // Trên localhost: giới hạn tối đa 12 ảnh trong memory cache để tránh ngốn RAM
+    if (isLocalhostEnv && memoryCache.size >= 12) {
+      const oldestKey = memoryCache.keys().next().value;
+      if (oldestKey) memoryCache.delete(oldestKey);
+    }
     memoryCache.set(id, dataUri);
     try {
       const db = await openDB();
