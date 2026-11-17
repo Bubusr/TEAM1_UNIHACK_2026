@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PawVerse Design Review</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #f0e5cf;
+      --card: #fbf5e8;
+      --card-2: #d7e3ca;
+      --text: #263b2d;
+      --muted: #657160;
+      --accent: #bd633f;
+      --border: #c5b89f;
+      --ink: #315a46;
+    }
+    * { box-sizing: border-box; }
+    body { background: radial-gradient(circle at 15% 0%, #fff8e9 0 12%, transparent 36%), repeating-linear-gradient(0deg, rgba(91,74,45,.035) 0 1px, transparent 1px 5px), var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; margin: 0; }
+    main { margin: 0 auto; max-width: 1280px; padding: 32px 20px 70px; }
+    h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; line-height: 1.15; }
+    h1 { color: var(--ink); font-size: clamp(36px, 5vw, 68px); font-weight: 500; margin: 0; max-width: 760px; }
+    h2 { color: var(--ink); font-size: 34px; font-weight: 500; margin-top: 56px; }
+    h3 { margin-bottom: 8px; }
+    .eyebrow { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .14em; }
+    .muted { color: var(--muted); }
+    .hero { border-bottom: 1px solid var(--border); padding-bottom: 28px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    button, select { background: var(--accent); border: 0; border-radius: 3px 12px 4px 10px; color: #fff8e9; cursor: pointer; font: inherit; font-weight: 800; padding: 10px 14px; }
+    button.secondary, select { background: var(--card-2); color: var(--text); }
+    .board { background: #d8c8a9; border: 1px solid var(--border); border-radius: 4px 22px 8px 18px; margin-top: 22px; overflow: auto; padding: 18px; transform: rotate(-.25deg); }
+    object { display: block; min-width: 980px; width: 100%; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .slice { background: var(--card); border: 1px solid var(--border); border-radius: 3px 19px 6px 15px; box-shadow: 4px 5px 0 rgba(91,74,45,.08); padding: 18px; }
+    .slice header { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; }
+    .slice h3 { margin: 0; }
+    .slice ul { color: var(--muted); padding-left: 20px; }
+    textarea { background: #fffaf0; border: 1px solid var(--border); border-radius: 3px 11px 4px 8px; color: var(--text); display: block; min-height: 92px; padding: 10px; resize: vertical; width: 100%; }
+    .notice { background: #d7e3ca; border-left: 5px solid var(--accent); color: var(--muted); margin-top: 18px; padding: 12px 14px; }
+    .links a { color: var(--accent); margin-right: 18px; }
+    .direction { align-items: center; display: flex; flex-wrap: wrap; gap: 18px; }
+    .swatch { align-items: center; display: flex; gap: 8px; }
+    .swatch i { border: 1px solid var(--border); border-radius: 50%; display: inline-block; height: 22px; width: 22px; }
+    .use-case { background: rgba(251,245,232,.72); border-bottom: 1px dashed var(--border); display: grid; gap: 14px; grid-template-columns: 150px 1fr 180px; padding: 16px 8px; }
+    .use-case:last-child { border-bottom: 0; }
+    .use-case strong { color: var(--ink); }
+    .use-case select { font-size: 13px; padding: 7px 9px; }
+    .rules { columns: 2; column-gap: 40px; }
+    .rules li { break-inside: avoid; margin-bottom: 10px; }
+    @media (max-width: 700px) { main { padding: 22px 14px 50px; } .slice header { display: block; } select { margin-top: 12px; width: 100%; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">PAWVERSE / DESIGN REVIEW</div>
+      <h1>Review the product before implementation.</h1>
+      <p class="muted">This page is a static review surface. It does not need the API, Docker, Expo, or a database. Your notes and decisions are saved in this browser only.</p>
+      <div class="actions">
+        <button id="export">Export review notes</button>
+        <button class="secondary" id="clear">Clear local notes</button>
+      </div>
+      <div class="notice">Recommended order: review the garden and capture flows first, then wallet, lure/rescue, consensus, and partner/sponsor screens.</div>
+    </section>
+
+    <section>
+      <h2>Visual direction: meadow journal</h2>
+      <p class="muted">The proposed direction is intentionally tactile and slightly imperfect: a field notebook from a small animal sanctuary, not a generic fintech dashboard. Use texture sparingly behind content, keep controls legible, and let real animal photography carry the emotional weight.</p>
+      <div class="direction">
+        <span class="swatch"><i style="background:#315a46"></i>ink green</span>
+        <span class="swatch"><i style="background:#bd633f"></i>terracotta</span>
+        <span class="swatch"><i style="background:#f0e5cf"></i>paper</span>
+        <span class="swatch"><i style="background:#d7e3ca"></i>sage</span>
+        <span class="swatch"><i style="background:#e2b95f"></i>harvest gold</span>
+      </div>
+      <ul class="rules">
+        <li>Use one expressive serif for titles and a quiet sans-serif for utility text.</li>
+        <li>Prefer irregular paper edges, hand-drawn strokes, and layered illustrations over glass cards.</li>
+        <li>Use asymmetry to create a path through the farm, but preserve predictable tap targets.</li>
+        <li>Reserve rounded panels for real containers: shop drawer, pet details, consent, and results.</li>
+        <li>Show the farm as a place first; resource counters should be secondary and compact.</li>
+        <li>Use real captured pet images in frames with simple crop/print treatments, not emoji as the primary identity.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Visual wireframes</h2>
+      <div class="board"><object data="./wireframe-board.svg?v=2" type="image/svg+xml" aria-label="PawVerse wireframe board"></object></div>
+    </section>
+
+    <section>
+      <h2>Use-case review</h2>
+      <p class="muted">These are the states that should be approved before implementation. Select a decision and add a note for anything that feels wrong.</p>
+      <div class="board" style="padding: 10px 18px;">
+        <div class="use-case"><strong>First launch</strong><span>Explain camera, animal welfare, location, and notification permissions before asking the OS prompt.</span><select data-use="first-launch"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Camera denied</strong><span>Show a calm explanation and settings path; never leave the user on an endless loading state.</span><select data-use="camera-denied"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Offline capture</strong><span>Save a clearly labelled pending job, show retry status, and prevent duplicate rewards after reconnect.</span><select data-use="offline-capture"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Unsafe photo</strong><span>Person face, private property, animal distress, or chasing is rejected with a welfare explanation.</span><select data-use="unsafe-photo"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Returning animal</strong><span>Show “Mochi again” and EXP instead of pretending a new pet was created.</span><select data-use="returning-animal"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Garden at a glance</strong><span>Farm landmarks remain the focus; fence timer, Kibble, and navigation do not cover the scene.</span><select data-use="garden-glance"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Care cap reached</strong><span>Explain when feed, pet, or play is unavailable and show the next reset time.</span><select data-use="care-cap"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Crop lifecycle</strong><span>Empty plot, seed planted, watered, growing, harvest-ready, and no-seed states each need distinct visuals.</span><select data-use="crop-lifecycle"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Shop purchase</strong><span>Shop is a separate drawer/modal; show cost, balance, insufficient funds, and purchase confirmation.</span><select data-use="shop-purchase"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Fence vulnerable</strong><span>Use an observable visual change and a gentle warning; never use panic language for a game timer.</span><select data-use="fence-warning"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Mint pending/fails</strong><span>Pet remains usable off-chain, with a quiet pending badge and a retry path if the chain fails.</span><select data-use="mint-failure"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Lure and rescue</strong><span>Use consent-like confirmation, owner grace period, transparent odds, cost cap, and guaranteed recovery.</span><select data-use="lure-rescue"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Consensus voter</strong><span>Blurred image, no requester identity, timer, accessible Approve/Report controls, and a reason on report.</span><select data-use="consensus-voter"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>QR expired/reused</strong><span>Explain expiry or prior redemption and never silently grant a shield or discount.</span><select data-use="qr-failure"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+        <div class="use-case"><strong>Shelter impact</strong><span>Show sponsor contribution, fulfilment status, and what is confirmed versus still pending.</span><select data-use="shelter-impact"><option>Needs decision</option><option>Keep</option><option>Change</option></select></div>
+      </div>
+      <textarea id="use-notes" placeholder="Cross-cutting notes about the use cases..."></textarea>
+    </section>
+
+
+    <section>
+      <h2>Slice decisions</h2>
+      <div class="grid">
+        <article class="slice" data-slice="0">
+          <header><h3>Slice 0 · Foundation</h3><select aria-label="Slice 0 status"><option>Needs review</option><option>Approved</option><option>Change requested</option></select></header>
+          <ul><li>Sign-in and consent</li><li>Privacy, deletion, sessions</li><li>API, database, storage, CI</li></ul>
+          <textarea aria-label="Slice 0 notes" placeholder="What should change?"></textarea>
+        </article>
+        <article class="slice" data-slice="1">
+          <header><h3>Slice 1 · Capture</h3><select aria-label="Slice 1 status"><option>Needs review</option><option>Approved</option><option>Change requested</option></select></header>
+          <ul><li>Live camera and daily theme</li><li>Judge result and score breakdown</li><li>New pet, EXP, rejection states</li></ul>
+          <textarea aria-label="Slice 1 notes" placeholder="What should change?"></textarea>
+        </article>
+        <article class="slice" data-slice="2">
+          <header><h3>Slice 2 · Garden</h3><select aria-label="Slice 2 status"><option>Needs review</option><option>Approved</option><option>Change requested</option></select></header>
+          <ul><li>Farm scene and pet movement</li><li>Fence, care actions, crops, shop</li><li>Inventory and notifications</li></ul>
+          <textarea aria-label="Slice 2 notes" placeholder="What should change?"></textarea>
+        </article>
+        <article class="slice" data-slice="3">
+          <header><h3>Slice 3 · Wallet</h3><select aria-label="Slice 3 status"><option>Needs review</option><option>Approved</option><option>Change requested</option></select></header>
+          <ul><li>Smart account and paymaster</li><li>Pet/item minting</li><li>Wallet ownership and sync</li></ul>
+          <textarea aria-label="Slice 3 notes" placeholder="What should change?"></textarea>
+        </article>
+        <article class="slice" data-slice="4">
+          <header><h3>Slice 4 · Lure and swaps</h3><select aria-label="Slice 4 status"><option>Needs review</option><option>Approved</option><option>Change requested</option></select></header>
+          <ul><li>Neighbor visit and lure</li><li>Rescue and custody</li><li>Crafting and escrowed swaps</li></ul>
+          <textarea aria-label="Slice 4 notes" placeholder="What should change?"></textarea>
+        </article>
+        <article class="slice" data-slice="5">
+          <header><h3>Slice 5 · Proof-of-Paw</h3><select aria-label="Slice 5 status"><option>Needs review</option><option>Approved</option><option>Change requested</option></select></header>
+          <ul><li>Peer voter task and timer</li><li>Trust, honeypots, resolution</li><li>Appeals and moderation</li></ul>
+          <textarea aria-label="Slice 5 notes" placeholder="What should change?"></textarea>
+        </article>
+        <article class="slice" data-slice="6">
+          <header><h3>Slice 6 · Partners and impact</h3><select aria-label="Slice 6 status"><option>Needs review</option><option>Approved</option><option>Change requested</option></select></header>
+          <ul><li>Partner QR and Sanctuary Stations</li><li>Sponsor vouchers</li><li>Shelter fulfilment and impact ledger</li></ul>
+          <textarea aria-label="Slice 6 notes" placeholder="What should change?"></textarea>
+        </article>
+      </div>
+    </section>
+
+    <section class="links">
+      <h2>Source artifacts</h2>
+      <a href="./product-design-spec.md">Full product specification</a>
+      <a href="./artifact-manifest.json">Artifact manifest</a>
+      <a href="../../build-list.md">Original build list</a>
+    </section>
+  </main>
+  <script>
+    const key = "pawverse-design-review-v1";
+    const fields = [...document.querySelectorAll("[data-slice]")].flatMap(card => [
+      [card.dataset.slice + "-status", card.querySelector("select")],
+      [card.dataset.slice + "-notes", card.querySelector("textarea")]
+    ]).concat([...document.querySelectorAll("[data-use]")].map(field => [field.dataset.use, field]), [["use-notes", document.getElementById("use-notes")]]);
+    const saved = JSON.parse(localStorage.getItem(key) || "{}");
+    fields.forEach(([id, field]) => {
+      if (saved[id] !== undefined) field.value = saved[id];
+      field.addEventListener("input", () => {
+        const next = Object.fromEntries(fields.map(([fieldId, element]) => [fieldId, element.value]));
+        localStorage.setItem(key, JSON.stringify(next));
+      });
+    });
+    document.getElementById("clear").addEventListener("click", () => {
+      localStorage.removeItem(key);
+      fields.forEach(([, field]) => field.value = field.tagName === "SELECT" ? "Needs review" : "");
+    });
+    document.getElementById("export").addEventListener("click", () => {
+      const review = Object.fromEntries(fields.map(([fieldId, element]) => [fieldId, element.value]));
+      const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), review }, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "pawverse-design-review.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+  </script>
+</body>
+</html>

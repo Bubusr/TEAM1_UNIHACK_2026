@@ -83,15 +83,16 @@ git push origin <tên-nhánh>
   - `refactor:` Tối ưu / tái cấu trúc mã nguồn
 - **Dependencies & Môi trường:** Mỗi nhánh prototype cần có file cấu hình phụ thuộc riêng (như `package.json`, `requirements.txt`, ...) và file `README.md` riêng hướng dẫn cài đặt chạy thử cho prototype đó.
 
-## ▶️ Chạy PawVerse local (Slice 0)
+## ▶️ Chạy PawVerse / PetWorld local
 
 ### Yêu cầu
 
 - Docker Desktop
 - Python 3.11+
 - Node.js 20+
+- Expo Go trên điện thoại (nếu test bằng điện thoại)
 
-### Cài đặt
+### 1. Cài đặt
 
 Từ thư mục gốc repository:
 
@@ -101,36 +102,71 @@ python -m pip install -e ".\apps\api[test]"
 npm install
 ```
 
-### Khởi động dịch vụ local
+### 2. Khởi động dịch vụ Docker
 
 ```powershell
 docker compose up -d
 ```
 
-Docker Compose sẽ khởi động:
+Các dịch vụ nền được cung cấp là:
 
 - Postgres 16 + pgvector tại `localhost:5432`
 - Redis tại `localhost:6379`
 - MinIO tại `localhost:9000`
 - MinIO Console tại `localhost:9001`
 
-### Chạy và kiểm tra API
+Docker không bắt buộc để chạy demo hiện tại vì API đang dùng demo state trong bộ nhớ. Nếu Docker Desktop báo `no configuration file provided`, hãy chạy lệnh từ thư mục gốc repository.
+
+### 3. Chạy API
+
+Mở terminal PowerShell thứ nhất:
 
 ```powershell
-python -m uvicorn app.main:app --app-dir .\apps\api --reload --port 8000
+python -m uvicorn app.main:app --app-dir .\apps\api --reload --host 0.0.0.0 --port 8000
 ```
 
-Trong terminal khác:
+Kiểm tra API trong terminal thứ hai:
 
 ```powershell
 Invoke-WebRequest http://localhost:8000/health
-python -m pytest .\apps\api\tests
 ```
 
-### Chạy mobile app
+### 4. Chạy app trên PC
+
+Mở terminal PowerShell thứ ba:
 
 ```powershell
-npm run dev:mobile
+npm run dev:mobile -- --web --port 8082
 ```
 
-Slice 0 hiện cung cấp mobile app shell, API health endpoint, local infrastructure và database migration nền tảng. Camera capture và AI judge sẽ được triển khai ở Slice 1.
+Mở `http://localhost:8082` trong trình duyệt. Dùng `localhost` để trình duyệt cho phép camera; camera thường bị chặn trên địa chỉ LAN dùng `http://`.
+
+### 5. Chạy app trên điện thoại
+
+1. Kết nối điện thoại và máy tính vào cùng một Wi-Fi.
+2. Tìm địa chỉ IP LAN của máy tính bằng `ipconfig` (ví dụ `192.168.1.10`).
+3. Trong PowerShell, thay địa chỉ IP bên dưới bằng IP của máy tính:
+
+```powershell
+$env:EXPO_PUBLIC_API_URL = "http://192.168.1.10:8000"
+npm run dev:mobile -- --lan --port 8082
+```
+
+4. Mở Expo Go trên điện thoại và quét QR code được hiển thị trong terminal hoặc trình duyệt Expo.
+
+Nếu điện thoại không kết nối được, kiểm tra Windows Firewall cho Python/Node.js và đảm bảo port `8000` và `8082` không bị chặn.
+
+### 6. Kiểm tra test và type
+
+```powershell
+python -m pytest .\apps\api\tests
+npx tsc --noEmit -p .\apps\mobile\tsconfig.json
+```
+
+### 7. Dừng môi trường
+
+Nhấn `Ctrl+C` ở các terminal đang chạy API/Expo. Dừng Docker bằng:
+
+```powershell
+docker compose down
+```

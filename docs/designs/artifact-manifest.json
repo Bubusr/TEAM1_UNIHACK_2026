@@ -1,0 +1,42 @@
+{
+  "product": "PawVerse",
+  "version": "design-v1",
+  "surfaces": [
+    { "id": "mobile-garden", "slice": 2, "status": "implemented-demo", "owner": "apps/mobile" },
+    { "id": "mobile-snap", "slice": 1, "status": "implemented-demo", "owner": "apps/mobile" },
+    { "id": "mobile-wallet", "slice": 3, "status": "designed", "owner": "apps/mobile" },
+    { "id": "mobile-neighbors", "slice": 4, "status": "designed", "owner": "apps/mobile" },
+    { "id": "mobile-consensus", "slice": 5, "status": "designed", "owner": "apps/mobile" },
+    { "id": "mobile-partners", "slice": 6, "status": "designed", "owner": "apps/mobile" },
+    { "id": "partner-cashier", "slice": 6, "status": "designed", "owner": "apps/partner-web" },
+    { "id": "sponsor-portal", "slice": 6, "status": "designed", "owner": "apps/sponsor-web" },
+    { "id": "admin-console", "slice": "cross-cutting", "status": "designed", "owner": "apps/admin" }
+  ],
+  "domain_objects": [
+    "user", "consent", "photo", "upload_job", "judge_run", "daily_theme",
+    "pet", "pet_event", "fence_event", "ledger_entry", "inventory_item",
+    "wallet", "mint_job", "chain_event", "neighbor", "lure_attempt",
+    "custody_event", "recipe", "craft_job", "swap_offer", "consensus_task",
+    "consensus_vote", "trust_event", "partner", "qr_code", "sponsor_campaign",
+    "voucher", "shelter", "relief_event", "audit_event"
+  ],
+  "contracts": [
+    { "name": "PawPet", "standard": "ERC-721", "network": "Avalanche Fuji first" },
+    { "name": "PawItems", "standard": "ERC-1155", "network": "Avalanche Fuji first" },
+    { "name": "ReliefEscrow", "standard": "custom escrow", "network": "Avalanche Fuji first" }
+  ],
+  "required_controls": [
+    "idempotency",
+    "append-only ledger",
+    "signed uploads",
+    "rate limits",
+    "KMS signer",
+    "multisig admin",
+    "pause switch",
+    "photo deletion",
+    "face/person protection",
+    "animal-welfare policy",
+    "audit events",
+    "golden-set tests"
+  ]
+}
