@@ -1,0 +1,35 @@
+[
+  {
+    "id": "1",
+    "name": "Khám phá Quận 1",
+    "description": "Hành trình khám phá các địa danh lịch sử nổi tiếng tại Quận 1, TP.HCM bằng xe buýt. Ghé thăm Nhà thờ Đức Bà, Bưu điện Trung tâm và Dinh Độc Lập.",
+    "estimatedTime": 90,
+    "badgeImageUrl": "/badges/khampha-q1.png",
+    "stops": [
+      {
+        "orderIndex": 0,
+        "name": "Nhà thờ Đức Bà",
+        "description": "Nhà thờ Đức Bà Sài Gòn (Notre-Dame Cathedral) — công trình kiến trúc mang phong cách Roman và Gothic, xây dựng từ năm 1863.",
+        "lat": 10.7798,
+        "lng": 106.699,
+        "qrCode": "BUSQUEST-STOP-NHATHODUCBA-001"
+      },
+      {
+        "orderIndex": 1,
+        "name": "Bưu điện Trung tâm",
+        "description": "Bưu điện Trung tâm Sài Gòn (Central Post Office) — thiết kế bởi Gustave Eiffel, hoàn thành năm 1891.",
+        "lat": 10.78,
+        "lng": 106.6998,
+        "qrCode": "BUSQUEST-STOP-BUUDIEN-002"
+      },
+      {
+        "orderIndex": 2,
+        "name": "Dinh Độc Lập",
+        "description": "Dinh Độc Lập (Independence Palace) — biểu tượng lịch sử của Việt Nam, nơi ghi dấu sự kiện thống nhất đất nước ngày 30/4/1975.",
+        "lat": 10.7769,
+        "lng": 106.6955,
+        "qrCode": "BUSQUEST-STOP-DINHDOCLAP-003"
+      }
+    ]
+  }
+]

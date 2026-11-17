@@ -1,0 +1,77 @@
+// Prisma schema for BusQuest
+// SQLite database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String            @id @default(cuid())
+  privyId       String            @unique
+  visibleName   String            // Tên hiển thị ẩn danh (alias)
+  walletAddress String?           @unique
+  createdAt     DateTime          @default(now())
+  checkIns      CheckIn[]
+  completions   RouteCompletion[]
+}
+
+model Route {
+  id            String            @id
+  name          String
+  description   String
+  estimatedTime Int               // Thời gian ước tính tính bằng phút
+  badgeImageUrl String
+  stops         Stop[]
+  checkIns      CheckIn[]
+  completions   RouteCompletion[]
+}
+
+model Stop {
+  id          String    @id @default(cuid())
+  routeId     String
+  orderIndex  Int
+  name        String
+  description String
+  lat         Float
+  lng         Float
+  qrCode      String    @unique
+  route       Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  checkIns    CheckIn[]
+
+  @@unique([routeId, orderIndex])
+}
+
+// Lưu ý: Tuyệt đối KHÔNG lưu toạ độ GPS vào CheckIn để bảo vệ quyền riêng tư người dùng
+model CheckIn {
+  id        String   @id @default(cuid())
+  userId    String
+  stopId    String
+  routeId   String
+  date      String   // Định dạng YYYY-MM-DD
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stop  Stop  @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, stopId, date])
+  @@index([userId, routeId, date])
+}
+
+model RouteCompletion {
+  id          String   @id @default(cuid())
+  userId      String
+  routeId     String
+  completedAt DateTime @default(now())
+  txHash      String?
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, routeId])
+}

@@ -1,84 +1,82 @@
-# TEAM 1 - UNIHACK 2026
+# BusQuest — Tour Xe Buýt Có Nhiệm Vụ (UniHack 2026 - Team1 Vietnam)
 
-Kho lưu trữ chính thức của **Team 1** tham gia cuộc thi **UNIHACK 2026**.
+> **Bản demo kỹ thuật trên testnet — Avalanche Fuji C-Chain (Chain ID: 43113)**
+
+BusQuest là ứng dụng web mobile "tour xe buýt có nhiệm vụ" dành cho sinh viên và giới trẻ. Người chơi di chuyển qua 3 điểm di tích lịch sử tại Quận 1, TP.HCM theo lộ trình bằng xe buýt, quét mã QR check-in tại từng điểm. Khi hoàn thành toàn bộ lộ trình, người chơi nhận được:
+1. **Một Huy hiệu NFT Soulbound** (ERC-721 không thể chuyển nhượng) lưu giữ vĩnh viễn trên blockchain Avalanche.
+2. **Một Phiếu ưu đãi (Voucher)** giảm giá sử dụng 1 lần tại quán cà phê đối tác. Quán sẽ quét mã QR động của khách để xác nhận on-chain.
 
 ---
 
-## 🌳 Cấu trúc phân nhánh (Git Branching Strategy)
+## 🏗️ Kiến Trúc Hệ Thống
 
-Repository này được tổ chức theo mô hình phân tách các prototype độc lập trên từng nhánh riêng biệt nhằm tối ưu tốc độ thử nghiệm, tránh xung đột mã nguồn (merge conflicts) giữa các ý tưởng trong thời gian diễn ra Hackathon:
-
-```text
-main (Nhánh gốc — chỉ lưu tài liệu tổng quan & hướng dẫn chung)
-├── prototype/busquest
-├── prototype/focusgarden (hoặc prototype/mangnon)
-└── prototype/petworld
-```
-
-### Chi tiết các nhánh
-
-| Nhánh | Mục đích / Nội dung | Trạng thái |
+| Thành phần | Công nghệ | Vai trò |
 |---|---|---|
-| `main` | Nhánh tài liệu tổng hợp, quy chuẩn dự án, báo cáo và hướng dẫn chung. | Nhánh mặc định |
-| `prototype/busquest` | Không gian phát triển prototype **BusQuest**. | Đang phát triển |
-| `prototype/focusgarden` | Không gian phát triển prototype **FocusGarden** *(hoặc Măng Non)*. | Đang phát triển |
-| `prototype/petworld` | Không gian phát triển prototype **PetWorld**. | Đang phát triển |
+| **Smart Contracts** | Solidity 0.8.24, Foundry, OpenZeppelin | Chạy trên Avalanche Fuji C-Chain (`CheckInManager`, `BadgeNFT`, `VoucherManager`) |
+| **Frontend UI** | Next.js 15 (App Router), Tailwind CSS | Giao diện mobile-first tiếng Việt, thân thiện, không lộ thuật ngữ crypto thô |
+| **Backend & API** | Next.js API Routes, Prisma ORM, SQLite | Xác thực QR, chống gian lận, ký EIP-712 xác nhận hoàn thành, **tuyệt đối không lưu toạ độ GPS** |
+| **Bảo mật & Riêng tư** | EIP-712 Signatures, Viem | Ký số hoàn thành lộ trình (Verifier) và Redeem voucher ngắn hạn (30 giây) |
 
 ---
 
-## 🚀 Hướng dẫn làm việc trong nhóm (Team Workflow)
+## ⚡ Tích Hợp Avalanche (Avalanche Integration)
 
-### 1. Clone và đồng bộ mã nguồn
-```bash
-# Clone repo về máy (nếu chưa clone)
-git clone https://github.com/Bubusr/TEAM1_UNIHACK_2026.git
-cd TEAM1_UNIHACK_2026
-
-# Cập nhật danh sách tất cả các nhánh từ remote
-git fetch origin
-```
-
-### 2. Chuyển sang nhánh prototype cần làm việc
-Chọn nhánh tương ứng với prototype bạn phụ trách:
-
-```bash
-# Đối với BusQuest:
-git checkout prototype/busquest
-
-# Đối với FocusGarden:
-git checkout prototype/focusgarden
-
-# Đối với PetWorld:
-git checkout prototype/petworld
-```
-
-### 3. Làm việc và đẩy code lên GitHub
-Khi làm việc trên nhánh prototype của mình:
-
-```bash
-# Kiểm tra trạng thái thay đổi
-git status
-
-# Thêm thay đổi vào staging
-git add .
-
-# Tạo commit theo chuẩn Conventional Commits
-git commit -m "feat(busquest): thêm giao diện màn hình chính"
-
-# Đẩy lên remote repository
-git push origin <tên-nhánh>
-# Ví dụ: git push -u origin prototype/busquest
-```
+- **Mạng**: Avalanche Fuji C-Chain (Chain ID: `43113`, RPC: `https://api.avax-test.network/ext/bc/C/rpc`).
+- **Hợp đồng thông minh**:
+  - `CheckInManager.sol`: Xác minh chữ ký EIP-712 từ Verifier ngoài chain, gọi mint huy hiệu và phát voucher, chống replay bằng nonce.
+  - `BadgeNFT.sol`: Chuẩn ERC-721 Soulbound chặn chuyển nhượng (chỉ cho phép mint và burn bởi chủ sở hữu).
+  - `VoucherManager.sol`: Quản lý hạn mức phát voucher của quán đối tác, xác minh chữ ký EIP-712 ngắn hạn do chủ voucher ký khi quán thực hiện `redeem`.
+- **Vì sao chọn Avalanche?**: Phí giao dịch cực thấp và thời gian hoàn tất (finality) ~1 giây rất phù hợp cho các vi giao dịch (micro-transactions) như check-in và đổi voucher mà không làm gián đoạn trải nghiệm người dùng ngoài đời thực.
 
 ---
 
-## 📌 Quy ước chung (Conventions)
+## 🚀 Hướng Dẫn Cài Đặt & Chạy Thử
 
-- **Nhánh `main`:** Giữ sạch, không commit trực tiếp code prototype vào nhánh này. Chỉ cập nhật tài liệu tổng hợp hoặc tài liệu thuyết trình/báo cáo chung của nhóm.
-- **Commit Message:** Khuyến khích sử dụng tiền tố rõ ràng:
-  - `feat:` Tính năng mới
-  - `fix:` Sửa lỗi
-  - `ui:` Cập nhật giao diện
-  - `docs:` Bổ sung tài liệu
-  - `refactor:` Tối ưu / tái cấu trúc mã nguồn
-- **Dependencies & Môi trường:** Mỗi nhánh prototype cần có file cấu hình phụ thuộc riêng (như `package.json`, `requirements.txt`, ...) và file `README.md` riêng hướng dẫn cài đặt chạy thử cho prototype đó.
+### 1. Yêu Cầu Môi Trường
+- Node.js >= 18
+- Foundry (forge) để biên dịch và kiểm thử smart contracts
+
+### 2. Cài Đặt Thư Viện & Khởi Tạo Database
+```bash
+# Cài đặt các gói phụ thuộc
+npm install
+
+# Khởi tạo database SQLite và sinh Prisma client
+npx prisma db push
+
+# Nạp dữ liệu lộ trình mẫu Quận 1 TP.HCM (3 điểm)
+node prisma/seed.js
+```
+
+### 3. Kiểm Thử Smart Contracts (Foundry)
+```bash
+cd contracts
+forge test -vvv
+```
+*(Kết quả: 13/13 tests passed bao gồm kiểm tra chữ ký EIP-712, chống double-redeem, chống transfer huy hiệu, quota đối tác,...)*
+
+### 4. Khởi Chạy Ứng Dụng Web
+```bash
+npm run dev
+```
+Mở trình duyệt tại: [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 📱 Các Màn Hình Chính Của Ứng Dụng
+
+1. **Trang chủ (`/`)**: Khám phá danh sách tuyến buýt, xem thời gian dự kiến và phần thưởng.
+2. **Chi tiết lộ trình (`/routes/1`)**: Xem danh sách 3 điểm (Nhà thờ Đức Bà, Bưu điện Trung tâm, Dinh Độc Lập), thanh tiến độ thực tế và nút nhận thưởng khi hoàn thành.
+3. **Quét QR Check-in (`/checkin`)**: Quét camera hoặc sử dụng nút "Thử nghiệm nhanh (Demo Test)" để giả lập quét mã tại điểm dừng cho giám khảo.
+4. **Ví của tôi (`/wallet`)**:
+   - Tab **Huy hiệu NFT**: Xem huy hiệu Soulbound ERC-721 đã nhận.
+   - Tab **Phiếu ưu đãi**: Xem voucher giảm giá và bấm "Dùng ngay".
+5. **Chi tiết Voucher (`/wallet/voucher/[id]`)**: Sinh mã QR động tự làm mới sau mỗi 30 giây bằng chữ ký số EIP-712.
+6. **Màn hình Quán Đối Tác (`/merchant`)**: Dành cho nhân viên quán quét QR khách hàng, gọi xác nhận on-chain và kiểm tra cơ chế từ chối khi quét lại lần 2.
+
+---
+
+## 🛡️ Cam Kết Riêng Tư & An Toàn (Theo AGENTS.md)
+- Không lưu toạ độ GPS cá nhân trong cơ sở dữ liệu.
+- Không đưa từng lượt check-in chi tiết lên blockchain công khai (chỉ đưa sự kiện hoàn thành lộ trình).
+- Mọi khoá riêng và bí mật môi trường được bảo vệ trong `.env` (đã thêm vào `.gitignore`).

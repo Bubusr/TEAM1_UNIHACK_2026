@@ -1,0 +1,17 @@
+# Foundry artifacts
+out/
+cache/
+
+# Environment variables
+.env
+.env.*
+
+# Deployment artifacts (keep broadcast for reference but not secrets)
+# broadcast/
+
+# OS / Editor
+.DS_Store
+*.swp
+
+# Node (if any frontend adjacent)
+node_modules/
