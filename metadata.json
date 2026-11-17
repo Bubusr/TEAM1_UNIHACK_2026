@@ -1,0 +1,6 @@
+{
+  "name": "Paws & Picket: Pet Sanctuary",
+  "description": "A cozy hand-drawn pet sanctuary and AI photo scrapbook game where daily pet snapshots renew your Streak Fence and adopt new companions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
