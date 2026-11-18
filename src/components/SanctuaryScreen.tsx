@@ -36,15 +36,17 @@ interface SanctuaryScreenProps {
   fenceHours: number;
   theme: string;
   pets: SanctuaryPet[];
+  selectedPetId?: string | null;
   toys: GardenToy[];
   foodInventory: Record<FoodItemType, number>;
   limits: DailyLimits;
   luredCount: number;
   activeBait: string | null;
   readyFarmCount: number;
+  onSelectPet?: (petId: string) => void;
   onCarePet: (petId: string) => string;
-  onFeedPet: (food: FoodItemType) => string;
-  onPlayToy: (toy: GardenToy) => string;
+  onFeedPet: (food: FoodItemType, petId?: string) => string;
+  onPlayToy: (toy: GardenToy, petId?: string) => string;
   onTapClover: () => string;
   onOpenFarm: () => void;
   onOpenModal: (modal: SanctuaryModalType) => void;
@@ -62,12 +64,14 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
   fenceHours,
   theme,
   pets,
+  selectedPetId,
   toys,
   foodInventory,
   limits,
   luredCount,
   activeBait,
   readyFarmCount,
+  onSelectPet,
   onCarePet,
   onFeedPet,
   onPlayToy,
@@ -78,6 +82,10 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
   onQuickEnergy,
 }) => {
   const activeToys = toys.filter((t) => t.owned);
+  const selectedPet =
+    pets.find((p) => p.id === selectedPetId || p.petUid === selectedPetId) ??
+    pets[0] ??
+    null;
 
   const [petPositions, setPetPositions] = useState<
     Record<string, { x: number; y: number; flip: boolean }>
@@ -139,24 +147,29 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
 
   const handlePetTap = (pet: SanctuaryPet) => {
     const pos = petPositions[pet.id] ?? { x: pet.x, y: pet.y };
+    onSelectPet?.(pet.id);
     const msg = onCarePet(pet.id);
     showToastAt(msg, pos.x, Math.max(20, pos.y - 12));
   };
 
   const handleToyTap = (toy: GardenToy) => {
-    const firstPet = pets[0];
-    if (firstPet) {
+    const targetPet = selectedPet;
+    if (targetPet) {
       setPetPositions((prev) => ({
         ...prev,
-        [firstPet.id]: {
+        [targetPet.id]: {
           x: Math.max(24, toy.x - 6),
           y: Math.max(40, toy.y - 4),
-          flip: (prev[firstPet.id]?.x ?? 50) > toy.x,
+          flip: (prev[targetPet.id]?.x ?? targetPet.x) > toy.x,
         },
       }));
     }
-    const msg = onPlayToy(toy);
-    showToastAt(msg, toy.x, toy.y - 10);
+    const msg = onPlayToy(toy, targetPet?.id);
+    showToastAt(
+      targetPet ? `${targetPet.name}: ${msg}` : msg,
+      toy.x,
+      toy.y - 10
+    );
   };
 
   const availableSnacks = (Object.keys(FOOD_META) as FoodItemType[]).filter(
@@ -246,24 +259,53 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}
         subRow={
-          <div className="flex items-center justify-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => onOpenModal('snap')}
-              className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-3 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] flex items-center gap-1.5 text-[11.5px] font-bold text-[#4B3C46] active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
-            >
-              <Camera className="w-3.5 h-3.5 text-[#C99D66]" />
-              <span>{theme}</span>
-            </button>
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center justify-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onOpenModal('snap')}
+                className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-3 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] flex items-center gap-1.5 text-[11.5px] font-bold text-[#4B3C46] active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
+              >
+                <Camera className="w-3.5 h-3.5 text-[#C99D66]" />
+                <span>{theme}</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => onOpenModal('farmhouse')}
-              className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-2.5 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] text-[11.5px] font-extrabold text-[#4B3C46] tabular-nums active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
-              title="Daily petting coin limit"
-            >
-              ❤️ {limits.petCoinsUsed}/{limits.petCoinsMax}
-            </button>
+              <button
+                type="button"
+                onClick={() => onOpenModal('farmhouse')}
+                className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-2.5 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] text-[11.5px] font-extrabold text-[#4B3C46] tabular-nums active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
+                title="Daily petting coin limit"
+              >
+                ❤️ {limits.petCoinsUsed}/{limits.petCoinsMax}
+              </button>
+            </div>
+
+            {pets.length > 0 && (
+              <div
+                className="flex items-center justify-center gap-1 flex-wrap max-w-full"
+                aria-label="Active companion selector"
+              >
+                {pets.map((pet) => {
+                  const isActive = selectedPet?.id === pet.id;
+                  return (
+                    <button
+                      key={pet.id}
+                      type="button"
+                      onClick={() => onSelectPet?.(pet.id)}
+                      aria-pressed={isActive}
+                      title={isActive ? `🐾 ${pet.name} (Đang chọn để chăm sóc/cho ăn/chơi bóng)` : `Chọn ${pet.name}`}
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold border transition-colors cursor-pointer whitespace-nowrap ${
+                        isActive
+                          ? 'bg-[#FFE07D] border-[#C99D66] text-[#4B3C46] shadow-xs'
+                          : 'bg-[#FFFDF9]/90 border-[#D9C3B4] text-[#8A747E] hover:text-[#4B3C46]'
+                      }`}
+                    >
+                      {isActive ? `🐾 ${pet.name}` : pet.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         }
       />
@@ -391,11 +433,21 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                   key={foodKey}
                   type="button"
                   onClick={() => {
-                    const msg = onFeedPet(foodKey);
-                    showToastAt(msg, 46, 48);
+                    const msg = onFeedPet(foodKey, selectedPet?.id);
+                    const pos = selectedPet
+                      ? petPositions[selectedPet.id] ?? {
+                          x: selectedPet.x,
+                          y: selectedPet.y,
+                        }
+                      : { x: 46, y: 48 };
+                    showToastAt(
+                      selectedPet ? `${selectedPet.name}: ${msg}` : msg,
+                      pos.x,
+                      Math.max(20, pos.y - 10)
+                    );
                   }}
                   className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-2 py-0.5 text-[11.5px] font-extrabold text-[#4B3C46] shadow-xs flex items-center gap-0.5 active:scale-90 transition-transform cursor-pointer"
-                  title={`Feed ${FOOD_META[foodKey].name}`}
+                  title={`Feed ${FOOD_META[foodKey].name} to ${selectedPet?.name ?? 'pet'}`}
                 >
                   <span>{FOOD_META[foodKey].icon}</span>
                   <span className="tabular-nums">{foodInventory[foodKey]}</span>
@@ -453,6 +505,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
               y: pet.y,
               flip: Boolean(pet.flip),
             };
+            const isSelected = selectedPet?.id === pet.id;
 
             return (
               <button
@@ -483,7 +536,9 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                 )}
 
                 <div
-                  className="animate-pet-hop group-active:scale-110 transition-transform"
+                  className={`animate-pet-hop group-active:scale-110 transition-transform rounded-full ${
+                    isSelected ? 'ring-2 ring-[#FFE07D]/90 ring-offset-2 ring-offset-transparent' : ''
+                  }`}
                   style={{ animationDelay: `${idx * 0.45}s` }}
                 >
                   <CroppedPetCutout
@@ -495,6 +550,11 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                     className="w-[78px] h-[78px]"
                   />
                 </div>
+                {isSelected && (
+                  <span className="mt-0.5 inline-block bg-[#FFF3BF]/95 border border-[#C99D66] rounded-full px-1.5 py-0 text-[9px] font-extrabold text-[#4B3C46] shadow-xs">
+                    {pet.name}
+                  </span>
+                )}
               </button>
             );
           })}

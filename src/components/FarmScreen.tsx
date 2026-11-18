@@ -9,26 +9,10 @@ import {
 } from '../types';
 import { SanctuaryModalType } from './SanctuaryScreen';
 import { SharedBottomDock, SharedTopHud } from './SharedHud';
+import { FOOD_META, SEED_LIST } from '../shared/gameMeta';
 
-export const FOOD_META: Record<
-  FoodItemType,
-  {
-    icon: string;
-    name: string;
-    seedCost?: number;
-    growMs?: number;
-    sellPrice: number;
-  }
-> = {
-  wheat: { icon: '🌾', name: 'Wheat', seedCost: 10, growMs: 8000, sellPrice: 24 },
-  carrot: { icon: '🥕', name: 'Carrot', seedCost: 15, growMs: 10000, sellPrice: 36 },
-  berry: { icon: '🍓', name: 'Berry', seedCost: 25, growMs: 14000, sellPrice: 55 },
-  catnip: { icon: '🌿', name: 'Catnip', seedCost: 35, growMs: 18000, sellPrice: 75 },
-  apple: { icon: '🍎', name: 'Apple', sellPrice: 45 },
-  peach: { icon: '🍑', name: 'Peach', sellPrice: 52 },
-};
+export { FOOD_META };
 
-const SEED_LIST: CropType[] = ['wheat', 'carrot', 'berry', 'catnip'];
 const MAX_STALL_CRATES = 6;
 
 interface FarmScreenProps {

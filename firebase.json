@@ -1,0 +1,17 @@
+{
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Paws and Picket",
+        "supportEmail": "pc.thuhuong@gmail.com",
+        "authorizedRedirectUris": [
+          "https://paws-local.firebaseapp.com/__/auth/handler",
+          "http://localhost"
+        ]
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firebase/firestore.rules"
+  }
+}

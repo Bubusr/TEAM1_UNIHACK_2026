@@ -1,0 +1,10 @@
+{
+  "projectId": "paws-local",
+  "appId": "1:213801959465:web:a72a8122fba248a7e71c38",
+  "apiKey": "AIzaSyBvCBq9Y1EsAz5uK1BIDioZmMS3YR1h7VE",
+  "authDomain": "paws-local.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "paws-local.firebasestorage.app",
+  "messagingSenderId": "213801959465",
+  "measurementId": "G-PFHBMELK0S"
+}

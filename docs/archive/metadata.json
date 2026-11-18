@@ -1,0 +1,8 @@
+{
+  "name": "Remix Pet Sanctuary: Snapshot Garden",
+  "description": "A charming hand-drawn world where you photograph pets to unlock them for your cozy, streak-based sanctuary garden.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
