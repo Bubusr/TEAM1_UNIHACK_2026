@@ -3,7 +3,7 @@
 **Author:** Member 03 – Blockchain & Web3 Integration Engineer  
 **Date:** November 19, 2026  
 **Branch:** `mem02-mem03`  
-**Overall Status:** **27 / 27 WEB3 TESTS PASS — 88 / 88 WORKSPACE TESTS PASS (0 FAILURES)**
+**Overall Status:** **35 / 35 WEB3 TESTS PASS — 96 / 96 WORKSPACE TESTS PASS (0 FAILURES)**
 
 ---
 
@@ -11,11 +11,12 @@
 
 | Test Suite File | Focus Area | Pass | Fail | Duration |
 | :--- | :--- | :---: | :---: | :---: |
-| `test/PawsAndPicketPassport.test.ts` | Hardhat ERC-721 + EIP-712 Contract Engine | 4 | 0 | 1,991 ms |
-| `test/walletClient.test.ts` | EIP-6963 Core Wallet Discovery & RPC Handling | 7 | 0 | 168 ms |
-| `test/web3-reconciliation.test.ts` | Firestore Reconciliation, Mint Log Parsing, Auth | 10 | 0 | 21,393 ms |
-| `test/web3-e2e-matrix.test.ts` | 7-Scenario End-to-End Mint Lifecycle Matrix | 6 | 0 | 7,051 ms |
-| **Total Web3 Test Suite** | | **27** | **0** | **~30.6 s** |
+| `test/PawsAndPicketPassport.test.ts` | Hardhat ERC-721 + EIP-712 Contract Engine | 4 | 0 | 1,133 ms |
+| `test/walletClient.test.ts` | EIP-6963 Core Wallet Discovery & RPC Handling | 7 | 0 | 254 ms |
+| `test/web3-reconciliation.test.ts` | Firestore Reconciliation, Mint Log Parsing, Auth | 10 | 0 | 11,965 ms |
+| `test/web3-e2e-matrix.test.ts` | 7-Scenario End-to-End Mint Lifecycle Matrix | 6 | 0 | 4,627 ms |
+| `test/web3-metadata-canonical.test.ts` | Canonical HTTPS Metadata, Public Portrait Binary, Zero PII | 8 | 0 | 3,161 ms |
+| **Total Web3 Test Suite** | | **35** | **0** | **~21.1 s** |
 
 ---
 
@@ -68,7 +69,19 @@ Verified in `test/walletClient.test.ts` and `src/server/walletAuth.ts`:
 
 ---
 
-## 5. Full Workspace Regression Status
+## 5. Canonical Metadata & Public Portrait Delivery Matrix
+
+Verified in `test/web3-metadata-canonical.test.ts`:
+
+- **Canonical HTTPS Origin:** `GET /api/metadata/:petUid` strictly produces `https://pawsandpicket.app` without leaking `localhost`, `127.0.0.1`, or development ports.
+- **Binary Image Delivery:** `GET /api/pets/:petUid/portrait` streams raw binary JPEG/PNG (510,996 bytes) with proper `Content-Type` and `Content-Length`.
+- **Zero Authentication Requirement:** Endpoint is fully public for external NFT indexers and explorers.
+- **Strict Privacy:** Zero PII (no keeper email, internal user ID, or GPS coordinates).
+- **EIP-712 Consistency:** Signed vouchers bind canonical HTTPS metadata URI, automatically stripping and replacing any localhost base URL.
+
+---
+
+## 6. Full Workspace Regression Status
 
 - `test/server.test.ts`: **19 / 19 PASS**
 - `test/regression-defects.test.ts`: **18 / 18 PASS**
@@ -78,5 +91,6 @@ Verified in `test/walletClient.test.ts` and `src/server/walletAuth.ts`:
 - `test/walletClient.test.ts`: **7 / 7 PASS**
 - `test/web3-reconciliation.test.ts`: **10 / 10 PASS**
 - `test/web3-e2e-matrix.test.ts`: **6 / 6 PASS**
+- `test/web3-metadata-canonical.test.ts`: **8 / 8 PASS**
 
-**Grand Total:** **88 / 88 TESTS PASSING (0 FAILURES, 0 REGRESSIONS)**
+**Grand Total:** **96 / 96 TESTS PASSING (0 FAILURES, 0 REGRESSIONS)**

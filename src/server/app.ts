@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,6 +57,22 @@ const PORT =
   Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort <= 65535
     ? parsedPort
     : 3000;
+
+export const CANONICAL_APP_ORIGIN = 'https://pawsandpicket.app';
+
+export function getCanonicalOrigin(): string {
+  const configured = process.env.APP_URL?.trim();
+  if (
+    configured &&
+    configured !== 'MY_APP_URL' &&
+    !configured.includes('localhost') &&
+    !configured.includes('127.0.0.1') &&
+    configured.startsWith('https://')
+  ) {
+    return configured.replace(/\/$/, '');
+  }
+  return CANONICAL_APP_ORIGIN;
+}
 
 function getPublicOrigin(req: express.Request): string {
   const configured = process.env.APP_URL?.trim();
@@ -128,10 +145,8 @@ export function createApp() {
         return res.status(404).json({ error: 'Pet Passport not found.' });
       }
 
-      const origin = getPublicOrigin(req);
-      const publicImageUrl = pet.photoUrl.startsWith('data:')
-        ? `${origin}/api/pets/${encodeURIComponent(pet.petUid)}/portrait`
-        : `${origin}${pet.photoUrl}`;
+      const canonicalOrigin = getCanonicalOrigin();
+      const publicImageUrl = `${canonicalOrigin}/api/pets/${encodeURIComponent(pet.petUid)}/portrait`;
 
       return res.json(
         buildPublicPetMetadata({
@@ -153,38 +168,46 @@ export function createApp() {
     }
   });
 
-  // Public portrait image endpoint for uploaded data-URL pet photos
+  // Public unauthenticated portrait image endpoint for Pet Passport tokens
   app.get('/api/pets/:petUid/portrait', async (req, res) => {
     try {
       const petUid = String(req.params.petUid || '').trim();
-      let photoUrl: string | null = null;
+      if (!petUid) return res.status(400).send('Missing petUid');
 
-      if (!process.env.DATABASE_URL) {
-        const petDoc = await adminDb.collection('pets').doc(petUid).get();
-        if (petDoc.exists) {
-          photoUrl = (petDoc.data() as any)?.photoUrl || null;
-        }
-      } else {
-        const [pet] = await db
-          .select({ photoUrl: pets.photoUrl })
-          .from(pets)
-          .where(eq(pets.petUid, petUid))
-          .limit(1);
-        photoUrl = pet?.photoUrl || null;
+      const pet = await getPetForWeb3(petUid);
+      const photoUrl = pet?.photoUrl;
+
+      if (!photoUrl) return res.status(404).send('Pet portrait not found');
+
+      // 1. Data URL (uploaded pet photo in Firestore)
+      if (photoUrl.startsWith('data:')) {
+        const match = photoUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
+        if (!match) return res.status(404).send('Invalid image format');
+        const buf = Buffer.from(match[2], 'base64');
+        res.setHeader('Content-Type', match[1]);
+        res.setHeader('Content-Length', buf.length);
+        res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+        return res.send(buf);
       }
 
-      if (!photoUrl) return res.status(404).send('Not found');
-
-      if (!photoUrl.startsWith('data:')) {
-        return res.redirect(photoUrl);
+      // 2. External HTTPS URL
+      if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+        return res.redirect(302, photoUrl);
       }
 
-      const match = photoUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
-      if (!match) return res.status(404).send('Invalid image');
-      const buf = Buffer.from(match[2], 'base64');
-      res.setHeader('Content-Type', match[1]);
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.send(buf);
+      // 3. Local asset path (e.g. /src/assets/images/cropped_golden_dog_...)
+      const cleanedRelPath = photoUrl.replace(/^\/+/, '');
+      const absPath = path.resolve(rootDir, cleanedRelPath);
+      if (absPath.startsWith(rootDir) && fs.existsSync(absPath)) {
+        const ext = path.extname(absPath).toLowerCase();
+        const mimeType =
+          ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.sendFile(absPath);
+      }
+
+      return res.status(404).send('Image file not found');
     } catch (error) {
       console.error('Portrait load failed:', error);
       return res.status(500).send('Error loading portrait');
@@ -710,7 +733,7 @@ export function createApp() {
           userId: user.id,
           uid: user.uid,
           petUid,
-          publicBaseUrl: getPublicOrigin(req),
+          publicBaseUrl: getCanonicalOrigin(),
         });
         return res.json(claimData);
       } catch (error) {

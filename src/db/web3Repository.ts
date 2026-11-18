@@ -75,7 +75,12 @@ export async function getPetForWeb3(petUid: string): Promise<Web3PetRecord | nul
       discoveryScore: Number(data.discoveryScore ?? data.score ?? 0),
       bondXp: Number(data.bondXp ?? 0),
       careCount: Number(data.careCount ?? 0),
-      discoveredAt: data.discoveredAt ? new Date(data.discoveredAt) : new Date(),
+      discoveredAt:
+        data.discoveredAt && typeof data.discoveredAt.toDate === 'function'
+          ? data.discoveredAt.toDate()
+          : data.discoveredAt && !Number.isNaN(new Date(data.discoveredAt).getTime())
+          ? new Date(data.discoveredAt)
+          : new Date(),
       mintStatus: data.mintStatus || (data.minted ? 'minted' : 'unminted'),
       tokenId: data.tokenId || null,
       mintTxHash: data.mintTxHash || null,

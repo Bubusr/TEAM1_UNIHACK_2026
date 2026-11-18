@@ -140,6 +140,22 @@ export function getFujiProvider(): ethers.JsonRpcProvider {
   return new ethers.JsonRpcProvider(getAvalancheFujiRpcUrl(), getAvalancheChainId());
 }
 
+export const CANONICAL_APP_ORIGIN = 'https://pawsandpicket.app';
+
+export function getCanonicalOrigin(): string {
+  const configured = process.env.APP_URL?.trim();
+  if (
+    configured &&
+    configured !== 'MY_APP_URL' &&
+    !configured.includes('localhost') &&
+    !configured.includes('127.0.0.1') &&
+    configured.startsWith('https://')
+  ) {
+    return configured.replace(/\/$/, '');
+  }
+  return CANONICAL_APP_ORIGIN;
+}
+
 export function buildPublicPetMetadata(pet: {
   petUid: string;
   name: string;
@@ -152,10 +168,20 @@ export function buildPublicPetMetadata(pet: {
   originalDiscovererWallet: string | null;
   publicImageUrl: string;
 }) {
+  let image = pet.publicImageUrl?.trim();
+  if (
+    !image ||
+    image.includes('localhost') ||
+    image.includes('127.0.0.1') ||
+    (!image.startsWith('https://') && !image.startsWith('ipfs://'))
+  ) {
+    image = `${getCanonicalOrigin()}/api/pets/${encodeURIComponent(pet.petUid)}/portrait`;
+  }
+
   return {
     name: `${pet.name} · Paws & Picket Passport`,
     description: `Canonical Pet Passport for ${pet.name}, discovered in Paws & Picket. Direct transfers are blocked; ownership changes only via explicit adoption.`,
-    image: pet.publicImageUrl,
+    image,
     attributes: [
       { trait_type: 'Species', value: pet.species },
       { trait_type: 'Pose', value: pet.pose },
@@ -164,7 +190,10 @@ export function buildPublicPetMetadata(pet: {
       { trait_type: 'Care Milestones', value: pet.careCount },
       {
         trait_type: 'Discovered Date',
-        value: pet.discoveredAt.toISOString().slice(0, 10),
+        value:
+          pet.discoveredAt instanceof Date && !Number.isNaN(pet.discoveredAt.getTime())
+            ? pet.discoveredAt.toISOString().slice(0, 10)
+            : new Date().toISOString().slice(0, 10),
       },
       ...(pet.originalDiscovererWallet
         ? [
@@ -389,7 +418,16 @@ export async function issueSignedMintClaim(params: {
     ipfsCid = pinned.metadataCid;
     metadataUri = pinned.metadataUri;
   } else {
-    metadataUri = `${params.publicBaseUrl}/api/metadata/${encodeURIComponent(pet.petUid)}`;
+    const rawBase = params.publicBaseUrl?.trim();
+    const base =
+      rawBase &&
+      !rawBase.includes('localhost') &&
+      !rawBase.includes('127.0.0.1') &&
+      rawBase.startsWith('https://')
+        ? rawBase.replace(/\/$/, '')
+        : getCanonicalOrigin();
+
+    metadataUri = `${base}/api/metadata/${encodeURIComponent(pet.petUid)}`;
   }
 
   const petIdHash = ethers.id(pet.petUid);
