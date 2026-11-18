@@ -675,7 +675,7 @@ export function createApp() {
         req.user!.email || '',
         req.user!.name
       );
-      await unlinkWallet(user.id);
+      await unlinkWallet(user.id, user.uid);
       return res.json({ unlinked: true });
     } catch (error) {
       const msg =
