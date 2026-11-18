@@ -19,6 +19,8 @@ export interface Web3PetRecord {
   mintStatus: 'unminted' | 'pending' | 'minted';
   tokenId?: string | null;
   mintTxHash?: string | null;
+  contractAddress?: string | null;
+  onChainOwner?: string | null;
   metadataUri?: string | null;
   ipfsCid?: string | null;
   originalDiscovererWallet: string | null;
@@ -77,6 +79,8 @@ export async function getPetForWeb3(petUid: string): Promise<Web3PetRecord | nul
       mintStatus: data.mintStatus || (data.minted ? 'minted' : 'unminted'),
       tokenId: data.tokenId || null,
       mintTxHash: data.mintTxHash || null,
+      contractAddress: data.contractAddress || null,
+      onChainOwner: data.onChainOwner || null,
       metadataUri: data.metadataUri || null,
       ipfsCid: data.ipfsCid || null,
       originalDiscovererWallet: data.originalDiscovererWallet || null,
@@ -107,6 +111,8 @@ export async function getPetForWeb3(petUid: string): Promise<Web3PetRecord | nul
     mintStatus: pet.mintStatus as any,
     tokenId: pet.tokenId,
     mintTxHash: pet.mintTxHash,
+    contractAddress: pet.contractAddress || null,
+    onChainOwner: pet.onChainOwner || null,
     metadataUri: pet.metadataUri,
     ipfsCid: pet.ipfsCid,
     originalDiscovererWallet: pet.originalDiscovererWallet ?? null,
@@ -180,6 +186,67 @@ export async function getLinkedWallet(params: {
     .select()
     .from(wallets)
     .where(eq(wallets.userId, params.userId))
+    .limit(1);
+
+  if (!wallet) return null;
+
+  return {
+    address: wallet.address,
+    chainId: wallet.chainId,
+    verifiedAt: wallet.verifiedAt,
+    userId: wallet.userId,
+  };
+}
+
+/**
+ * Retrieve a verified linked wallet record by EVM address.
+ */
+export async function getWalletByAddress(
+  address: string
+): Promise<Web3WalletRecord | null> {
+  const cleanAddr = String(address || '').trim().toLowerCase();
+  if (!cleanAddr) return null;
+
+  if (!process.env.DATABASE_URL) {
+    const q = await adminDb
+      .collection('wallets')
+      .where('address', '==', cleanAddr)
+      .limit(1)
+      .get();
+    if (!q.empty) {
+      const d = q.docs[0].data();
+      return {
+        address: d.address,
+        chainId: d.chainId || 43113,
+        verifiedAt: d.verifiedAt || new Date().toISOString(),
+        userId: Number(d.userId || 0),
+        uid: d.uid,
+      };
+    }
+
+    // Fallback check on users collection (user.wallet.address)
+    const userQ = await adminDb
+      .collection('users')
+      .where('wallet.address', '==', cleanAddr)
+      .limit(1)
+      .get();
+    if (!userQ.empty) {
+      const u = userQ.docs[0].data();
+      return {
+        address: cleanAddr,
+        chainId: u.wallet?.chainId || 43113,
+        verifiedAt: u.wallet?.verifiedAt || new Date().toISOString(),
+        userId: Number(u.id || 0),
+        uid: u.uid,
+      };
+    }
+    return null;
+  }
+
+  const [wallet] = await db
+    .select()
+    .from(wallets)
+    .where(eq(wallets.address, cleanAddr))
     .limit(1);
 
   if (!wallet) return null;
@@ -272,6 +339,7 @@ export async function recordConfirmedMint(params: {
   tokenId: string;
   txHash: string;
   onChainOwner: string;
+  contractAddress?: string;
 }): Promise<void> {
   if (!process.env.DATABASE_URL) {
     const petRef = adminDb.collection('pets').doc(params.petUid);
@@ -299,6 +367,7 @@ export async function recordConfirmedMint(params: {
         tokenId: params.tokenId,
         mintTxHash: params.txHash,
         onChainOwner: params.onChainOwner,
+        ...(params.contractAddress ? { contractAddress: params.contractAddress } : {}),
         memories: updatedMemories,
       },
       { merge: true }
@@ -334,10 +403,69 @@ export async function recordConfirmedMint(params: {
         tokenId: params.tokenId,
         mintTxHash: params.txHash,
         onChainOwner: params.onChainOwner,
+        ...(params.contractAddress ? { contractAddress: params.contractAddress } : {}),
         memories: updatedMemories,
       })
       .where(eq(pets.petUid, params.petUid));
   });
+}
+
+/**
+ * Update the owner of a minted pet in database following on-chain ownership reconciliation.
+ */
+export async function updatePetOnChainOwnership(params: {
+  petUid: string;
+  newOwnerId: number;
+  newOwnerUid?: string;
+  onChainOwner: string;
+}): Promise<void> {
+  const cleanUid = String(params.petUid || '').trim();
+  const normalizedOwner = params.onChainOwner.toLowerCase();
+
+  if (!process.env.DATABASE_URL) {
+    const petRef = adminDb.collection('pets').doc(cleanUid);
+    const doc = await petRef.get();
+    if (doc.exists) {
+      await petRef.set(
+        {
+          currentOwnerId: params.newOwnerId,
+          userId: params.newOwnerId,
+          ...(params.newOwnerUid ? { currentOwnerUid: params.newOwnerUid, uid: params.newOwnerUid } : {}),
+          onChainOwner: normalizedOwner,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      return;
+    }
+
+    const q = await adminDb
+      .collection('pets')
+      .where('petUid', '==', cleanUid)
+      .limit(1)
+      .get();
+    if (!q.empty) {
+      await q.docs[0].ref.set(
+        {
+          currentOwnerId: params.newOwnerId,
+          userId: params.newOwnerId,
+          ...(params.newOwnerUid ? { currentOwnerUid: params.newOwnerUid, uid: params.newOwnerUid } : {}),
+          onChainOwner: normalizedOwner,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    }
+    return;
+  }
+
+  await db
+    .update(pets)
+    .set({
+      currentOwnerId: params.newOwnerId,
+      onChainOwner: normalizedOwner,
+    })
+    .where(eq(pets.petUid, cleanUid));
 }
 
 /**

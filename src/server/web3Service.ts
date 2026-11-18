@@ -14,8 +14,10 @@ import {
 import {
   getLinkedWallet,
   getPetForWeb3,
+  getWalletByAddress,
   recordConfirmedMint,
   recordIssuedMintClaim,
+  updatePetOnChainOwnership,
 } from '../db/web3Repository.ts';
 import { MINT_ELIGIBILITY_RULES } from '../shared/gameMeta.ts';
 import { computeMintEligibility } from './rewards.ts';
@@ -574,6 +576,7 @@ export async function confirmFujiMintTransaction(params: {
     tokenId: matchedLog.tokenId,
     txHash: params.txHash,
     onChainOwner,
+    contractAddress: status.contractAddress,
   });
 
   return {
@@ -723,19 +726,19 @@ export async function confirmFujiAdoptionTransaction(params: {
 }
 
 export async function reconcileMintedPetOwnership(petUid: string) {
-  const [pet] = await db
-    .select()
-    .from(pets)
-    .where(eq(pets.petUid, petUid))
-    .limit(1);
+  const pet = await getPetForWeb3(petUid);
   if (!pet) throw new Error('Pet not found.');
-  if (pet.mintStatus !== 'minted' || !pet.tokenId || !pet.contractAddress) {
+
+  const status = getWeb3Status();
+  const contractAddress = pet.contractAddress || status.contractAddress;
+
+  if (pet.mintStatus !== 'minted' || !pet.tokenId || !contractAddress) {
     return { reconciled: false, reason: 'Pet is not minted on-chain.' };
   }
 
   const provider = getFujiProvider();
   const contract = new ethers.Contract(
-    pet.contractAddress,
+    contractAddress,
     PAWS_PASSPORT_ABI,
     provider
   );
@@ -743,11 +746,10 @@ export async function reconcileMintedPetOwnership(petUid: string) {
     await contract.ownerOf(BigInt(pet.tokenId))
   ).toLowerCase();
 
-  const [dbOwnerWallet] = await db
-    .select()
-    .from(wallets)
-    .where(eq(wallets.userId, pet.currentOwnerId))
-    .limit(1);
+  const dbOwnerWallet = await getLinkedWallet({
+    userId: pet.currentOwnerId,
+    uid: pet.currentOwnerUid,
+  });
 
   const dbWalletAddress = dbOwnerWallet?.address?.toLowerCase() ?? null;
   const inSync = Boolean(dbWalletAddress && dbWalletAddress === onChainOwner);
@@ -755,20 +757,15 @@ export async function reconcileMintedPetOwnership(petUid: string) {
   if (!inSync) {
     // Reconcile ONLY if a verified wallet owner exists in DB for the on-chain owner,
     // otherwise report explicit conflict without silently overwriting ownership!
-    const [chainUserWallet] = await db
-      .select()
-      .from(wallets)
-      .where(eq(wallets.address, onChainOwner))
-      .limit(1);
+    const chainUserWallet = await getWalletByAddress(onChainOwner);
 
-    if (chainUserWallet) {
-      await db
-        .update(pets)
-        .set({
-          currentOwnerId: chainUserWallet.userId,
-          onChainOwner,
-        })
-        .where(eq(pets.id, pet.id));
+    if (chainUserWallet && (chainUserWallet.userId || chainUserWallet.uid)) {
+      await updatePetOnChainOwnership({
+        petUid: pet.petUid,
+        newOwnerId: Number(chainUserWallet.userId || 0),
+        newOwnerUid: chainUserWallet.uid,
+        onChainOwner,
+      });
       return {
         reconciled: true,
         inSync: true,
