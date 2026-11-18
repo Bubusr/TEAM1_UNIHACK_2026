@@ -84,6 +84,12 @@ export function createApp() {
   app.set('trust proxy', 1);
   app.use(express.json({ limit: '12mb' }));
 
+  const rootDir = path.resolve(__dirname, '../../');
+  app.use(
+    '/src/assets/images',
+    express.static(path.resolve(rootDir, 'src/assets/images'))
+  );
+
   const judgeLimiter = createRateLimiter({
     windowMs: 60 * 1000,
     maxRequests: 10,
