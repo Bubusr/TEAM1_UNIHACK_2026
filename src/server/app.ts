@@ -43,7 +43,9 @@ import {
 import {
   buildPublicPetMetadata,
   confirmFujiMintTransaction,
+  getCanonicalOrigin,
   getWeb3Status,
+  isPetPubliclyAccessible,
   issueSignedMintClaim,
   reconcileMintedPetOwnership,
 } from './web3Service.ts';
@@ -57,22 +59,6 @@ const PORT =
   Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort <= 65535
     ? parsedPort
     : 3000;
-
-export const CANONICAL_APP_ORIGIN = 'https://pawsandpicket.app';
-
-export function getCanonicalOrigin(): string {
-  const configured = process.env.APP_URL?.trim();
-  if (
-    configured &&
-    configured !== 'MY_APP_URL' &&
-    !configured.includes('localhost') &&
-    !configured.includes('127.0.0.1') &&
-    configured.startsWith('https://')
-  ) {
-    return configured.replace(/\/$/, '');
-  }
-  return CANONICAL_APP_ORIGIN;
-}
 
 function getPublicOrigin(req: express.Request): string {
   const configured = process.env.APP_URL?.trim();
@@ -145,7 +131,20 @@ export function createApp() {
         return res.status(404).json({ error: 'Pet Passport not found.' });
       }
 
+      if (!isPetPubliclyAccessible(pet)) {
+        return res.status(404).json({
+          error: 'Pet Passport metadata is not published or eligible for public view.',
+        });
+      }
+
       const canonicalOrigin = getCanonicalOrigin();
+      if (!canonicalOrigin) {
+        return res.status(503).json({
+          error:
+            'Public production origin is not configured on the server. Set APP_URL to a verified public HTTPS domain.',
+        });
+      }
+
       const publicImageUrl = `${canonicalOrigin}/api/pets/${encodeURIComponent(pet.petUid)}/portrait`;
 
       return res.json(
@@ -177,7 +176,14 @@ export function createApp() {
       const pet = await getPetForWeb3(petUid);
       const photoUrl = pet?.photoUrl;
 
-      if (!photoUrl) return res.status(404).send('Pet portrait not found');
+      if (!pet || !photoUrl) return res.status(404).send('Pet portrait not found');
+
+      // Privacy boundary: ensure private/unpublished pets are not exposed
+      if (!isPetPubliclyAccessible(pet)) {
+        return res
+          .status(404)
+          .send('Pet portrait is private or not eligible for public viewing');
+      }
 
       // 1. Data URL (uploaded pet photo in Firestore)
       if (photoUrl.startsWith('data:')) {

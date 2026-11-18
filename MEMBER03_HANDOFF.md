@@ -147,16 +147,26 @@ Pet documents in Firestore collection `pets`:
 
 ---
 
-## 9. Known Limitations
+## 9. Production Hosting & Canonical Metadata Origin Resolution
 
-- **Phase 1 Soulbound:** In-game player-to-player NFT transfers are disabled until Phase 2 smart contract upgrade.
-- **Server Metadata Dependency:** Under Mode B, Token URIs depend on the domain availability of the backend web server rather than decentralized IPFS pinning.
+1. **Hosting Provider Audit:** Identified project configuration in `.firebaserc` (project `paws-local`, number `213801959465`). Current project is on the Firebase Spark free plan.
+2. **Dynamic Origin Resolution:** Replaced hardcoded fallback with `getCanonicalOrigin()`, which reads `process.env.APP_URL` and fails closed (HTTP 503) if unconfigured in production.
+3. **Privacy Boundary:** Added `isPetPubliclyAccessible()` protecting unbonded/unpublished private photos from unauthenticated scraping.
+4. **Complete Report:** Documented in `PRODUCTION_HOSTING_REPORT.md`.
 
 ---
 
-## 10. Manual Steps Remaining for Milestone I (Real Fuji Mint)
+## 10. Known Limitations
 
-1. User reviews the **Preflight Summary** presented below.
-2. User provides/confirms their recipient Avalanche Fuji wallet address (or confirms using the deployer wallet).
-3. User approves execution of the live `mintWithClaim` transaction on Avalanche Fuji C-Chain.
-4. Independent on-chain confirmation via Snowtrace Explorer.
+- **Phase 1 Soulbound:** In-game player-to-player NFT transfers are disabled until Phase 2 smart contract upgrade.
+- **Server Metadata Dependency:** Under Mode B, Token URIs depend on the domain availability of the backend web server rather than decentralized IPFS pinning.
+- **Public Domain Deployment:** The backend must be deployed to public compute (e.g. Google Cloud Run or Firebase Blaze) with `APP_URL` configured before the metadata and portrait endpoints are accessible to external indexers on the public internet.
+
+---
+
+## 11. Steps Remaining for Milestone I (Real Fuji Mint)
+
+1. Deploy backend Express server to public compute and set `APP_URL`.
+2. Connect Keeper's Core Wallet to act as Transaction Sender & NFT Recipient.
+3. User gives explicit approval to broadcast `mintWithClaim` on Avalanche Fuji C-Chain.
+4. Verify token #1 mint and event log independently on Snowtrace.

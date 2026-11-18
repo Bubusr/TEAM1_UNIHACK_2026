@@ -69,15 +69,18 @@ Verified in `test/walletClient.test.ts` and `src/server/walletAuth.ts`:
 
 ---
 
-## 5. Canonical Metadata & Public Portrait Delivery Matrix
+## 5. Canonical Metadata, Origin Fail-Safe & Privacy Verification Matrix
 
-Verified in `test/web3-metadata-canonical.test.ts`:
+Verified in `test/web3-metadata-canonical.test.ts` (8 / 8 PASS):
 
-- **Canonical HTTPS Origin:** `GET /api/metadata/:petUid` strictly produces `https://pawsandpicket.app` without leaking `localhost`, `127.0.0.1`, or development ports.
-- **Binary Image Delivery:** `GET /api/pets/:petUid/portrait` streams raw binary JPEG/PNG (510,996 bytes) with proper `Content-Type` and `Content-Length`.
-- **Zero Authentication Requirement:** Endpoint is fully public for external NFT indexers and explorers.
-- **Strict Privacy:** Zero PII (no keeper email, internal user ID, or GPS coordinates).
-- **EIP-712 Consistency:** Signed vouchers bind canonical HTTPS metadata URI, automatically stripping and replacing any localhost base URL.
+1. **No Unverified Placeholders:** `getCanonicalOrigin()` in production returns `null` when `APP_URL` is unset, never defaulting to an unverified domain like `pawsandpicket.app`.
+2. **Fail-Safe Gate (HTTP 503):** When production origin is missing, `issueSignedMintClaim()` and `GET /api/metadata/:petUid` fail safely with 503.
+3. **Explicit Test Origin Injection:** Local test runners can inject custom HTTPS test origins cleanly.
+4. **Origin Consistency:** Metadata endpoint and portrait image strictly share the exact same verified origin.
+5. **No Localhost / Private IPs:** Submissions with localhost, 127.0.0.1, or private network IPs are rejected.
+6. **Privacy Boundary (`isPetPubliclyAccessible`):** Unminted, ineligible pet photos return HTTP 404, preventing unauthenticated scraping of private uploads.
+7. **EIP-712 Consistency:** Signed claim voucher binds the exact canonical metadata URI.
+8. **Unauthenticated Public Access:** Valid binary image (510,996 bytes) served with `image/jpeg` status 200 without cookies or headers.
 
 ---
 

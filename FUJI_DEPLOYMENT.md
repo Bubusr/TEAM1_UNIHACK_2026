@@ -60,6 +60,18 @@ bytes32 public constant MINT_CLAIM_TYPEHASH = keccak256(
 
 ## 4. Current Operational Status
 
-- **Status:** **OPERATIONAL & READY FOR FIRST MINT**
+- **Status:** **OPERATIONAL & AWAITING PRODUCTION DEPLOYMENT**
 - **Contract Redeployment Required:** **NO** (Existing deployment matches all specifications).
 - **Backend ABI Compatibility:** 100% compatible with `PAWS_PASSPORT_ABI` in `src/server/web3Service.ts`.
+
+---
+
+## 5. Production Hosting & Canonical Metadata Origin Gate
+
+- **Active Mode:** Mode B (Server Canonical Metadata).
+- **Canonical Origin Resolution:** Configured via `process.env.APP_URL`. Fails closed (HTTP 503) if unconfigured in production to prevent issuing on-chain claims referencing dead domains.
+- **Hosting Audit:** Detailed in `PRODUCTION_HOSTING_REPORT.md`.
+  - Configured project: Firebase `paws-local` (Project Number `213801959465`).
+  - Public default domain: `https://paws-local.web.app` (TLS valid, awaiting backend compute deployment).
+  - Custom domain: `pawsandpicket.app` (unrouted `NXDOMAIN`).
+- **Live Mint Precondition:** The Express backend must be deployed to public HTTPS compute (e.g. Google Cloud Run or Firebase Blaze) and `APP_URL` configured before broadcasting the first live transaction.

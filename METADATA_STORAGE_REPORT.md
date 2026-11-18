@@ -5,7 +5,7 @@
 **Application:** Paws & Picket  
 **Network:** Avalanche Fuji Testnet (43113)  
 **Contract Address:** `0x2aA2EbA597E8E2a1bB727Fd4317dBb6cEC2Bee31`  
-**Canonical Public Origin:** `https://pawsandpicket.app`  
+**Hosting Configuration:** Detailed in `PRODUCTION_HOSTING_REPORT.md`  
 
 ---
 
@@ -14,35 +14,31 @@
 ### Current Configuration
 - **Provider:** `server` (`METADATA_STORAGE_PROVIDER=server` default)
 - **Pinata Status:** Inactive (`METADATA_STORAGE_API_KEY` is unconfigured)
-- **Readiness:** **READY FOR FUJI MINT** (`readyForMint: true`)
+- **Readiness:** **AWAITING PRODUCTION HOSTING CONFIGURATION**
 
 > [!NOTE]
 > **Honest Decentralization Disclosure:**  
-> The current system operates under **Mode B (Server Canonical Metadata)**. The Token URI points to the application's canonical HTTPS endpoint (`https://pawsandpicket.app/api/metadata/:petUid`), not an immutable IPFS content hash. This is standard and fully compliant with the ERC-721 Metadata JSON Schema, but depends on application server availability. It is **not** permanent IPFS pinning.
+> The current system operates under **Mode B (Server Canonical Metadata)**. The Token URI points to the application's canonical HTTPS endpoint (`https://<verified-domain>/api/metadata/:petUid`), not an immutable IPFS content hash. This is standard and fully compliant with the ERC-721 Metadata JSON Schema, but depends on application server availability. It is **not** permanent IPFS pinning.
 
 ---
 
-## 2. Standard ERC-721 Metadata Schema & Canonical Origin Hardening
+## 2. Standard ERC-721 Metadata Schema & Dynamic Origin Resolution
 
 The endpoint `/api/metadata/:petUid` returns canonical ERC-721 compliant JSON with strictly scrubbed PII.
 
-### Root Cause Analysis of Previous Defect
-1. **Localhost Leakage:** Previously, `getPublicOrigin(req)` extracted `req.get('host')` when `APP_URL` was unset or blank, producing `http://127.0.0.1:<port>`.
-2. **Local Asset Path Concatenation:** For pets referencing local starter assets (e.g. `/src/assets/images/cropped_golden_dog_...`), the metadata generator previously concatenated `${origin}${pet.photoUrl}`, directly exposing internal filesystem paths instead of routing through the portrait endpoint.
-3. **EIP-712 Voucher Origin Drift:** In `/api/web3/mint-claim`, `publicBaseUrl` was derived from incoming request host headers rather than the canonical origin.
-
-### Implemented Corrections
-1. **Canonical Origin Constant:** Introduced `CANONICAL_APP_ORIGIN = 'https://pawsandpicket.app'` and `getCanonicalOrigin()` in both `src/server/app.ts` and `src/server/web3Service.ts`.
-2. **Strict Sanitization:** `buildPublicPetMetadata()` and `issueSignedMintClaim()` automatically reject and sanitize any localhost, 127.0.0.1, or non-HTTPS URLs, ensuring all metadata tokens and EIP-712 vouchers use `https://pawsandpicket.app`.
-3. **Unified Portrait Endpoint:** Regardless of whether the pet image is stored as a base64 data-URL or a local starter asset, `metadata.image` always resolves to:
-   `https://pawsandpicket.app/api/pets/<encoded-petUid>/portrait`
+### Dynamic Origin Resolution & Fail-Closed Protection
+1. **Dynamic Origin Resolution (`getCanonicalOrigin`):** The application strictly reads `process.env.APP_URL` in production. It verifies that the origin is absolute HTTPS (`https://`) and contains no `localhost`, `127.0.0.1`, private IP ranges, or development ports.
+2. **Fail-Closed Gate:** If `APP_URL` is unset or blank in production, `getCanonicalOrigin()` returns `null`. Both `issueSignedMintClaim()` and `GET /api/metadata/:petUid` fail safely with **HTTP 503**, guaranteeing that the smart contract never signs or stores vouchers referencing dead or unverified placeholder domains.
+3. **Test Injection Support:** Automated tests can explicitly supply a valid HTTPS test origin (e.g. `https://test.pawsandpicket.local`) or inject `publicBaseUrl`.
+4. **Unified Portrait Endpoint:** Regardless of whether the pet image is stored as a base64 data-URL or a local starter asset, `metadata.image` always resolves to:
+   `<VERIFIED_CANONICAL_ORIGIN>/api/pets/<encoded-petUid>/portrait`
 
 ### Sanitized JSON Example
 ```json
 {
   "name": "Sunny · Paws & Picket Passport",
   "description": "Canonical Pet Passport for Sunny, discovered in Paws & Picket. Direct transfers are blocked; ownership changes only via explicit adoption.",
-  "image": "https://pawsandpicket.app/api/pets/pet-retriever-guest%3Amulti-pet-1794982055618/portrait",
+  "image": "https://test.pawsandpicket.local/api/pets/pet-retriever-guest%3Amulti-pet-1794982055618/portrait",
   "attributes": [
     { "trait_type": "Species", "value": "dog" },
     { "trait_type": "Pose", "value": "Happy" },
@@ -61,27 +57,27 @@ The endpoint `/api/metadata/:petUid` returns canonical ERC-721 compliant JSON wi
 
 ---
 
-## 3. Public Portrait Binary Serving Architecture
+## 3. Public Portrait Binary Serving Architecture & Privacy Boundary
 
 - **Endpoint:** `GET /api/pets/:petUid/portrait`
 - **Supported Storage Backends:**
   1. **Firestore Data URLs:** Base64-decoded into binary buffer, setting `Content-Type: image/jpeg` or `image/png`, `Content-Length`, and `Cache-Control: public, max-age=86400, immutable`.
   2. **Local Starter Assets:** Safely resolved within `rootDir` (e.g. `src/assets/images/cropped_golden_dog_...`), verified with `fs.existsSync()`, and served via `res.sendFile(absPath)` with `Content-Type: image/jpeg` (510,996 bytes).
   3. **External HTTPS URLs:** Forwarded via HTTP 302 redirect.
-- **Unauthenticated Access:** Completely public, zero authentication or session headers required, enabling external NFT viewers (OpenSea, Snowtrace, Core Wallet) to fetch and render raw portrait images.
+- **Unauthenticated Access:** Completely public for published/eligible pets without cookies or session tokens.
+- **Privacy Shield (`isPetPubliclyAccessible`):** Private or unbonded draft uploads (`discoveryScore < 80` or `bondXp < 100` and unminted) unconditionally return **HTTP 404**, preventing unauthenticated scraping of unpublished pet pictures.
 
 ---
 
 ## 4. Production Deployment & Public Reachability Verification
 
 > [!WARNING]
-> **Production DNS & Reachability Status (Step 3 Real-World Audit):**  
-> - **Domain:** `pawsandpicket.app`
-> - **DNS Lookup:** `nslookup pawsandpicket.app` -> `NXDOMAIN` (Domain not found on public DNS).
-> - **HTTPS Connection:** `curl -sIv https://pawsandpicket.app` -> `curl: (6) Could not resolve host: pawsandpicket.app`.
+> **Production DNS & Reachability Status (Real-World Audit):**  
+> - **Custom Domain:** `pawsandpicket.app` -> `NXDOMAIN` (Domain not found on public DNS).
+> - **Provider Domain:** `paws-local.web.app` -> Resolves to `199.36.158.100`, TLS 1.3 valid Google Trust Services cert, but returns **HTTP 404 Site Not Found** because server compute is not yet deployed on Firebase (project is on Spark free tier).
 > - **Verification Distinction:**
->   - **Code Generator Verification:** **PASS**. The backend code strictly generates valid, canonical `https://pawsandpicket.app` URLs without any localhost leakage.
->   - **Live Public Reachability:** **BLOCKED (INFRASTRUCTURE)**. The domain `pawsandpicket.app` has not yet been registered or assigned DNS records in production.
+>   - **Code Generator Verification:** **PASS**. The backend code strictly generates valid, canonical HTTPS production URLs without any localhost leakage and fails closed with 503 if unconfigured.
+>   - **Live Public Reachability:** **BLOCKED (INFRASTRUCTURE)**. See `PRODUCTION_HOSTING_REPORT.md` for full deployment instructions.
 
 ---
 
