@@ -32,6 +32,7 @@ import { MINT_ELIGIBILITY_RULES } from '../shared/gameMeta.ts';
 import { computeMintEligibility } from './rewards.ts';
 
 export const PAWS_PASSPORT_ABI = [
+  'function mintWithClaim((address recipient, uint256 petId, string petName, string species, uint256 score, string tokenURI, uint256 nonce, uint256 deadline) claim, bytes signature) external returns (uint256)',
   'function mintWithClaim(address recipient, bytes32 petIdHash, string metadataUri, uint256 nonce, uint256 deadline, bytes signature) external returns (uint256)',
   'function createAdoptionOffer(uint256 tokenId, address to, uint64 durationSeconds) external',
   'function cancelAdoptionOffer(uint256 tokenId) external',
@@ -41,11 +42,20 @@ export const PAWS_PASSPORT_ABI = [
   'function tokenURI(uint256 tokenId) view returns (string)',
   'function passports(uint256 tokenId) view returns (bytes32 petIdHash, address originalDiscoverer, uint64 discoveredAt, uint64 mintedAt)',
   'function adoptionOffers(uint256 tokenId) view returns (address from, address to, uint64 expiresAt, bool active)',
+  'event PetPassportMinted(uint256 indexed tokenId, uint256 indexed petId, address indexed recipient, string petName, string species, uint256 score, string tokenURI)',
   'event PetMinted(uint256 indexed tokenId, bytes32 indexed petIdHash, address indexed discoverer, string metadataUri, uint256 nonce)',
   'event AdoptionOffered(uint256 indexed tokenId, address indexed from, address indexed to, uint64 expiresAt)',
   'event AdoptionCancelled(uint256 indexed tokenId, address indexed cancelledBy)',
   'event AdoptionCompleted(uint256 indexed tokenId, address indexed from, address indexed to, bytes32 petIdHash)',
 ] as const;
+
+export function getNumericPetId(pet: { id?: number | string; petUid: string }): bigint {
+  if (typeof pet.id === 'number' && Number.isFinite(pet.id) && pet.id > 0) {
+    return BigInt(pet.id);
+  }
+  const hash = crypto.createHash('sha256').update(pet.petUid).digest('hex');
+  return BigInt('0x' + hash.slice(0, 14));
+}
 
 export function getAvalancheChainId(): number {
   const parsed = Number(
@@ -98,7 +108,9 @@ export function getWeb3Status() {
   const chainId = getAvalancheChainId();
   const rpcUrl = getAvalancheFujiRpcUrl();
   const contractAddress = parseOptionalAddress(
-    process.env.PET_PASSPORT_CONTRACT_ADDRESS?.trim() || ''
+    process.env.PET_PASSPORT_CONTRACT_ADDRESS?.trim() ||
+      process.env.PAWS_PASSPORT_CONTRACT_ADDRESS?.trim() ||
+      ''
   );
   const rawSignerKey = process.env.TRUSTED_SIGNER_PRIVATE_KEY?.trim() || '';
 
@@ -928,6 +940,7 @@ async function _executeIssueSignedMintClaim(params: IssueSignedMintClaimParams) 
     metadataUri = `${base}/api/metadata/${encodeURIComponent(pet.petUid)}`;
   }
 
+  const petIdNumeric = getNumericPetId(pet);
   const petIdHash = ethers.id(pet.petUid);
   const nonceBig = BigInt('0x' + crypto.randomBytes(16).toString('hex'));
   const nonceStr = nonceBig.toString();
@@ -941,24 +954,30 @@ async function _executeIssueSignedMintClaim(params: IssueSignedMintClaimParams) 
   };
 
   const types = {
-    MintClaim: [
+    PassportClaim: [
       { name: 'recipient', type: 'address' },
-      { name: 'petIdHash', type: 'bytes32' },
-      { name: 'metadataUriHash', type: 'bytes32' },
+      { name: 'petId', type: 'uint256' },
+      { name: 'petName', type: 'string' },
+      { name: 'species', type: 'string' },
+      { name: 'score', type: 'uint256' },
+      { name: 'tokenURI', type: 'string' },
       { name: 'nonce', type: 'uint256' },
       { name: 'deadline', type: 'uint256' },
     ],
   };
 
-  const value = {
+  const passportClaimValue = {
     recipient: recipientChecksum,
-    petIdHash,
-    metadataUriHash: ethers.keccak256(ethers.toUtf8Bytes(metadataUri)),
+    petId: petIdNumeric,
+    petName: pet.name || 'Pet',
+    species: pet.species || 'pet',
+    score: BigInt(pet.discoveryScore || 80),
+    tokenURI: metadataUri,
     nonce: nonceBig,
-    deadline,
+    deadline: BigInt(deadline),
   };
 
-  const signature = await signerWallet.signTypedData(domain, types, value);
+  const signature = await signerWallet.signTypedData(domain, types, passportClaimValue);
 
   await recordIssuedMintClaim({
     petUid: pet.petUid,
@@ -979,6 +998,11 @@ async function _executeIssueSignedMintClaim(params: IssueSignedMintClaimParams) 
     contractAddress: status.contractAddress,
     claim: {
       recipient: recipientChecksum,
+      petId: petIdNumeric.toString(),
+      petName: pet.name || 'Pet',
+      species: pet.species || 'pet',
+      score: Number(pet.discoveryScore || 80),
+      tokenURI: metadataUri,
       petIdHash,
       metadataUri,
       nonce: nonceStr,
@@ -1054,20 +1078,32 @@ export async function confirmFujiMintTransaction(params: {
   }
 
   const iface = new ethers.Interface(PAWS_PASSPORT_ABI);
+  const expectedPetId = getNumericPetId(pet);
   const expectedPetIdHash = ethers.id(pet.petUid).toLowerCase();
 
   let matchedLog: {
     tokenId: string;
     discoverer: string;
     metadataUri: string;
-    nonce: string;
+    nonce?: string;
   } | null = null;
 
   for (const log of receipt.logs) {
     if (log.address.toLowerCase() !== expectedContract) continue;
     try {
       const parsed = iface.parseLog(log);
-      if (parsed && parsed.name === 'PetMinted') {
+      if (!parsed) continue;
+      if (parsed.name === 'PetPassportMinted') {
+        const eventPetId = BigInt(parsed.args.petId);
+        if (eventPetId === expectedPetId) {
+          matchedLog = {
+            tokenId: parsed.args.tokenId.toString(),
+            discoverer: String(parsed.args.recipient).toLowerCase(),
+            metadataUri: String(parsed.args.tokenURI),
+          };
+          break;
+        }
+      } else if (parsed.name === 'PetMinted') {
         const eventPetHash = String(parsed.args.petIdHash).toLowerCase();
         if (eventPetHash === expectedPetIdHash) {
           matchedLog = {
