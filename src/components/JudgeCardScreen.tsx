@@ -16,6 +16,8 @@ interface JudgeCardScreenProps {
   report: JudgeReport;
   isJudging: boolean;
   judgeError: string | null;
+  walletSlot?: React.ReactNode;
+  isMinting?: boolean;
   onSelectYard: () => void;
   onSelectFarm: () => void;
   onOpenModal: (modal: SanctuaryModalType) => void;
@@ -39,6 +41,8 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
   report,
   isJudging,
   judgeError,
+  walletSlot,
+  isMinting,
   onSelectYard,
   onSelectFarm,
   onOpenModal,
@@ -67,6 +71,7 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
         coins={coins}
         energy={energy}
         maxEnergy={maxEnergy}
+        walletSlot={walletSlot}
         onOpenProfile={() => onOpenModal('profile')}
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}
@@ -216,14 +221,28 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={onMintPet}
-              className="cream-btn rounded-full py-1.5 px-3 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap bg-[#F0F8FF]"
-            >
-              <CrystalMintIcon className="w-3.5 h-3.5 shrink-0" />
-              <span>{report.minted ? 'Minted ✓' : 'Mint'}</span>
-            </button>
+            {report.minted ? (
+              <a
+                href={report.explorerUrl || `https://testnet.snowtrace.io/address/0x1a5913d8a00247ccad7bb0ed879b3be43ca112b0`}
+                target="_blank"
+                rel="noreferrer"
+                className="cream-btn rounded-full py-1.5 px-3 font-display text-[12px] font-extrabold text-[#15803D] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap bg-[#F0FDF4] border border-[#BBF7D0] shadow-sm hover:bg-[#DCFCE7]"
+                title="View Pet Passport on Avalanche Fuji Snowtrace"
+              >
+                <CrystalMintIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>Passport #{report.tokenId || '1'} ↗</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={onMintPet}
+                disabled={isMinting}
+                className="cream-btn rounded-full py-1.5 px-3 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap bg-[#F0F8FF] border border-[#BFDBFE] disabled:opacity-60 shadow-sm hover:bg-[#E0F2FE]"
+              >
+                <CrystalMintIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>{isMinting ? 'Minting Fuji...' : 'Mint Passport'}</span>
+              </button>
+            )}
 
             <button
               type="button"

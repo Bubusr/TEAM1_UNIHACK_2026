@@ -18,6 +18,7 @@ interface TopHudProps {
   coins: number;
   energy: number;
   maxEnergy: number;
+  walletSlot?: React.ReactNode;
   rightBadge?: React.ReactNode;
   subRow: React.ReactNode;
   onOpenProfile: () => void;
@@ -31,6 +32,7 @@ export const SharedTopHud: React.FC<TopHudProps> = ({
   coins,
   energy,
   maxEnergy,
+  walletSlot,
   rightBadge,
   subRow,
   onOpenProfile,
@@ -40,33 +42,36 @@ export const SharedTopHud: React.FC<TopHudProps> = ({
   return (
     <header className="relative z-30 px-3 pt-2.5 flex flex-col gap-1.5 shrink-0">
       <div className="flex items-center justify-between gap-2">
-        {/* Left: Squircle Avatar + Level */}
-        <button
-          type="button"
-          onClick={onOpenProfile}
-          aria-label={`Keeper level ${level}`}
-          className="cream-pill rounded-[18px] px-2 py-1 flex items-center gap-1.5 shrink-0 active:scale-95 transition-transform cursor-pointer"
-        >
-          <div className="w-8 h-8 rounded-[12px] border-2 border-[#D9C3B4] bg-[#FFF5F8] overflow-hidden shrink-0">
-            <img
-              src="/src/assets/images/cropped_calico_cat_1794637541476.jpg"
-              alt="Calico cat avatar"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="flex flex-col items-start pr-0.5">
-            <span className="font-display text-[13px] font-extrabold leading-none text-[#4B3C46] whitespace-nowrap">
-              Lv.{level}
-            </span>
-            <div className="mt-1 w-10 h-1.5 rounded-full bg-[#F3EAE2] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-[#FFE07D] transition-all duration-300"
-                style={{ width: `${Math.min(100, expPercent)}%` }}
+        {/* Left: Squircle Avatar + Level + Wallet */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            aria-label={`Keeper level ${level}`}
+            className="cream-pill rounded-[18px] px-2 py-1 flex items-center gap-1.5 shrink-0 active:scale-95 transition-transform cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-[12px] border-2 border-[#D9C3B4] bg-[#FFF5F8] overflow-hidden shrink-0">
+              <img
+                src="/src/assets/images/cropped_calico_cat_1794637541476.jpg"
+                alt="Calico cat avatar"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover"
               />
             </div>
-          </div>
-        </button>
+            <div className="flex flex-col items-start pr-0.5">
+              <span className="font-display text-[13px] font-extrabold leading-none text-[#4B3C46] whitespace-nowrap">
+                Lv.{level}
+              </span>
+              <div className="mt-1 w-10 h-1.5 rounded-full bg-[#F3EAE2] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#FFE07D] transition-all duration-300"
+                  style={{ width: `${Math.min(100, expPercent)}%` }}
+                />
+              </div>
+            </div>
+          </button>
+          {walletSlot}
+        </div>
 
         {/* Right: Coins + Energy / Contextual Badge */}
         <div className="flex items-center gap-1.5 pl-1">

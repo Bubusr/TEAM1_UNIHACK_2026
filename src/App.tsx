@@ -22,6 +22,10 @@ import { NeighborGardenScreen } from './components/NeighborGardenScreen';
 import { NeighborFarmScreen } from './components/NeighborFarmScreen';
 import { JudgeCardScreen } from './components/JudgeCardScreen';
 import { CreamSheets } from './components/CreamSheets';
+import { WalletButton } from './components/WalletButton';
+import { connectCoreWallet, mintPetPassportNFT } from './lib/wallet';
+import { CrystalMintIcon } from './components/HandDrawnAssets';
+import { ExternalLink, CheckCircle2, X } from 'lucide-react';
 
 const INITIAL_PETS: SanctuaryPet[] = [
   {
@@ -351,6 +355,18 @@ export default function App() {
   const [album, setAlbum] = useState<JudgeReport[]>([SAMPLE_PUPPY_REPORT]);
   const [isJudging, setIsJudging] = useState(false);
   const [judgeError, setJudgeError] = useState<string | null>(null);
+
+  // Core Wallet & Minting State (Member 03)
+  const [walletAccount, setWalletAccount] = useState<`0x${string}` | null>(null);
+  const [walletChainId, setWalletChainId] = useState<number | null>(null);
+  const [isMinting, setIsMinting] = useState(false);
+  const [mintSuccessModal, setMintSuccessModal] = useState<{
+    isOpen: boolean;
+    petName: string;
+    tokenId: string;
+    txHash: string;
+    explorerUrl: string;
+  } | null>(null);
 
   const visitingNeighbor =
     neighbors.find((n) => n.id === visitingId) ?? null;
@@ -919,19 +935,74 @@ export default function App() {
     openSanctuaryScreen();
   };
 
-  const handleMintPet = () => {
-    if (activeReport.minted) return;
-    setActiveReport((r) => ({ ...r, minted: true }));
-    setPets((prev) =>
-      prev.map((p) =>
-        p.id === `cropped-${activeReport.id}` ? { ...p, minted: true } : p
-      )
-    );
-    setAlbum((prev) =>
-      prev.map((item) =>
-        item.id === activeReport.id ? { ...item, minted: true } : item
-      )
-    );
+  const handleMintPet = async () => {
+    if (activeReport.minted || isMinting) return;
+    setIsMinting(true);
+    try {
+      let recipient = walletAccount;
+      if (!recipient) {
+        recipient = await connectCoreWallet();
+        setWalletAccount(recipient);
+      }
+
+      const result = await mintPetPassportNFT({
+        recipient,
+        petId: activeReport.id,
+        petName: activeReport.petName,
+        species: activeReport.species,
+        score: activeReport.overallScore,
+        imageUrl: activeReport.photoUrl,
+      });
+
+      setActiveReport((r) => ({
+        ...r,
+        minted: true,
+        tokenId: result.tokenId,
+        txHash: result.txHash,
+        explorerUrl: result.explorerUrl,
+      }));
+
+      setPets((prev) =>
+        prev.map((p) =>
+          p.id === `cropped-${activeReport.id}`
+            ? {
+                ...p,
+                minted: true,
+                tokenId: result.tokenId,
+                txHash: result.txHash,
+                explorerUrl: result.explorerUrl,
+              }
+            : p
+        )
+      );
+
+      setAlbum((prev) =>
+        prev.map((item) =>
+          item.id === activeReport.id
+            ? {
+                ...item,
+                minted: true,
+                tokenId: result.tokenId,
+                txHash: result.txHash,
+                explorerUrl: result.explorerUrl,
+              }
+            : item
+        )
+      );
+
+      setMintSuccessModal({
+        isOpen: true,
+        petName: activeReport.petName,
+        tokenId: result.tokenId || '1',
+        txHash: result.txHash,
+        explorerUrl: result.explorerUrl,
+      });
+    } catch (err: any) {
+      console.error('Failed to mint Pet Passport:', err);
+      alert(err.message || 'Minting Pet Passport failed. Please ensure Core Wallet is connected to Avalanche Fuji.');
+    } finally {
+      setIsMinting(false);
+    }
   };
 
   const handleShareSnap = () => {
@@ -1238,6 +1309,14 @@ export default function App() {
             luredCount={luredRescued ? 0 : 1}
             activeBait={activeBait}
             readyFarmCount={readyFarmCount}
+            walletSlot={
+              <WalletButton
+                account={walletAccount}
+                chainId={walletChainId}
+                onAccountChange={setWalletAccount}
+                onChainChange={setWalletChainId}
+              />
+            }
             onCarePet={handleCarePet}
             onFeedPet={handleFeedPet}
             onPlayToy={handlePlayToy}
@@ -1366,6 +1445,15 @@ export default function App() {
             report={activeReport}
             isJudging={isJudging}
             judgeError={judgeError}
+            walletSlot={
+              <WalletButton
+                account={walletAccount}
+                chainId={walletChainId}
+                onAccountChange={setWalletAccount}
+                onChainChange={setWalletChainId}
+              />
+            }
+            isMinting={isMinting}
             onSelectYard={openSanctuaryScreen}
             onSelectFarm={openFarmScreen}
             onOpenModal={(m) => openModalIn('judge', m)}
@@ -1383,6 +1471,65 @@ export default function App() {
           {renderCreamSheets('judge')}
         </section>
       </div>
+
+      {/* Celebratory Mint Success Modal */}
+      {mintSuccessModal?.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm">
+          <div className="relative w-full max-w-sm bg-[#FFFDF9] rounded-[28px] border-4 border-[#DFCBBF] p-6 shadow-2xl flex flex-col items-center text-center">
+            <button
+              type="button"
+              onClick={() => setMintSuccessModal(null)}
+              className="absolute top-4 right-4 text-[#8A747E] hover:text-[#4B3C46] p-1 rounded-full cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-16 h-16 rounded-full bg-[#E8F8EC] border-2 border-[#C3E8CD] flex items-center justify-center text-3xl mb-3 shadow-inner">
+              🎓
+            </div>
+
+            <h3 className="font-display text-xl font-extrabold text-[#4B3C46] mb-1">
+              Pet Passport Minted!
+            </h3>
+            <p className="text-xs font-bold text-[#8A747E] mb-4">
+              Hộ chiếu NFT chính thức cho{' '}
+              <span className="text-[#E84142]">{mintSuccessModal.petName}</span>{' '}
+              đã được lưu trữ on-chain trên Avalanche Fuji.
+            </p>
+
+            <div className="w-full bg-[#F8F4F0] border-2 border-[#EADBD0] rounded-2xl p-3 mb-4 flex flex-col gap-1.5 text-xs">
+              <div className="flex justify-between items-center text-[#7B6670]">
+                <span>Token ID:</span>
+                <span className="font-mono font-extrabold text-[#4B3C46]">
+                  #{mintSuccessModal.tokenId}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-[#7B6670]">
+                <span>Network:</span>
+                <span className="font-bold text-[#15803D]">
+                  Avalanche Fuji (43113)
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-[#7B6670]">
+                <span>Tx Hash:</span>
+                <span className="font-mono text-[10px] text-[#4B3C46]">
+                  {mintSuccessModal.txHash.slice(0, 10)}...{mintSuccessModal.txHash.slice(-8)}
+                </span>
+              </div>
+            </div>
+
+            <a
+              href={mintSuccessModal.explorerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="buttercup-cta w-full py-2.5 rounded-full font-display text-xs font-extrabold text-[#4B3C46] flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform cursor-pointer"
+            >
+              <span>Xem trên Snowtrace Explorer</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

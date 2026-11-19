@@ -42,6 +42,7 @@ interface SanctuaryScreenProps {
   luredCount: number;
   activeBait: string | null;
   readyFarmCount: number;
+  walletSlot?: React.ReactNode;
   onCarePet: (petId: string) => string;
   onFeedPet: (food: FoodItemType) => string;
   onPlayToy: (toy: GardenToy) => string;
@@ -68,6 +69,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
   luredCount,
   activeBait,
   readyFarmCount,
+  walletSlot,
   onCarePet,
   onFeedPet,
   onPlayToy,
@@ -242,6 +244,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
         coins={coins}
         energy={energy}
         maxEnergy={maxEnergy}
+        walletSlot={walletSlot}
         onOpenProfile={() => onOpenModal('profile')}
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}

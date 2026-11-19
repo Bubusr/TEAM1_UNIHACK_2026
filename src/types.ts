@@ -54,6 +54,9 @@ export interface SanctuaryPet {
   accessory?: string | null;
   score?: number;
   minted?: boolean;
+  txHash?: string;
+  tokenId?: string;
+  explorerUrl?: string;
 }
 
 export interface NeighborGarden {
@@ -104,6 +107,9 @@ export interface JudgeReport {
   expReward: number;
   cropped?: boolean;
   minted?: boolean;
+  txHash?: string;
+  tokenId?: string;
+  explorerUrl?: string;
 }
 
 export interface ShopItem {
