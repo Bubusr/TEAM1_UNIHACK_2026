@@ -114,6 +114,16 @@ export function createApp() {
     keyPrefix: 'action',
   });
 
+  // Health check endpoints for Cloud Run, Kubernetes, and load balancers
+  app.get(['/api/health', '/healthz'], (_req, res) => {
+    return res.json({
+      status: 'ok',
+      service: 'paws-and-picket',
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+    });
+  });
+
   // Public Web3 configuration status (never exposes private keys)
   app.get('/api/web3/status', (_req, res) => {
     return res.json(getWeb3Status());

@@ -1,0 +1,16 @@
+node_modules
+.git
+.gitignore
+.env
+.env.*
+*.log
+dist
+test
+test-results
+coverage
+.gemini
+.agents
+*.md
+contracts
+cache
+artifacts

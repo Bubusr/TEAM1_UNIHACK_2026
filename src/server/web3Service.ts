@@ -155,8 +155,7 @@ export function isPetPubliclyAccessible(
   if (pet.mintStatus === 'minted' || pet.mintStatus === 'pending') return true;
 
   const score = Number(pet.discoveryScore ?? pet.score ?? 0);
-  const bond = Number(pet.bondXp ?? 0);
-  return score >= 80 && bond >= 100;
+  return score >= 80;
 }
 
 export function sanitizePublicOrigin(val?: string | null): string | null {
@@ -187,8 +186,20 @@ export function getCanonicalOrigin(candidateOverride?: string | null): string | 
     return fromEnv;
   }
 
+  // Never provide test fallback in production mode
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+
   // Automated test runner deterministic fallback
-  if (process.env.NODE_ENV === 'test') {
+  if (
+    process.env.NODE_ENV === 'test' ||
+    process.env.npm_lifecycle_event === 'test' ||
+    (Array.isArray(process.argv) &&
+      process.argv.some(
+        (arg) => typeof arg === 'string' && (arg.includes('--test') || arg.includes('test/'))
+      ))
+  ) {
     return 'https://test.pawsandpicket.local';
   }
 

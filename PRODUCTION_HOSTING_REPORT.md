@@ -148,31 +148,31 @@ cache-control: max-age=0
 
 ---
 
-## 10. Outstanding Manual Configuration & Deployment Path
+## 10. Outstanding Manual Configuration & Cloud Run Deployment Path
 
-To transition from the current verified local implementation to a live public mint on Avalanche Fuji:
-
-### Step 1: Provision Public Node.js Compute
-Choose one of the following production hosting options for the Express backend:
-- **Option A (Google Cloud Run - Recommended):**  
-  Deploy `src/server/server.ts` to Google Cloud Run (which powers Google AI Studio applets). Cloud Run provides a direct HTTPS origin (`https://<service>-<hash>.a.run.app`) with automatic TLS and zero cold-start on min-instances.
-- **Option B (Firebase Blaze Upgrade):**  
-  Upgrade `paws-local` to the Blaze pay-as-you-go plan at [https://console.firebase.google.com/project/paws-local/usage/details](https://console.firebase.google.com/project/paws-local/usage/details), enable Cloud Functions, and deploy Express via Firebase Hosting rewrites.
-- **Option C (PaaS Host - Render / Railway / Fly.io):**  
-  Connect the GitHub repository (`https://github.com/Bubusr/TEAM1_UNIHACK_2026.git`) and run `npm run start`.
-
-### Step 2: Configure Production Environment Variables
-In the chosen hosting dashboard, configure:
-```env
-APP_URL=https://<your-verified-public-domain>
-GUEST_SESSION_SECRET=<secure-random-32-chars>
-GEMINI_API_KEY=<your-gemini-key>
-TRUSTED_SIGNER_PRIVATE_KEY=<your-trusted-signer-key>
-PET_PASSPORT_CONTRACT_ADDRESS=0x2aA2EbA597E8E2a1bB727Fd4317dBb6cEC2Bee31
-AVALANCHE_FUJI_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
-AVALANCHE_CHAIN_ID=43113
+### Google Cloud Billing API Verification
+An automated query to the Google Cloud Billing API (`https://cloudbilling.googleapis.com/v1/projects/paws-local/billingInfo`) verified:
+```json
+{
+  "name": "projects/paws-local/billingInfo",
+  "projectId": "paws-local",
+  "billingAccountName": "",
+  "billingEnabled": false
+}
 ```
+Project `paws-local` has **`billingEnabled: false`**. Google Cloud Run, Artifact Registry, and Cloud Build require an active billing account.
 
-### Step 3: Verify Public DNS & Execute Real Mint
-1. Perform an independent `curl -sI https://<your-verified-public-domain>/api/web3/status` to confirm public HTTP 200.
-2. Proceed to Phase I live Fuji mint with connected Core Wallet.
+### Deployment Assets Created
+1. `Dockerfile`: Optimized multi-stage build (Node 24 Alpine, `PORT=8080`, native strip-types).
+2. `.dockerignore`: Strictly excludes `.env`, secrets, contracts, and test files.
+3. Health check endpoints: `/api/health` and `/healthz` mounted in `src/server/app.ts`.
+4. Dedicated deployment guides:
+   - `CLOUD_RUN_DEPLOYMENT.md`: Step-by-step gcloud and console instructions.
+   - `PRODUCTION_SMOKE_TEST.md`: 12-point automated verification script.
+   - `PRODUCTION_ENVIRONMENT_CHECKLIST.md`: Secret management and environment variable audit.
+
+### Exact Manual Steps to Deploy
+1. **Link Billing Account:** Enable billing on `paws-local` at [https://console.firebase.google.com/project/paws-local/usage/details](https://console.firebase.google.com/project/paws-local/usage/details).
+2. **Deploy to Cloud Run:** Run `gcloud run deploy paws-and-picket --source . --project paws-local --region asia-southeast1 --allow-unauthenticated` (detailed command in `CLOUD_RUN_DEPLOYMENT.md`).
+3. **Configure APP_URL:** Update `APP_URL` with the generated `https://<service-url>.run.app`.
+4. **Execute Smoke Tests:** Verify live connectivity with `PRODUCTION_SMOKE_TEST.md` before requesting mint approval.

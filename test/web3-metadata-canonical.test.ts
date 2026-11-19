@@ -284,4 +284,16 @@ describe('Web3 Production Origin & Privacy Verification (Phase 7 Suite)', () => 
     const bytes = await res.arrayBuffer();
     assert.ok(bytes.byteLength > 0);
   });
+
+  it('9. Health check endpoints (/api/health and /healthz) return HTTP 200 for Cloud Run probes', async () => {
+    for (const endpoint of ['/api/health', '/healthz']) {
+      const res = await fetch(`${baseUrl}${endpoint}`);
+      assert.strictEqual(res.status, 200);
+      const json = await res.json();
+      assert.strictEqual(json.status, 'ok');
+      assert.strictEqual(json.service, 'paws-and-picket');
+      assert.ok(typeof json.timestamp === 'string');
+      assert.ok(typeof json.uptime === 'number');
+    }
+  });
 });

@@ -96,10 +96,12 @@ If `METADATA_STORAGE_PROVIDER=pinata` and a valid JWT is provided in `METADATA_S
 | Check | Result | Evidence |
 | :--- | :---: | :--- |
 | ERC-721 schema validity | **PASS** | `name`, `description`, `image`, `attributes` formatted |
-| Canonical HTTPS Origin | **PASS** | `https://pawsandpicket.app` strictly enforced |
+| Canonical HTTPS Origin Resolver | **PASS** | `getCanonicalOrigin()` enforces valid HTTPS from `APP_URL` |
+| Fail-Closed Protection | **PASS** | Returns HTTP 503 if `APP_URL` is unconfigured in production |
 | No Localhost/Port Leakage | **PASS** | Verified in `test/web3-metadata-canonical.test.ts` (0 matches for localhost/:3000/:53548) |
 | Binary Image Serving | **PASS** | 510,996 bytes streamed with `image/jpeg` status 200 |
-| Public Unauthenticated Access | **PASS** | Zero session / cookie required for `/api/pets/:petUid/portrait` |
+| Privacy Boundary Guard | **PASS** | Unauthenticated access to unpublished draft pets returns HTTP 404 |
 | Zero PII exposure | **PASS** | Verified in automated tests (no emails, no user IDs, no coordinates) |
 | EIP-712 URI binding consistency | **PASS** | Exact match between voucher `metadataUri` and metadata endpoint |
-| Production Internet Reachability | **BLOCKED** | Domain `pawsandpicket.app` returns `NXDOMAIN` |
+| Cloud Run Readiness | **PASS** | Multi-stage Dockerfile, health checks (`/api/health`), 0.0.0.0 binding |
+| Production Internet Reachability | **BLOCKED** | Project `paws-local` has `billingEnabled: false` (requires Blaze/billing) |

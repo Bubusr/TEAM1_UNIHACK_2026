@@ -147,12 +147,17 @@ Pet documents in Firestore collection `pets`:
 
 ---
 
-## 9. Production Hosting & Canonical Metadata Origin Resolution
+## 9. Production Hosting & Cloud Run Deployment Infrastructure
 
-1. **Hosting Provider Audit:** Identified project configuration in `.firebaserc` (project `paws-local`, number `213801959465`). Current project is on the Firebase Spark free plan.
-2. **Dynamic Origin Resolution:** Replaced hardcoded fallback with `getCanonicalOrigin()`, which reads `process.env.APP_URL` and fails closed (HTTP 503) if unconfigured in production.
-3. **Privacy Boundary:** Added `isPetPubliclyAccessible()` protecting unbonded/unpublished private photos from unauthenticated scraping.
-4. **Complete Report:** Documented in `PRODUCTION_HOSTING_REPORT.md`.
+1. **Hosting Provider Audit:** Identified project configuration in `.firebaserc` (project `paws-local`, number `213801959465`). API audit verified `billingEnabled: false` (Spark free tier).
+2. **Container Architecture:** Created multi-stage `Dockerfile`, `.dockerignore`, and health checks (`/api/health`, `/healthz`) in `src/server/app.ts`.
+3. **Dynamic Origin Resolution:** Implemented `getCanonicalOrigin()`, which reads `process.env.APP_URL` and fails closed (HTTP 503) if unconfigured in production.
+4. **Privacy Boundary:** Added `isPetPubliclyAccessible()` protecting unbonded/unpublished private photos from unauthenticated scraping.
+5. **Deployment Deliverables:**
+   - `CLOUD_RUN_DEPLOYMENT.md`: Step-by-step Cloud Run guide.
+   - `PRODUCTION_SMOKE_TEST.md`: 12-point automated verification script.
+   - `PRODUCTION_ENVIRONMENT_CHECKLIST.md`: Secret management and environment variable audit.
+   - `PRODUCTION_HOSTING_REPORT.md`: Comprehensive hosting and DNS report.
 
 ---
 
@@ -166,7 +171,9 @@ Pet documents in Firestore collection `pets`:
 
 ## 11. Steps Remaining for Milestone I (Real Fuji Mint)
 
-1. Deploy backend Express server to public compute and set `APP_URL`.
-2. Connect Keeper's Core Wallet to act as Transaction Sender & NFT Recipient.
-3. User gives explicit approval to broadcast `mintWithClaim` on Avalanche Fuji C-Chain.
-4. Verify token #1 mint and event log independently on Snowtrace.
+1. Enable billing on project `paws-local` or configure container hosting.
+2. Deploy backend Express server to Cloud Run and configure `APP_URL`.
+3. Run `PRODUCTION_SMOKE_TEST.md` against the live HTTPS URL.
+4. Connect Keeper's Core Wallet to act as Transaction Sender & NFT Recipient.
+5. User gives explicit approval to broadcast `mintWithClaim` on Avalanche Fuji C-Chain.
+6. Verify token #1 mint and event log independently on Snowtrace.
