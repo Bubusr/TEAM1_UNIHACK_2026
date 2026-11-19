@@ -156,13 +156,19 @@ export async function signInWithGooglePopup(): Promise<User> {
       console.error('Firebase signInWithPopup error:', err?.code, err?.message, err);
 
       if (err?.code === 'auth/popup-closed-by-user') {
-        throw new Error('Sign-in popup was closed. Please try again.');
+        const error = new Error('Sign-in popup was closed. Please try again.');
+        (error as any).code = 'auth/popup-closed-by-user';
+        throw error;
       }
       if (err?.code === 'auth/cancelled-popup-request') {
-        throw new Error('Sign-in was cancelled. Please try again.');
+        const error = new Error('Sign-in was cancelled. Please try again.');
+        (error as any).code = 'auth/cancelled-popup-request';
+        throw error;
       }
       if (err?.code === 'auth/popup-blocked') {
-        throw new Error('Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.');
+        const error = new Error('Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.');
+        (error as any).code = 'auth/popup-blocked';
+        throw error;
       }
 
       // If unauthorized domain happens in dev fallback mode:

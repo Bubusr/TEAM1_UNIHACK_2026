@@ -125,6 +125,31 @@ export function createApp() {
     keyPrefix: 'action',
   });
 
+  // Reverse proxy for Firebase Auth helper iframes/handlers
+  // This allows same-domain authentication and avoids third-party cookie restrictions
+  app.all('/__/auth/*', async (req, res) => {
+    try {
+      const targetUrl = `https://paws-local.firebaseapp.com${req.originalUrl}`;
+      const forwardHeaders = { ...req.headers };
+      delete forwardHeaders.host;
+      const resp = await fetch(targetUrl, {
+        method: req.method,
+        headers: forwardHeaders as any,
+        body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body),
+        redirect: 'manual',
+      });
+      res.status(resp.status);
+      resp.headers.forEach((val, key) => {
+        res.setHeader(key, val);
+      });
+      const data = await resp.arrayBuffer();
+      res.send(Buffer.from(data));
+    } catch (e) {
+      console.error('[auth-proxy] Error proxying auth request:', e);
+      res.status(502).send('Auth proxy error');
+    }
+  });
+
   // Health check endpoints for Cloud Run, Kubernetes, and load balancers
   app.get(['/api/health', '/healthz'], (_req, res) => {
     return res.json({

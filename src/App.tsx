@@ -1732,13 +1732,35 @@ export default function App() {
     setProfileBusy('auth');
     setProfileFeedback(null);
     try {
-      await signInWithGoogleRedirect();
-    } catch (err) {
+      const user = await signInWithGooglePopup();
+      if (user) {
+        setProfileFeedback({
+          type: 'ok',
+          text: `Signed in as ${user.displayName || user.email || 'Keeper'} ✓`,
+        });
+      }
+    } catch (err: any) {
+      console.warn('Google Sign-In failed:', err);
+      if (err?.code === 'auth/popup-closed-by-user') {
+        setProfileFeedback({
+          type: 'err',
+          text: 'Sign-in window closed. Please try again.',
+        });
+      } else if (err?.code === 'auth/popup-blocked') {
+        setProfileFeedback({
+          type: 'ok',
+          text: 'Pop-up blocked. Redirecting to Google Sign-In...',
+        });
+        await signInWithGoogleRedirect();
+        return;
+      } else {
+        setProfileFeedback({
+          type: 'err',
+          text: err instanceof Error ? err.message : 'Google Sign-In failed.',
+        });
+      }
+    } finally {
       setProfileBusy(null);
-      setProfileFeedback({
-        type: 'err',
-        text: err instanceof Error ? err.message : 'Google Sign-In failed.',
-      });
     }
   };
 
