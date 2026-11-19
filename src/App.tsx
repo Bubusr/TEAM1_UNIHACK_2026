@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from 'react';
+import { Home, Settings, Sun, Sunset, Wallet } from 'lucide-react';
 import {
   CropPlot,
   CropType,
   DailyLimits,
+  FirstBondQuestState,
   FoodItemType,
   GardenToy,
+  HatTransform,
+  JourneyPhase,
   JudgeReport,
   MarketListing,
+  MintedPassportRecord,
   NeighborGarden,
   OrchardTree,
+  PetAnimState,
   PetSpecies,
   SanctuaryPet,
   ShopItem,
+  WalletState,
 } from './types';
 import {
   SanctuaryModalType,
@@ -21,48 +28,183 @@ import { FOOD_META, FarmScreen } from './components/FarmScreen';
 import { NeighborGardenScreen } from './components/NeighborGardenScreen';
 import { NeighborFarmScreen } from './components/NeighborFarmScreen';
 import { JudgeCardScreen } from './components/JudgeCardScreen';
+import { PassportGalleryScreen } from './components/PassportGalleryScreen';
 import { CreamSheets } from './components/CreamSheets';
+import { WalletConnectModal } from './components/WalletConnectModal';
+import { FirstBondQuestModal } from './components/FirstBondQuestModal';
+import {
+  PetProfileModal,
+  isFavoriteFoodForSpecies,
+} from './components/PetProfileModal';
+import { PassportMintModal } from './components/PassportMintModal';
+import { StartScreen } from './components/StartScreen';
+import { AppSettingsModal } from './components/AppSettingsModal';
+import { SkyTheme, SkyThemeProvider, UiLabelsProvider } from './components/SharedHud';
+import {
+  playCameraSound,
+  playCoinSound,
+  playHappySound,
+  playTapSound,
+  playVictorySound,
+  setAudioEnabled,
+} from './utils/appAudio';
+import {
+  authenticateWalletAddress,
+  claimFirstBondQuestApi,
+  computeBondLevel,
+  connectCoreWallet,
+  getSnowtraceTxUrl,
+  isPetPassportEligible,
+  shortenAddress,
+  switchToAvalancheFuji,
+  syncCareAction,
+  syncPetCreated,
+  toPetProfile,
+} from './services/pawsApi';
+
+import { PET_IMAGES, resolveAssetUrl } from './assets/petImages';
 
 const INITIAL_PETS: SanctuaryPet[] = [
   {
     id: 'pet-calico',
     name: 'Mochi',
     species: 'cat',
-    photoUrl: '/src/assets/images/cropped_calico_cat_1794637541476.jpg',
+    photoUrl: PET_IMAGES.croppedCalicoCat,
     cutoutMode: 'studio',
     x: 34,
     y: 50,
     needsCare: 'heart',
     score: 94,
+    pose: 'Cozy',
+    bondXp: 110,
+    bondLevel: 3,
+    discoveryDate: '2026-11-10',
+    discoveryStatus: 'Passport Ready',
+    passportEligible: true,
+    animState: 'idle',
   },
   {
     id: 'pet-retriever',
     name: 'Sunny',
     species: 'dog',
-    photoUrl: '/src/assets/images/cropped_golden_dog_1794637542709.jpg',
+    photoUrl: PET_IMAGES.croppedGoldenDog,
     cutoutMode: 'studio',
     x: 63,
     y: 45,
     flip: true,
     score: 91,
+    pose: 'Playful',
+    bondXp: 65,
+    bondLevel: 2,
+    discoveryDate: '2026-11-12',
+    discoveryStatus: 'Welcomed',
+    passportEligible: false,
+    animState: 'idle',
   },
   {
     id: 'pet-bunny',
     name: 'Pip',
     species: 'bunny',
-    photoUrl: '/src/assets/images/cropped_fluffy_bunny_1794637542800.jpg',
+    photoUrl: PET_IMAGES.croppedFluffyBunny,
     cutoutMode: 'studio',
     x: 50,
     y: 62,
     score: 88,
+    pose: 'Curious',
+    bondXp: 40,
+    bondLevel: 2,
+    discoveryDate: '2026-11-14',
+    discoveryStatus: 'Welcomed',
+    passportEligible: false,
+    animState: 'idle',
+  },
+];
+
+const INITIAL_PASSPORTS: MintedPassportRecord[] = [
+  {
+    tokenId: '#001',
+    petId: 'n-maya-shiba',
+    petName: 'Kibo',
+    species: 'shiba',
+    imageUrl: PET_IMAGES.neighborShibaDog,
+    bondLevel: 4,
+    bondXp: 150,
+    discoveryDate: '2026-11-04',
+    ownerAddress: '0xA41E92c08B7F3D190C12a874f3B590e2112B4E91',
+    ipfsCid: 'bafybeigkiboshibapawsfuji1passport',
+    ipfsUri: 'ipfs://bafybeigkiboshibapawsfuji1passport/metadata.json',
+    txHash: '0x8a1c3f9d4b20e7a158c340b91f2a7e5c8d30b41f92a7c6e1d0b54a8f12c9e301',
+    snowtraceUrl: getSnowtraceTxUrl(
+      '0x8a1c3f9d4b20e7a158c340b91f2a7e5c8d30b41f92a7c6e1d0b54a8f12c9e301'
+    ),
+    mintedAt: '2026-11-08',
+    aiScore: 95,
+    pose: 'Happy',
+  },
+  {
+    tokenId: '#002',
+    petId: 'n-leo-samoyed',
+    petName: 'Cloud',
+    species: 'samoyed',
+    imageUrl: PET_IMAGES.neighborSamoyedPup,
+    bondLevel: 3,
+    bondXp: 125,
+    discoveryDate: '2026-11-06',
+    ownerAddress: '0x3B82D1f7C09E4a12B85f6C90E23D4b87A1F50C22',
+    ipfsCid: 'bafybeigcloudsamoyedpawsfuji2passport',
+    ipfsUri: 'ipfs://bafybeigcloudsamoyedpawsfuji2passport/metadata.json',
+    txHash: '0x3d7e91b2c40f6a8d15e390c42b1a8f7d6e20c31b84f9a5d2e1c67b3f04d8a219',
+    snowtraceUrl: getSnowtraceTxUrl(
+      '0x3d7e91b2c40f6a8d15e390c42b1a8f7d6e20c31b84f9a5d2e1c67b3f04d8a219'
+    ),
+    mintedAt: '2026-11-11',
+    aiScore: 93,
+    pose: 'Playful',
+  },
+  {
+    tokenId: '#003',
+    petId: 'n-maya-ragdoll',
+    petName: 'Pearl',
+    species: 'cat',
+    imageUrl: PET_IMAGES.neighborRagdollCat,
+    bondLevel: 4,
+    bondXp: 140,
+    discoveryDate: '2026-11-09',
+    ownerAddress: '0xA41E92c08B7F3D190C12a874f3B590e2112B4E91',
+    ipfsCid: 'bafybeigpearlragdollpawsfuji3passport',
+    ipfsUri: 'ipfs://bafybeigpearlragdollpawsfuji3passport/metadata.json',
+    txHash: '0x5c2f48a1e90b3d7c62f481a30e9b7c5d2f10a48e73b6c9f2d0e41a7b85c6d402',
+    snowtraceUrl: getSnowtraceTxUrl(
+      '0x5c2f48a1e90b3d7c62f481a30e9b7c5d2f10a48e73b6c9f2d0e41a7b85c6d402'
+    ),
+    mintedAt: '2026-11-13',
+    aiScore: 96,
+    pose: 'Cozy',
   },
 ];
 
 const INITIAL_SHOP: ShopItem[] = [
-  { id: 'straw-hat', name: 'Straw Hat', cost: 400, icon: '👒', kind: 'accessory' },
-  { id: 'flower-crown', name: 'Daisy Crown', cost: 550, icon: '🌸', kind: 'accessory' },
+  { id: 'straw-hat', name: 'Straw Hat', cost: 0, icon: '👒', kind: 'accessory', owned: true },
+  { id: 'ribbon-bow', name: 'Pink Bow', cost: 0, icon: '🎀', kind: 'accessory', owned: true },
+  { id: 'sunny-cap', name: 'Sunny Cap', cost: 300, icon: '🧢', kind: 'accessory' },
+  { id: 'flower-crown', name: 'Daisy Crown', cost: 350, icon: '🌸', kind: 'accessory' },
+  { id: 'top-hat', name: 'Dapper Hat', cost: 450, icon: '🎩', kind: 'accessory' },
+  { id: 'royal-crown', name: 'Royal Crown', cost: 550, icon: '👑', kind: 'accessory' },
   { id: 'camera-film', name: '+10 Energy', cost: 250, icon: '⚡', kind: 'energy' },
 ];
+
+function mergeShopItems(saved?: ShopItem[]): ShopItem[] {
+  if (!saved || !Array.isArray(saved)) return INITIAL_SHOP;
+  const savedMap = new Map(saved.map((item) => [item.id, item]));
+  return INITIAL_SHOP.map((base) => {
+    const prev = savedMap.get(base.id);
+    if (!prev) return base;
+    return {
+      ...base,
+      owned: Boolean(base.owned || prev.owned),
+    };
+  });
+}
 
 const INITIAL_TOYS: GardenToy[] = [
   { id: 'toy-yarn', name: 'Yarn Ball', icon: '🧶', cost: 120, x: 76, y: 74, owned: true },
@@ -122,21 +264,35 @@ const INITIAL_NEIGHBORS: NeighborGarden[] = [
         id: 'n-maya-shiba',
         name: 'Kibo',
         species: 'shiba',
-        photoUrl: '/src/assets/images/neighbor_shiba_dog_1794722670611.jpg',
+        photoUrl: PET_IMAGES.neighborShibaDog,
         cutoutMode: 'studio',
         x: 38,
         y: 52,
         needsCare: 'heart',
+        bondXp: 150,
+        bondLevel: 4,
+        discoveryDate: '2026-11-04',
+        discoveryStatus: 'Preserved On-Chain',
+        passportEligible: true,
+        passportTokenId: '#001',
+        minted: true,
       },
       {
         id: 'n-maya-ragdoll',
         name: 'Pearl',
         species: 'cat',
-        photoUrl: '/src/assets/images/neighbor_ragdoll_cat_1794722671151.jpg',
+        photoUrl: PET_IMAGES.neighborRagdollCat,
         cutoutMode: 'studio',
         x: 64,
         y: 55,
         flip: true,
+        bondXp: 140,
+        bondLevel: 4,
+        discoveryDate: '2026-11-09',
+        discoveryStatus: 'Preserved On-Chain',
+        passportEligible: true,
+        passportTokenId: '#003',
+        minted: true,
       },
     ],
   },
@@ -176,20 +332,32 @@ const INITIAL_NEIGHBORS: NeighborGarden[] = [
         id: 'n-leo-samoyed',
         name: 'Cloud',
         species: 'samoyed',
-        photoUrl: '/src/assets/images/neighbor_samoyed_pup_1794722672155.jpg',
+        photoUrl: PET_IMAGES.neighborSamoyedPup,
         cutoutMode: 'studio',
         x: 42,
         y: 54,
         needsCare: 'food',
+        bondXp: 125,
+        bondLevel: 3,
+        discoveryDate: '2026-11-06',
+        discoveryStatus: 'Preserved On-Chain',
+        passportEligible: true,
+        passportTokenId: '#002',
+        minted: true,
       },
       {
         id: 'n-leo-corgi',
         name: 'Toast',
         species: 'corgi',
-        photoUrl: '/src/assets/images/lured_stray_corgi_1794627550798.jpg',
+        photoUrl: PET_IMAGES.luredStrayCorgi,
         cutoutMode: 'silhouette',
         x: 66,
         y: 49,
+        bondXp: 70,
+        bondLevel: 2,
+        discoveryDate: '2026-11-11',
+        discoveryStatus: 'Welcomed',
+        passportEligible: false,
       },
     ],
   },
@@ -229,20 +397,30 @@ const INITIAL_NEIGHBORS: NeighborGarden[] = [
         id: 'n-hana-cat',
         name: 'Miso',
         species: 'cat',
-        photoUrl: '/src/assets/images/neighbor_ragdoll_cat_1794722671151.jpg',
+        photoUrl: PET_IMAGES.neighborRagdollCat,
         cutoutMode: 'studio',
         x: 36,
         y: 55,
+        bondXp: 80,
+        bondLevel: 3,
+        discoveryDate: '2026-11-10',
+        discoveryStatus: 'Welcomed',
+        passportEligible: false,
       },
       {
         id: 'n-hana-bunny',
         name: 'Snow',
         species: 'bunny',
-        photoUrl: '/src/assets/images/cropped_fluffy_bunny_1794637542800.jpg',
+        photoUrl: PET_IMAGES.croppedFluffyBunny,
         cutoutMode: 'studio',
         x: 62,
         y: 56,
         flip: true,
+        bondXp: 55,
+        bondLevel: 2,
+        discoveryDate: '2026-11-12',
+        discoveryStatus: 'Welcomed',
+        passportEligible: false,
       },
     ],
   },
@@ -250,7 +428,7 @@ const INITIAL_NEIGHBORS: NeighborGarden[] = [
 
 const SAMPLE_PUPPY_REPORT: JudgeReport = {
   id: 'report-golden-puppy',
-  photoUrl: '/src/assets/images/polaroid_golden_puppy_1794627548886.jpg',
+  photoUrl: PET_IMAGES.polaroidGoldenPuppy,
   theme: 'Fluffy Tails',
   overallScore: 92,
   verdict: 'EXCELLENT!',
@@ -285,82 +463,365 @@ type ScreenView =
   | 'farm'
   | 'neighborGarden'
   | 'neighborFarm'
-  | 'judge';
+  | 'judge'
+  | 'gallery';
+
+const SAVE_STORAGE_KEY = 'paws_and_picket_save_v1';
+
+interface SavedAppState {
+  keeperName?: string;
+  soundEnabled?: boolean;
+  showTextLabels?: boolean;
+  skyTheme?: SkyTheme;
+  coins?: number;
+  energy?: number;
+  level?: number;
+  expPercent?: number;
+  fenceHours?: number;
+  pets?: SanctuaryPet[];
+  shopItems?: ShopItem[];
+  toys?: GardenToy[];
+  waterCharges?: number;
+  cropPlots?: CropPlot[];
+  trees?: OrchardTree[];
+  seedInventory?: Record<CropType, number>;
+  foodInventory?: Record<FoodItemType, number>;
+  marketListings?: MarketListing[];
+  limits?: DailyLimits;
+  neighbors?: NeighborGarden[];
+  luredRescued?: boolean;
+  activeBait?: string | null;
+  album?: JudgeReport[];
+  passports?: MintedPassportRecord[];
+  firstBondQuest?: FirstBondQuestState;
+}
+
+function loadSavedState(): SavedAppState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(SAVE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as SavedAppState) : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function App() {
-  const [desktopMode, setDesktopMode] = useState<'both' | ScreenView>('both');
-  const [mobileScreen, setMobileScreen] = useState<ScreenView>('sanctuary');
+  const [initialSave] = useState<SavedAppState | null>(() => loadSavedState());
+  const [appPhase, setAppPhase] = useState<'start' | 'playing'>('start');
+  const [activeScreen, setActiveScreen] = useState<ScreenView>('sanctuary');
+  const [hasSavedSession, setHasSavedSession] = useState<boolean>(() =>
+    Boolean(initialSave)
+  );
 
-  const [coins, setCoins] = useState(12560);
-  const [energy, setEnergy] = useState(45);
+  const [keeperName, setKeeperName] = useState<string>(
+    initialSave?.keeperName || 'Keeper'
+  );
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(
+    initialSave?.soundEnabled ?? true
+  );
+  const [showTextLabels, setShowTextLabels] = useState<boolean>(
+    initialSave?.showTextLabels ?? false
+  );
+  const [skyTheme, setSkyTheme] = useState<SkyTheme>(
+    initialSave?.skyTheme === 'sunset' ? 'sunset' : 'morning'
+  );
+
+  const [coins, setCoins] = useState(initialSave?.coins ?? 12560);
+  const [energy, setEnergy] = useState(initialSave?.energy ?? 45);
   const maxEnergy = 50;
-  const [level, setLevel] = useState(12);
-  const [expPercent, setExpPercent] = useState(64);
+  const [level, setLevel] = useState(initialSave?.level ?? 12);
+  const [expPercent, setExpPercent] = useState(initialSave?.expPercent ?? 64);
   const [streakDays] = useState(7);
-  const [fenceHours, setFenceHours] = useState(14);
+  const [fenceHours, setFenceHours] = useState(initialSave?.fenceHours ?? 14);
   const [theme] = useState('Fluffy Tails');
 
-  const [pets, setPets] = useState<SanctuaryPet[]>(INITIAL_PETS);
-  const [shopItems, setShopItems] = useState<ShopItem[]>(INITIAL_SHOP);
-  const [toys, setToys] = useState<GardenToy[]>(INITIAL_TOYS);
+  const [pets, setPets] = useState<SanctuaryPet[]>(() =>
+    (initialSave?.pets ?? INITIAL_PETS).map((p) => ({
+      ...p,
+      photoUrl: resolveAssetUrl(p.photoUrl),
+    }))
+  );
+  const [shopItems, setShopItems] = useState<ShopItem[]>(() =>
+    mergeShopItems(initialSave?.shopItems)
+  );
+  const [toys, setToys] = useState<GardenToy[]>(
+    initialSave?.toys ?? INITIAL_TOYS
+  );
 
   // Crop Farm State
-  const [waterCharges, setWaterCharges] = useState(8);
+  const [waterCharges, setWaterCharges] = useState(
+    initialSave?.waterCharges ?? 8
+  );
   const maxWater = 8;
-  const [cropPlots, setCropPlots] = useState<CropPlot[]>(INITIAL_PLOTS);
-  const [trees, setTrees] = useState<OrchardTree[]>(INITIAL_TREES);
-  const [seedInventory, setSeedInventory] = useState<Record<CropType, number>>({
-    wheat: 3,
-    carrot: 2,
-    berry: 1,
-    catnip: 0,
-  });
-  const [foodInventory, setFoodInventory] = useState<Record<FoodItemType, number>>({
-    wheat: 0,
-    carrot: 1,
-    berry: 0,
-    catnip: 0,
-    apple: 0,
-    peach: 0,
-  });
-  const [marketListings, setMarketListings] = useState<MarketListing[]>([
-    { id: 'init-sale', item: 'carrot', qty: 1, price: 36, sold: true, buyerName: 'Maya' },
-  ]);
+  const [cropPlots, setCropPlots] = useState<CropPlot[]>(
+    initialSave?.cropPlots ?? INITIAL_PLOTS
+  );
+  const [trees, setTrees] = useState<OrchardTree[]>(
+    initialSave?.trees ?? INITIAL_TREES
+  );
+  const [seedInventory, setSeedInventory] = useState<Record<CropType, number>>(
+    initialSave?.seedInventory ?? {
+      wheat: 3,
+      carrot: 2,
+      berry: 1,
+      catnip: 0,
+    }
+  );
+  const [foodInventory, setFoodInventory] = useState<
+    Record<FoodItemType, number>
+  >(
+    initialSave?.foodInventory ?? {
+      wheat: 0,
+      carrot: 1,
+      berry: 0,
+      catnip: 0,
+      apple: 0,
+      peach: 0,
+    }
+  );
+  const [marketListings, setMarketListings] = useState<MarketListing[]>(
+    initialSave?.marketListings ?? [
+      { id: 'init-sale', item: 'carrot', qty: 1, price: 36, sold: true, buyerName: 'Maya' },
+    ]
+  );
 
   // Daily Currency Limits
-  const [limits, setLimits] = useState<DailyLimits>({
-    petCoinsUsed: 2,
-    petCoinsMax: 10,
-    playCoinsUsed: 0,
-    playCoinsMax: 5,
-    feedCoinsUsed: 0,
-    feedCoinsMax: 6,
-    cloverCoinsUsed: 0,
-    cloverCoinsMax: 5,
-  });
+  const [limits, setLimits] = useState<DailyLimits>(
+    initialSave?.limits ?? {
+      petCoinsUsed: 2,
+      petCoinsMax: 10,
+      playCoinsUsed: 0,
+      playCoinsMax: 5,
+      feedCoinsUsed: 0,
+      feedCoinsMax: 6,
+      cloverCoinsUsed: 0,
+      cloverCoinsMax: 5,
+    }
+  );
 
-  const [neighbors, setNeighbors] = useState<NeighborGarden[]>(INITIAL_NEIGHBORS);
+  const [neighbors, setNeighbors] = useState<NeighborGarden[]>(() =>
+    (initialSave?.neighbors ?? INITIAL_NEIGHBORS).map((n) => ({
+      ...n,
+      pets: n.pets.map((p) => ({ ...p, photoUrl: resolveAssetUrl(p.photoUrl) })),
+    }))
+  );
   const [visitingId, setVisitingId] = useState<string | null>(null);
 
   const [activeModal, setActiveModal] = useState<SanctuaryModalType>(null);
   const [modalTarget, setModalTarget] = useState<ScreenView>('sanctuary');
-  const [luredRescued, setLuredRescued] = useState(false);
-  const [activeBait, setActiveBait] = useState<string | null>(null);
+  const [luredRescued, setLuredRescued] = useState(
+    initialSave?.luredRescued ?? false
+  );
+  const [activeBait, setActiveBait] = useState<string | null>(
+    initialSave?.activeBait ?? null
+  );
 
   const [activeReport, setActiveReport] = useState<JudgeReport>(SAMPLE_PUPPY_REPORT);
-  const [album, setAlbum] = useState<JudgeReport[]>([SAMPLE_PUPPY_REPORT]);
+  const [album, setAlbum] = useState<JudgeReport[]>(() =>
+    (initialSave?.album ?? [SAMPLE_PUPPY_REPORT]).map((r) => ({
+      ...r,
+      photoUrl: resolveAssetUrl(r.photoUrl),
+    }))
+  );
   const [isJudging, setIsJudging] = useState(false);
   const [judgeError, setJudgeError] = useState<string | null>(null);
+
+  // Member 01: Pet Journey, First Bond Quest, Core Wallet & Public Passport Gallery State
+  const [firstBondQuest, setFirstBondQuest] = useState<FirstBondQuestState>(
+    initialSave?.firstBondQuest ?? {
+      welcomeDone: false,
+      feedDone: false,
+      playDone: false,
+      claimed: false,
+      rewardXp: 100,
+    }
+  );
+
+  const [wallet, setWallet] = useState<WalletState>({
+    connected: false,
+    address: null,
+    chainId: null,
+    isAvalancheFuji: false,
+    providerLabel: null,
+    authVerified: false,
+    connecting: false,
+    error: null,
+  });
+
+  const [passports, setPassports] = useState<MintedPassportRecord[]>(() =>
+    (initialSave?.passports ?? INITIAL_PASSPORTS).map((p) => ({
+      ...p,
+      imageUrl: resolveAssetUrl(p.imageUrl),
+    }))
+  );
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [questModalOpen, setQuestModalOpen] = useState(false);
+  const [mintModalPetId, setMintModalPetId] = useState<string | null>(null);
+  const [mintModalOpen, setMintModalOpen] = useState(false);
+  const [settingsModal, setSettingsModal] = useState<{
+    open: boolean;
+    tab: 'settings' | 'guide';
+  }>({ open: false, tab: 'settings' });
+  const [profileModalState, setProfileModalState] = useState<{
+    open: boolean;
+    mode: 'welcome' | 'profile';
+    petId: string | null;
+  }>({ open: false, mode: 'profile', petId: null });
 
   const visitingNeighbor =
     neighbors.find((n) => n.id === visitingId) ?? null;
 
+  useEffect(() => {
+    setAudioEnabled(soundEnabled);
+  }, [soundEnabled]);
+
+  // Persist Sanctuary progress automatically
+  useEffect(() => {
+    if (!hasSavedSession && appPhase === 'start') return;
+    try {
+      const snapshot: SavedAppState = {
+        keeperName,
+        soundEnabled,
+        showTextLabels,
+        coins,
+        energy,
+        level,
+        expPercent,
+        fenceHours,
+        pets,
+        shopItems,
+        toys,
+        waterCharges,
+        cropPlots,
+        trees,
+        seedInventory,
+        foodInventory,
+        marketListings,
+        limits,
+        neighbors,
+        luredRescued,
+        activeBait,
+        album,
+        passports,
+        firstBondQuest,
+        skyTheme,
+      };
+      window.localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // Ignore quota errors in restricted frames
+    }
+  }, [
+    hasSavedSession,
+    appPhase,
+    keeperName,
+    soundEnabled,
+    showTextLabels,
+    skyTheme,
+    coins,
+    energy,
+    level,
+    expPercent,
+    fenceHours,
+    pets,
+    shopItems,
+    toys,
+    waterCharges,
+    cropPlots,
+    trees,
+    seedInventory,
+    foodInventory,
+    marketListings,
+    limits,
+    neighbors,
+    luredRescued,
+    activeBait,
+    album,
+    passports,
+    firstBondQuest,
+  ]);
+
+  const handleToggleSound = () => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      setAudioEnabled(next);
+      if (next) playTapSound();
+      return next;
+    });
+  };
+
+  const handleToggleShowTextLabels = () => {
+    playTapSound();
+    setShowTextLabels((prev) => !prev);
+  };
+
+  const handleToggleSkyTheme = () => {
+    playTapSound();
+    setSkyTheme((prev) => (prev === 'morning' ? 'sunset' : 'morning'));
+  };
+
+  const handleResetSave = () => {
+    try {
+      window.localStorage.removeItem(SAVE_STORAGE_KEY);
+    } catch {
+      // Ignore storage errors
+    }
+    setHasSavedSession(false);
+    setKeeperName('Keeper');
+    setCoins(12560);
+    setEnergy(45);
+    setLevel(12);
+    setExpPercent(64);
+    setFenceHours(14);
+    setPets(INITIAL_PETS);
+    setShopItems(INITIAL_SHOP);
+    setToys(INITIAL_TOYS);
+    setWaterCharges(8);
+    setCropPlots(INITIAL_PLOTS);
+    setTrees(INITIAL_TREES);
+    setSeedInventory({ wheat: 3, carrot: 2, berry: 1, catnip: 0 });
+    setFoodInventory({ wheat: 0, carrot: 1, berry: 0, catnip: 0, apple: 0, peach: 0 });
+    setMarketListings([
+      { id: 'init-sale', item: 'carrot', qty: 1, price: 36, sold: true, buyerName: 'Maya' },
+    ]);
+    setLimits({
+      petCoinsUsed: 2,
+      petCoinsMax: 10,
+      playCoinsUsed: 0,
+      playCoinsMax: 5,
+      feedCoinsUsed: 0,
+      feedCoinsMax: 6,
+      cloverCoinsUsed: 0,
+      cloverCoinsMax: 5,
+    });
+    setNeighbors(INITIAL_NEIGHBORS);
+    setVisitingId(null);
+    setLuredRescued(false);
+    setActiveBait(null);
+    setActiveReport(SAMPLE_PUPPY_REPORT);
+    setAlbum([SAMPLE_PUPPY_REPORT]);
+    setPassports(INITIAL_PASSPORTS);
+    setFirstBondQuest({
+      welcomeDone: false,
+      feedDone: false,
+      playDone: false,
+      claimed: false,
+      rewardXp: 100,
+    });
+    setActiveModal(null);
+    setActiveScreen('sanctuary');
+    setAppPhase('start');
+  };
+
   const openModalIn = (target: ScreenView, modal: SanctuaryModalType) => {
+    playTapSound();
     setModalTarget(target);
     setActiveModal(modal);
   };
 
-  // Visiting neighbors periodically purchase unsold items in your Roadside Market (faster for fair/low prices)
+  // Visiting neighbors periodically purchase unsold items in your Roadside Market
   useEffect(() => {
     const nextUnsold = marketListings.find((l) => !l.sold);
     if (!nextUnsold) return;
@@ -404,38 +865,80 @@ export default function App() {
     });
   };
 
-  // Petting with daily coin cap
-  const handleCarePet = (petId: string): string => {
+  const applyPetBondGain = (
+    petId: string,
+    xpGain: number,
+    anim: PetAnimState = 'happy'
+  ) => {
     setPets((prev) =>
-      prev.map((p) =>
-        p.id === petId
-          ? { ...p, needsCare: p.needsCare ? null : undefined }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id !== petId) return p;
+        const nextXp = p.bondXp + xpGain;
+        const nextLv = computeBondLevel(nextXp);
+        const eligible = isPetPassportEligible(nextXp);
+        return {
+          ...p,
+          bondXp: nextXp,
+          bondLevel: nextLv,
+          passportEligible: eligible,
+          discoveryStatus: p.minted
+            ? 'Preserved On-Chain'
+            : eligible
+            ? 'Passport Ready'
+            : p.discoveryStatus,
+          needsCare: null,
+          animState: anim,
+        };
+      })
     );
 
+    window.setTimeout(() => {
+      setPets((prev) =>
+        prev.map((p) => (p.id === petId ? { ...p, animState: 'idle' } : p))
+      );
+    }, 1700);
+  };
+
+  // Petting with daily coin cap + Bond XP
+  const handleCarePet = (petId: string): string => {
+    playHappySound();
+    applyPetBondGain(petId, 10, 'happy');
+    void syncCareAction(petId, 'pet', 10);
+
     if (limits.petCoinsUsed >= limits.petCoinsMax) {
-      return '❤️ Daily Max';
+      return '❤️ +10 XP';
     }
 
     setLimits((prev) => ({ ...prev, petCoinsUsed: prev.petCoinsUsed + 1 }));
     setCoins((c) => c + 15);
     awardExp(6);
-    return '+15 🪙';
+    return '+15 🪙 · +10 XP';
   };
 
-  // Feeding harvested crops/fruits with daily coin cap
-  const handleFeedPet = (food: FoodItemType): string => {
+  // Feeding harvested crops/fruits with species-favorite bonus + daily coin cap
+  const handleFeedPet = (food: FoodItemType, targetPetId?: string): string => {
     if (foodInventory[food] <= 0) return 'No food';
+    playHappySound();
 
+    const recipientPet =
+      pets.find((p) => p.id === targetPetId) ?? pets[0];
     setFoodInventory((prev) => ({ ...prev, [food]: prev[food] - 1 }));
-    setPets((prev) =>
-      prev.map((p, i) => (i === 0 ? { ...p, needsCare: null } : p))
-    );
+
+    const isFav = recipientPet
+      ? isFavoriteFoodForSpecies(recipientPet.species, food)
+      : false;
+    const bondGain = isFav ? 20 : 15;
+
+    if (recipientPet) {
+      applyPetBondGain(recipientPet.id, bondGain, 'eating');
+      void syncCareAction(recipientPet.id, 'feed', bondGain);
+    }
+
+    setFirstBondQuest((q) => (q.feedDone ? q : { ...q, feedDone: true }));
 
     if (limits.feedCoinsUsed >= limits.feedCoinsMax) {
       awardExp(10);
-      return `${FOOD_META[food].icon} Yummy!`;
+      return `${FOOD_META[food].icon} +${bondGain} XP${isFav ? ' ⭐' : ''}`;
     }
 
     setLimits((prev) => ({
@@ -444,12 +947,22 @@ export default function App() {
     }));
     setCoins((c) => c + 25);
     awardExp(12);
-    return `${FOOD_META[food].icon} +25 🪙`;
+    return `${FOOD_META[food].icon} +25 🪙 · +${bondGain} XP${isFav ? ' ⭐' : ''}`;
   };
 
-  const handlePlayToy = (toy: GardenToy): string => {
+  const handlePlayToy = (toy: GardenToy, targetPetId?: string): string => {
+    playHappySound();
+    const recipientPet =
+      pets.find((p) => p.id === targetPetId) ?? pets[0];
+    if (recipientPet) {
+      applyPetBondGain(recipientPet.id, 15, 'playing');
+      void syncCareAction(recipientPet.id, 'play', 15);
+    }
+
+    setFirstBondQuest((q) => (q.playDone ? q : { ...q, playDone: true }));
+
     if (limits.playCoinsUsed >= limits.playCoinsMax) {
-      return `${toy.icon} Fun!`;
+      return `${toy.icon} +15 XP`;
     }
     setLimits((prev) => ({
       ...prev,
@@ -457,7 +970,31 @@ export default function App() {
     }));
     setCoins((c) => c + 20);
     awardExp(8);
-    return `${toy.icon} +20 🪙`;
+    return `${toy.icon} +20 🪙 · +15 XP`;
+  };
+
+  const handleProfileCareAction = (
+    petId: string,
+    action: 'pet' | 'feed' | 'play'
+  ): string => {
+    if (action === 'pet') {
+      return handleCarePet(petId);
+    }
+    if (action === 'feed') {
+      const firstFood = (Object.keys(foodInventory) as FoodItemType[]).find(
+        (k) => foodInventory[k] > 0
+      );
+      if (firstFood) {
+        return handleFeedPet(firstFood, petId);
+      }
+      // Always allow gentle kibble care from Pet Profile so Quest/Bond test never deadlocks
+      applyPetBondGain(petId, 15, 'eating');
+      void syncCareAction(petId, 'feed', 15);
+      setFirstBondQuest((q) => (q.feedDone ? q : { ...q, feedDone: true }));
+      return '🥣 +15 XP';
+    }
+    const ownedToy = toys.find((t) => t.owned) ?? toys[0];
+    return handlePlayToy(ownedToy, petId);
   };
 
   const handleTapClover = (): string => {
@@ -632,6 +1169,7 @@ export default function App() {
   const handleCollectMarketSale = (listingId: string): string => {
     const target = marketListings.find((l) => l.id === listingId);
     if (!target || !target.sold) return '';
+    playCoinSound();
     setCoins((c) => c + target.price);
     setMarketListings((prev) => prev.filter((l) => l.id !== listingId));
     return `+${target.price} 🪙`;
@@ -647,6 +1185,7 @@ export default function App() {
 
   const handleBuyItem = (item: ShopItem) => {
     if (coins < item.cost) return;
+    playCoinSound();
     setCoins((c) => c - item.cost);
     if (item.kind === 'energy') {
       setEnergy((e) => Math.min(maxEnergy, e + 10));
@@ -668,8 +1207,51 @@ export default function App() {
   };
 
   const handleEquipAccessory = (petId: string, accessoryId: string | null) => {
+    playTapSound();
     setPets((prev) =>
-      prev.map((p) => (p.id === petId ? { ...p, accessory: accessoryId } : p))
+      prev.map((p) =>
+        p.id === petId
+          ? { ...p, accessory: accessoryId, animState: accessoryId ? 'happy' : 'idle' }
+          : p
+      )
+    );
+    if (accessoryId) {
+      window.setTimeout(() => {
+        setPets((prev) =>
+          prev.map((p) => (p.id === petId ? { ...p, animState: 'idle' } : p))
+        );
+      }, 1100);
+    }
+  };
+
+  const handleBuyAndEquipHat = (petId: string, item: ShopItem): boolean => {
+    if (item.kind !== 'accessory') return false;
+    if (item.owned) {
+      handleEquipAccessory(petId, item.id);
+      return true;
+    }
+    if (coins < item.cost) return false;
+    playCoinSound();
+    setCoins((c) => c - item.cost);
+    setShopItems((prev) =>
+      prev.map((s) => (s.id === item.id ? { ...s, owned: true } : s))
+    );
+    setPets((prev) =>
+      prev.map((p) =>
+        p.id === petId ? { ...p, accessory: item.id, animState: 'happy' } : p
+      )
+    );
+    window.setTimeout(() => {
+      setPets((prev) =>
+        prev.map((p) => (p.id === petId ? { ...p, animState: 'idle' } : p))
+      );
+    }, 1200);
+    return true;
+  };
+
+  const handleUpdateHatTransform = (petId: string, next: HatTransform) => {
+    setPets((prev) =>
+      prev.map((p) => (p.id === petId ? { ...p, hatTransform: next } : p))
     );
   };
 
@@ -814,124 +1396,118 @@ export default function App() {
     );
   };
 
-  const openFarmScreen = () => {
+  const switchScreen = (screen: ScreenView) => {
+    playTapSound();
     setActiveModal(null);
-    setMobileScreen('farm');
-    if (desktopMode !== 'both') {
-      setDesktopMode('farm');
-    }
+    setHasSavedSession(true);
+    setAppPhase('playing');
+    setActiveScreen(screen);
   };
 
-  const openSanctuaryScreen = () => {
-    setActiveModal(null);
-    setMobileScreen('sanctuary');
-    if (desktopMode !== 'both') {
-      setDesktopMode('sanctuary');
-    }
-  };
-
-  const openNeighborGardenScreen = () => {
-    setActiveModal(null);
-    setMobileScreen('neighborGarden');
-    if (desktopMode !== 'both') {
-      setDesktopMode('neighborGarden');
-    }
-  };
+  const openFarmScreen = () => switchScreen('farm');
+  const openSanctuaryScreen = () => switchScreen('sanctuary');
+  const openNeighborGardenScreen = () => switchScreen('neighborGarden');
+  const openGalleryScreen = () => switchScreen('gallery');
 
   const openNeighborFarmScreen = () => {
     if (!visitingNeighbor) return;
-    setActiveModal(null);
-    setMobileScreen('neighborFarm');
-    if (desktopMode !== 'both') {
-      setDesktopMode('neighborFarm');
-    }
+    switchScreen('neighborFarm');
   };
 
   const handleVisitNeighbor = (neighborId: string) => {
     setVisitingId(neighborId);
-    setActiveModal(null);
-    setMobileScreen('neighborGarden');
-    if (desktopMode !== 'both') {
-      setDesktopMode('neighborGarden');
-    }
+    switchScreen('neighborGarden');
   };
 
   const handleLeaveNeighbor = () => {
+    playTapSound();
     setVisitingId(null);
     setActiveModal(null);
-    if (mobileScreen === 'neighborFarm') {
-      setMobileScreen('neighborGarden');
-    }
-    if (desktopMode === 'neighborFarm') {
-      setDesktopMode('neighborGarden');
+    if (activeScreen === 'neighborFarm') {
+      setActiveScreen('neighborGarden');
     }
   };
 
   const handleOpenAlbumItem = (entry: JudgeReport) => {
     setActiveReport(entry);
-    setActiveModal(null);
-    setMobileScreen('judge');
-    if (desktopMode !== 'both') {
-      setDesktopMode('judge');
-    }
+    switchScreen('judge');
   };
 
   const handleUseSampleSnap = () => {
     setActiveReport(SAMPLE_PUPPY_REPORT);
     setJudgeError(null);
-    setActiveModal(null);
-    setMobileScreen('judge');
-    if (desktopMode !== 'both') {
-      setDesktopMode('judge');
-    }
+    switchScreen('judge');
   };
 
+  const welcomeDiscoveredPet = (customName: string): SanctuaryPet => {
+    const petId = `cropped-${activeReport.id}`;
+    const existing = pets.find((p) => p.id === petId);
+    if (existing) return existing;
+
+    setCoins((c) => c + activeReport.coinsReward);
+    awardExp(Math.round(activeReport.expReward / 2));
+    setFenceHours(24);
+    setEnergy((e) => Math.max(0, e - 5));
+
+    const initialXp = activeReport.overallScore >= 90 ? 40 : 25;
+    const newPet: SanctuaryPet = {
+      id: petId,
+      name: customName || activeReport.petName,
+      species: mapSpecies(activeReport.species),
+      photoUrl: activeReport.photoUrl,
+      cutoutMode: 'auto',
+      x: 48,
+      y: 52,
+      score: activeReport.overallScore,
+      pose: activeReport.pose,
+      minted: activeReport.minted,
+      bondXp: initialXp,
+      bondLevel: computeBondLevel(initialXp),
+      discoveryDate: new Date().toISOString().slice(0, 10),
+      discoveryStatus: 'Welcomed',
+      passportEligible: isPetPassportEligible(initialXp),
+      animState: 'happy',
+    };
+
+    setPets((prev) =>
+      prev.some((p) => p.id === newPet.id) ? prev : [...prev, newPet]
+    );
+    setActiveReport((r) => ({
+      ...r,
+      petName: newPet.name,
+      cropped: true,
+      petId: newPet.id,
+    }));
+    setAlbum((prev) =>
+      prev.map((item) =>
+        item.id === activeReport.id
+          ? { ...item, petName: newPet.name, cropped: true, petId: newPet.id }
+          : item
+      )
+    );
+    setFirstBondQuest((q) => (q.welcomeDone ? q : { ...q, welcomeDone: true }));
+    void syncPetCreated(toPetProfile(newPet));
+    return newPet;
+  };
+
+  // Phase 2 Welcome trigger from Judge Card
   const handleCropIntoSanctuary = () => {
     if (!activeReport.cropped) {
-      setCoins((c) => c + activeReport.coinsReward);
-      awardExp(Math.round(activeReport.expReward / 2));
-      setFenceHours(24);
-      setEnergy((e) => Math.max(0, e - 5));
-
-      const newPet: SanctuaryPet = {
-        id: `cropped-${activeReport.id}`,
-        name: activeReport.petName,
-        species: mapSpecies(activeReport.species),
-        photoUrl: activeReport.photoUrl,
-        cutoutMode: 'auto',
-        x: 48,
-        y: 52,
-        score: activeReport.overallScore,
-        minted: activeReport.minted,
-      };
-
-      setPets((prev) =>
-        prev.some((p) => p.id === newPet.id) ? prev : [...prev, newPet]
-      );
-      setActiveReport((r) => ({ ...r, cropped: true }));
-      setAlbum((prev) =>
-        prev.map((item) =>
-          item.id === activeReport.id ? { ...item, cropped: true } : item
-        )
-      );
+      setProfileModalState({ open: true, mode: 'welcome', petId: null });
+      return;
     }
-
     openSanctuaryScreen();
   };
 
+  // Phase 5/6 Passport Mint Modal trigger from Judge Card
   const handleMintPet = () => {
-    if (activeReport.minted) return;
-    setActiveReport((r) => ({ ...r, minted: true }));
-    setPets((prev) =>
-      prev.map((p) =>
-        p.id === `cropped-${activeReport.id}` ? { ...p, minted: true } : p
-      )
-    );
-    setAlbum((prev) =>
-      prev.map((item) =>
-        item.id === activeReport.id ? { ...item, minted: true } : item
-      )
-    );
+    let targetId = `cropped-${activeReport.id}`;
+    if (!activeReport.cropped) {
+      const welcomed = welcomeDiscoveredPet(activeReport.petName);
+      targetId = welcomed.id;
+    }
+    setMintModalPetId(targetId);
+    setMintModalOpen(true);
   };
 
   const handleShareSnap = () => {
@@ -942,13 +1518,10 @@ export default function App() {
   };
 
   const handleUploadPhoto = async (file: File) => {
+    playCameraSound();
     setJudgeError(null);
     setIsJudging(true);
-    setActiveModal(null);
-    setMobileScreen('judge');
-    if (desktopMode !== 'both') {
-      setDesktopMode('judge');
-    }
+    switchScreen('judge');
 
     try {
       const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -1017,40 +1590,227 @@ export default function App() {
 
   const handleRescueStray = () => {
     if (luredRescued) return;
+    playVictorySound();
     setLuredRescued(true);
-    setPets((prev) => [
-      ...prev,
-      {
-        id: 'pet-biscuit-corgi',
-        name: 'Biscuit',
-        species: 'corgi',
-        photoUrl: '/src/assets/images/lured_stray_corgi_1794627550798.jpg',
-        cutoutMode: 'silhouette',
-        x: 72,
-        y: 62,
-        score: 90,
-      },
-    ]);
+    const rescued: SanctuaryPet = {
+      id: 'pet-biscuit-corgi',
+      name: 'Biscuit',
+      species: 'corgi',
+      photoUrl: PET_IMAGES.luredStrayCorgi,
+      cutoutMode: 'silhouette',
+      x: 72,
+      y: 62,
+      score: 90,
+      pose: 'Happy',
+      bondXp: 45,
+      bondLevel: 2,
+      discoveryDate: new Date().toISOString().slice(0, 10),
+      discoveryStatus: 'Welcomed',
+      passportEligible: false,
+      animState: 'happy',
+    };
+    setPets((prev) => [...prev, rescued]);
     setCoins((c) => c + 100);
+    setFirstBondQuest((q) => (q.welcomeDone ? q : { ...q, welcomeDone: true }));
+    void syncPetCreated(toPetProfile(rescued));
     setActiveModal(null);
   };
 
-  const showSanctuaryOnDesktop =
-    desktopMode === 'both' || desktopMode === 'sanctuary';
-  const showFarmOnDesktop =
-    desktopMode === 'both' || desktopMode === 'farm';
-  const showNeighborGardenOnDesktop =
-    desktopMode === 'both' || desktopMode === 'neighborGarden';
-  const showNeighborFarmOnDesktop =
-    Boolean(visitingNeighbor) &&
-    (desktopMode === 'both' || desktopMode === 'neighborFarm');
-  const showJudgeOnDesktop =
-    desktopMode === 'both' || desktopMode === 'judge';
+  // Core Wallet Handlers (Member 03)
+  const handleConnectCore = async (useDemoFallback: boolean) => {
+    setWallet((w) => ({ ...w, connecting: true, error: null }));
+    try {
+      const result = await connectCoreWallet(useDemoFallback);
+      const auth = await authenticateWalletAddress(
+        result.address,
+        result.providerLabel
+      );
+      setWallet({
+        connected: true,
+        address: result.address,
+        chainId: result.chainId,
+        isAvalancheFuji: result.isAvalancheFuji,
+        providerLabel: result.providerLabel,
+        authVerified: auth.verified,
+        connecting: false,
+        error: null,
+      });
+    } catch (err) {
+      setWallet((w) => ({
+        ...w,
+        connecting: false,
+        error:
+          err instanceof Error ? err.message : 'Failed to connect Core Wallet.',
+      }));
+    }
+  };
+
+  const handleSwitchFuji = async () => {
+    setWallet((w) => ({ ...w, connecting: true, error: null }));
+    try {
+      const chainId = await switchToAvalancheFuji(wallet.providerLabel);
+      setWallet((w) => ({
+        ...w,
+        chainId,
+        isAvalancheFuji: true,
+        connecting: false,
+      }));
+    } catch (err) {
+      setWallet((w) => ({
+        ...w,
+        connecting: false,
+        error: err instanceof Error ? err.message : 'Failed to switch network.',
+      }));
+    }
+  };
+
+  const handleVerifyAuth = async () => {
+    if (!wallet.address) return;
+    setWallet((w) => ({ ...w, connecting: true, error: null }));
+    try {
+      const auth = await authenticateWalletAddress(
+        wallet.address,
+        wallet.providerLabel
+      );
+      setWallet((w) => ({
+        ...w,
+        authVerified: auth.verified,
+        connecting: false,
+      }));
+    } catch (err) {
+      setWallet((w) => ({
+        ...w,
+        connecting: false,
+        error: err instanceof Error ? err.message : 'Signature declined.',
+      }));
+    }
+  };
+
+  const handleDisconnectWallet = () => {
+    setWallet({
+      connected: false,
+      address: null,
+      chainId: null,
+      isAvalancheFuji: false,
+      providerLabel: null,
+      authVerified: false,
+      connecting: false,
+      error: null,
+    });
+  };
+
+  // First Bond Quest Claim (Anti-Cheat Protected)
+  const handleClaimQuestReward = async (targetPetId: string) => {
+    if (firstBondQuest.claimed) return;
+    const res = await claimFirstBondQuestApi(targetPetId);
+    if (!res.claimed) return;
+
+    playVictorySound();
+    applyPetBondGain(targetPetId, res.rewardXp, 'happy');
+    setFirstBondQuest((prev) => ({
+      ...prev,
+      claimed: true,
+      targetPetId,
+      claimedAt: new Date().toISOString(),
+    }));
+  };
+
+  // Passport Minted Callback -> Update Pet + Album + Public Gallery
+  const handlePassportMinted = (record: MintedPassportRecord) => {
+    playVictorySound();
+    setPassports((prev) => [record, ...prev]);
+    setPets((prev) =>
+      prev.map((p) =>
+        p.id === record.petId
+          ? {
+              ...p,
+              minted: true,
+              passportEligible: true,
+              passportTokenId: record.tokenId,
+              discoveryStatus: 'Preserved On-Chain',
+              ipfsCid: record.ipfsCid,
+              ipfsUri: record.ipfsUri,
+              txHash: record.txHash,
+              ownerAddress: record.ownerAddress,
+            }
+          : p
+      )
+    );
+    setAlbum((prev) =>
+      prev.map((entry) =>
+        `cropped-${entry.id}` === record.petId
+          ? { ...entry, minted: true, petId: record.petId }
+          : entry
+      )
+    );
+    if (`cropped-${activeReport.id}` === record.petId) {
+      setActiveReport((r) => ({ ...r, minted: true, petId: record.petId }));
+    }
+  };
+
+  const handleJumpToJourneyPhase = (phase: JourneyPhase) => {
+    setQuestModalOpen(false);
+    if (phase === 'discover') {
+      switchScreen('judge');
+      return;
+    }
+    if (phase === 'welcome') {
+      if (!activeReport.cropped) {
+        switchScreen('judge');
+        setProfileModalState({ open: true, mode: 'welcome', petId: null });
+      } else {
+        openSanctuaryScreen();
+      }
+      return;
+    }
+    if (phase === 'care') {
+      openSanctuaryScreen();
+      setProfileModalState({
+        open: true,
+        mode: 'profile',
+        petId: pets[0]?.id ?? null,
+      });
+      return;
+    }
+    if (phase === 'grow') {
+      openFarmScreen();
+      return;
+    }
+    if (phase === 'preserve') {
+      const readyPet =
+        pets.find((p) => p.passportEligible && !p.minted) ?? pets[0];
+      setMintModalPetId(readyPet?.id ?? null);
+      setMintModalOpen(true);
+      return;
+    }
+    if (phase === 'connect') {
+      setWalletModalOpen(true);
+    }
+  };
+
+  const questDoneCount =
+    (firstBondQuest.welcomeDone ? 1 : 0) +
+    (firstBondQuest.feedDone ? 1 : 0) +
+    (firstBondQuest.playDone ? 1 : 0);
+
+  const questProgressLabel = firstBondQuest.claimed
+    ? 'Quest ✓'
+    : `${questDoneCount}/3`;
+
+  const currentJourneyPhase: JourneyPhase = passports.some((p) =>
+    pets.some((own) => own.id === p.petId)
+  )
+    ? 'connect'
+    : pets.some((p) => p.passportEligible)
+    ? 'preserve'
+    : questDoneCount >= 2
+    ? 'grow'
+    : firstBondQuest.welcomeDone
+    ? 'care'
+    : 'discover';
 
   const frameSizeClass =
-    desktopMode === 'both'
-      ? 'w-full max-w-[392px] h-[min(86dvh,710px)] lg:w-[310px] lg:h-[552px] aspect-[9/16]'
-      : 'w-full max-w-[392px] h-[min(86dvh,710px)] aspect-[9/16]';
+    'w-full h-dvh sm:w-full sm:max-w-[420px] sm:h-[min(86dvh,756px)] sm:aspect-[9/16]';
 
   const renderCreamSheets = (target: ScreenView) => {
     if (modalTarget !== target) return null;
@@ -1075,6 +1835,7 @@ export default function App() {
         album={album}
         luredRescued={luredRescued}
         activeBait={activeBait}
+        keeperName={keeperName}
         onBuyItem={handleBuyItem}
         onBuyToy={handleBuyToy}
         onFeedPet={(food) => {
@@ -1083,26 +1844,44 @@ export default function App() {
         onVisitNeighbor={handleVisitNeighbor}
         onBuyFromNeighborMarket={handleBuyFromNeighborMarket}
         onEquipAccessory={handleEquipAccessory}
+        onBuyAndEquipHat={handleBuyAndEquipHat}
         onCarePet={(petId) => {
           handleCarePet(petId);
         }}
         onUseSampleSnap={handleUseSampleSnap}
-        onUploadPhoto={handleUploadPhoto}
         onRescueStray={handleRescueStray}
         onPlaceBait={(baitName) => {
+          playHappySound();
           setActiveBait(baitName);
           setActiveModal(null);
+          if (activeScreen !== 'sanctuary') {
+            setActiveScreen('sanctuary');
+          }
         }}
         onOpenAlbumItem={handleOpenAlbumItem}
+        onOpenPetProfile={(petId) => {
+          setActiveModal(null);
+          setProfileModalState({ open: true, mode: 'profile', petId });
+        }}
+        onOpenMintPassport={(petId) => {
+          setActiveModal(null);
+          setMintModalPetId(petId);
+          setMintModalOpen(true);
+        }}
+        onOpenGallery={openGalleryScreen}
+        onOpenWallet={() => setWalletModalOpen(true)}
+        onOpenQuest={() => setQuestModalOpen(true)}
+        walletLabel={
+          wallet.connected ? shortenAddress(wallet.address) : 'Connect Core'
+        }
       />
     );
   };
 
-  const desktopTabs: { id: 'both' | ScreenView; label: string }[] = [
-    { id: 'both', label: `Both · All (${visitingNeighbor ? 5 : 4})` },
+  const navTabs: { id: ScreenView; label: string }[] = [
     { id: 'sanctuary', label: 'Sanctuary' },
     { id: 'farm', label: 'Crop Farm' },
-    { id: 'neighborGarden', label: 'Visit Garden' },
+    { id: 'neighborGarden', label: 'Visit' },
     ...(visitingNeighbor
       ? [
           {
@@ -1112,277 +1891,544 @@ export default function App() {
         ]
       : []),
     { id: 'judge', label: 'AI Judge' },
+    { id: 'gallery', label: `Passports (${passports.length})` },
   ];
 
+  const profileTargetPet =
+    pets.find((p) => p.id === profileModalState.petId) ?? null;
+
+  const openSettings = () => {
+    playTapSound();
+    setSettingsModal({ open: true, tab: 'settings' });
+  };
+
   return (
-    <div className="min-h-dvh w-full pastel-studio-bg flex flex-col items-center justify-center sm:p-4 lg:p-5">
-      {/* Minimal Pastel Top Bar */}
-      <div className="w-full max-w-[1440px] px-3 pt-2.5 pb-2 sm:pt-0 sm:pb-3 flex items-center justify-between gap-2 flex-wrap">
-        <div className="cream-pill rounded-full px-3.5 py-1 flex items-center gap-1.5">
+    <SkyThemeProvider value={{ skyTheme, toggleSkyTheme: handleToggleSkyTheme }}>
+    <UiLabelsProvider value={showTextLabels}>
+    <div
+      className={`min-h-dvh w-full ${
+        skyTheme === 'sunset' ? 'pastel-studio-bg-sunset' : 'pastel-studio-bg'
+      } flex flex-col items-center justify-center sm:p-4 lg:p-5 transition-colors duration-500`}
+    >
+      {/* Desktop Studio Header Bar (Hidden on mobile so full-screen app has a single clean in-frame top bar) */}
+      <header className="hidden sm:flex w-full max-w-[1160px] px-3 pb-3 items-center justify-between gap-4">
+        {/* Zone 1: Wordmark / Return to Title */}
+        <button
+          type="button"
+          onClick={() => {
+            playTapSound();
+            setActiveModal(null);
+            setAppPhase('start');
+          }}
+          className="cream-pill rounded-full px-3.5 py-1 flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform"
+          title="Return to Start Screen"
+        >
+          {appPhase === 'playing' && (
+            <Home className="w-3.5 h-3.5 text-[#8A747E]" />
+          )}
           <span className="font-display text-[14px] font-extrabold text-[#4B3C46] whitespace-nowrap">
             🐾 Paws &amp; Picket
           </span>
-        </div>
+        </button>
 
-        {/* Desktop Switcher */}
-        <div className="hidden lg:flex items-center gap-1 cream-pill rounded-full p-1">
-          {desktopTabs.map((tab) => {
-            const active = desktopMode === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setActiveModal(null);
-                  setDesktopMode(tab.id);
-                }}
-                className={`rounded-full px-3 py-1 font-display text-[12.5px] font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
-                  active
-                    ? 'bg-[#FFE07D] text-[#4B3C46]'
-                    : 'text-[#8A747E] hover:text-[#4B3C46]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Zone 2: In-Game Screen Navigation (Desktop) */}
+        {appPhase === 'playing' && (
+          <nav
+            aria-label="Screens"
+            className="hidden lg:flex items-center gap-1 cream-pill rounded-full p-1"
+          >
+            {navTabs.map((tab) => {
+              const active = activeScreen === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => switchScreen(tab.id)}
+                  className={`rounded-full px-3 py-1 font-display text-[12px] font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
+                    active
+                      ? 'bg-[#FFE07D] text-[#4B3C46]'
+                      : 'text-[#8A747E] hover:text-[#4B3C46]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        )}
 
-        {/* Mobile / Tablet Switcher */}
-        <div className="flex lg:hidden items-center gap-1 cream-pill rounded-full p-1">
-          <button
-            type="button"
-            onClick={openSanctuaryScreen}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'sanctuary'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
-            }`}
-          >
-            🏡 Yard
-          </button>
-          <button
-            type="button"
-            onClick={openFarmScreen}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'farm'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
-            }`}
-          >
-            🌾 Farm
-          </button>
-          <button
-            type="button"
-            onClick={openNeighborGardenScreen}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'neighborGarden'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
-            }`}
-          >
-            🏘️ Visit
-          </button>
-          {visitingNeighbor && (
+        {/* Zone 3: Primary Actions (Wallet + Settings Menu) */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {appPhase === 'playing' && (
             <button
               type="button"
-              onClick={openNeighborFarmScreen}
-              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-                mobileScreen === 'neighborFarm'
+              onClick={() =>
+                activeScreen === 'gallery'
+                  ? openSanctuaryScreen()
+                  : openGalleryScreen()
+              }
+              className={`lg:hidden cream-pill rounded-full px-2.5 py-1 font-display text-[11.5px] font-extrabold cursor-pointer whitespace-nowrap active:scale-95 transition-transform ${
+                activeScreen === 'gallery'
                   ? 'bg-[#FFE07D] text-[#4B3C46]'
-                  : 'text-[#8A747E]'
+                  : 'bg-[#FFFDF9] text-[#4B3C46]'
               }`}
             >
-              🚜 {visitingNeighbor.ownerName}
+              {activeScreen === 'gallery' ? '🏡 Yard' : `🏛️ ${passports.length}`}
             </button>
           )}
+
           <button
             type="button"
             onClick={() => {
-              setActiveModal(null);
-              setMobileScreen('judge');
+              playTapSound();
+              setWalletModalOpen(true);
             }}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'judge'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
+            className={`cream-pill rounded-full px-3 py-1 font-display text-[11.5px] font-extrabold flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-transform ${
+              wallet.connected
+                ? 'bg-[#E8F8EC] text-[#3F7B52]'
+                : 'bg-[#FFFDF9] text-[#4B3C46]'
             }`}
+            title="Core Wallet & Avalanche Fuji"
           >
-            📸 Judge
+            <Wallet className="w-3.5 h-3.5" />
+            <span className="tabular-nums">
+              {wallet.connected ? shortenAddress(wallet.address) : 'Core Wallet'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleToggleSkyTheme}
+            aria-label={
+              skyTheme === 'sunset'
+                ? 'Switch to Sunny Morning sky'
+                : 'Switch to Golden Hour Sunset sky'
+            }
+            className={`cream-pill rounded-full px-2.5 h-8.5 flex items-center gap-1 font-display text-[11.5px] font-extrabold cursor-pointer active:scale-95 transition-transform whitespace-nowrap ${
+              skyTheme === 'sunset'
+                ? 'bg-[#FFE7D6] text-[#C95E45]'
+                : 'bg-[#FFF8D8] text-[#C88A1E]'
+            }`}
+            title="Switch Meadow Sky Theme"
+          >
+            {skyTheme === 'sunset' ? (
+              <Sunset className="w-3.5 h-3.5 stroke-[2.4]" />
+            ) : (
+              <Sun className="w-3.5 h-3.5 stroke-[2.4]" />
+            )}
+            <span>{skyTheme === 'sunset' ? 'Sunset' : 'Morning'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              playTapSound();
+              setSettingsModal({ open: true, tab: 'settings' });
+            }}
+            aria-label="Open Settings and Menu"
+            className="cream-pill rounded-full w-8.5 h-8.5 flex items-center justify-center text-[#4B3C46] cursor-pointer active:scale-95 transition-transform"
+            title="Settings & How to Play"
+          >
+            <Settings className="w-4 h-4 stroke-[2.3]" />
           </button>
         </div>
+      </header>
+
+      {/* ACTIVE APP VIEWPORT */}
+      <div className="w-full flex-1 flex items-center justify-center sm:px-2">
+        <section
+          aria-label={appPhase === 'start' ? 'Start Screen' : 'Paws and Picket App'}
+          className={`relative ${frameSizeClass} rounded-none sm:rounded-[36px] border-0 sm:border-[3px] ${
+            appPhase === 'playing' && activeScreen === 'judge'
+              ? 'sm:border-[#E8CFD9]'
+              : appPhase === 'playing' && activeScreen === 'gallery'
+              ? 'sm:border-[#C6E1F5]'
+              : 'sm:border-[#DFCBBF]'
+          } shadow-none sm:shadow-[0_14px_34px_rgba(138,116,126,0.16)] overflow-hidden bg-[#FFFDF9]`}
+        >
+          {appPhase === 'start' ? (
+            <StartScreen
+              keeperName={keeperName}
+              level={level}
+              coins={coins}
+              streakDays={streakDays}
+              pets={pets}
+              passportsCount={passports.length}
+              hasSavedSession={hasSavedSession}
+              soundEnabled={soundEnabled}
+              wallet={wallet}
+              onStartPlay={() => {
+                playVictorySound();
+                setHasSavedSession(true);
+                setAppPhase('playing');
+              }}
+              onOpenGallery={() => {
+                playTapSound();
+                setHasSavedSession(true);
+                setAppPhase('playing');
+                setActiveScreen('gallery');
+              }}
+              onOpenGuide={() => {
+                playTapSound();
+                setSettingsModal({ open: true, tab: 'guide' });
+              }}
+              onOpenSettings={() => {
+                playTapSound();
+                setSettingsModal({ open: true, tab: 'settings' });
+              }}
+              onToggleSound={handleToggleSound}
+              onOpenWallet={() => {
+                playTapSound();
+                setWalletModalOpen(true);
+              }}
+            />
+          ) : (
+            <>
+              {activeScreen === 'sanctuary' && (
+                <>
+                  <SanctuaryScreen
+                    coins={coins}
+                    energy={energy}
+                    maxEnergy={maxEnergy}
+                    level={level}
+                    expPercent={expPercent}
+                    streakDays={streakDays}
+                    fenceHours={fenceHours}
+                    theme={theme}
+                    pets={pets}
+                    toys={toys}
+                    foodInventory={foodInventory}
+                    limits={limits}
+                    luredCount={luredRescued ? 0 : 1}
+                    activeBait={activeBait}
+                    readyFarmCount={readyFarmCount}
+                    questProgressLabel={questProgressLabel}
+                    onCarePet={handleCarePet}
+                    onOpenPetProfile={(petId) => {
+                      playTapSound();
+                      setProfileModalState({ open: true, mode: 'profile', petId });
+                    }}
+                    onFeedPet={(food) => handleFeedPet(food)}
+                    onPlayToy={(toy) => handlePlayToy(toy)}
+                    onTapClover={handleTapClover}
+                    onOpenFarm={openFarmScreen}
+                    onOpenQuest={() => setQuestModalOpen(true)}
+                    onOpenModal={(m) => openModalIn('sanctuary', m)}
+                    onQuickCoins={() => openModalIn('sanctuary', 'shop')}
+                    onQuickEnergy={() =>
+                      setEnergy((e) => Math.min(maxEnergy, e + 5))
+                    }
+                    onOpenSettings={openSettings}
+                  />
+                  {renderCreamSheets('sanctuary')}
+                </>
+              )}
+
+              {activeScreen === 'farm' && (
+                <>
+                  <FarmScreen
+                    coins={coins}
+                    energy={energy}
+                    maxEnergy={maxEnergy}
+                    level={level}
+                    expPercent={expPercent}
+                    waterCharges={waterCharges}
+                    maxWater={maxWater}
+                    cropPlots={cropPlots}
+                    trees={trees}
+                    seedInventory={seedInventory}
+                    foodInventory={foodInventory}
+                    marketListings={marketListings}
+                    readyFarmCount={readyFarmCount}
+                    luredCount={luredRescued ? 0 : 1}
+                    onSelectYard={openSanctuaryScreen}
+                    onOpenModal={(m) => openModalIn('farm', m)}
+                    onQuickCoins={() => openModalIn('farm', 'shop')}
+                    onRefillWater={handleRefillWater}
+                    onTapPlot={handleTapPlot}
+                    onTapTree={handleTapTree}
+                    onBuySeed={handleBuySeed}
+                    onListOnMarket={handleListOnMarket}
+                    onCancelMarketListing={handleCancelMarketListing}
+                    onCollectMarketSale={handleCollectMarketSale}
+                    onOpenSettings={openSettings}
+                  />
+                  {renderCreamSheets('farm')}
+                </>
+              )}
+
+              {activeScreen === 'neighborGarden' && (
+                <>
+                  <NeighborGardenScreen
+                    coins={coins}
+                    energy={energy}
+                    maxEnergy={maxEnergy}
+                    level={level}
+                    expPercent={expPercent}
+                    readyFarmCount={readyFarmCount}
+                    luredCount={luredRescued ? 0 : 1}
+                    neighbors={neighbors}
+                    visitingNeighbor={visitingNeighbor}
+                    onVisitNeighbor={handleVisitNeighbor}
+                    onLeaveNeighbor={handleLeaveNeighbor}
+                    onOpenNeighborFarm={openNeighborFarmScreen}
+                    onSelectYard={openSanctuaryScreen}
+                    onSelectFarm={openFarmScreen}
+                    onOpenModal={(m) => openModalIn('neighborGarden', m)}
+                    onQuickCoins={() => openModalIn('neighborGarden', 'shop')}
+                    onQuickEnergy={() =>
+                      setEnergy((e) => Math.min(maxEnergy, e + 5))
+                    }
+                    onNeighborPat={handleNeighborPat}
+                    onNeighborGift={handleNeighborGift}
+                    onOpenSettings={openSettings}
+                  />
+                  {renderCreamSheets('neighborGarden')}
+                </>
+              )}
+
+              {activeScreen === 'neighborFarm' && visitingNeighbor && (
+                <>
+                  <NeighborFarmScreen
+                    coins={coins}
+                    energy={energy}
+                    maxEnergy={maxEnergy}
+                    level={level}
+                    expPercent={expPercent}
+                    readyFarmCount={readyFarmCount}
+                    luredCount={luredRescued ? 0 : 1}
+                    activeNeighbor={visitingNeighbor}
+                    onSelectNeighborGarden={openNeighborGardenScreen}
+                    onSelectYard={openSanctuaryScreen}
+                    onSelectFarm={openFarmScreen}
+                    onOpenModal={(m) => openModalIn('neighborFarm', m)}
+                    onQuickCoins={() => openModalIn('neighborFarm', 'shop')}
+                    onQuickEnergy={() =>
+                      setEnergy((e) => Math.min(maxEnergy, e + 5))
+                    }
+                    onWaterNeighborPlot={handleWaterNeighborPlot}
+                    onWaterNeighborTree={handleWaterNeighborTree}
+                    onGiftNeighbor={handleGiftNeighborById}
+                    onOpenSettings={openSettings}
+                  />
+                  {renderCreamSheets('neighborFarm')}
+                </>
+              )}
+
+              {activeScreen === 'judge' && (
+                <>
+                  <JudgeCardScreen
+                    coins={coins}
+                    energy={energy}
+                    maxEnergy={maxEnergy}
+                    level={level}
+                    expPercent={expPercent}
+                    readyFarmCount={readyFarmCount}
+                    luredCount={luredRescued ? 0 : 1}
+                    report={activeReport}
+                    isJudging={isJudging}
+                    judgeError={judgeError}
+                    onSelectYard={openSanctuaryScreen}
+                    onSelectFarm={openFarmScreen}
+                    onOpenModal={(m) => openModalIn('judge', m)}
+                    onQuickCoins={() => openModalIn('judge', 'shop')}
+                    onQuickEnergy={() =>
+                      setEnergy((e) => Math.min(maxEnergy, e + 5))
+                    }
+                    onCropIntoSanctuary={handleCropIntoSanctuary}
+                    onMintPet={handleMintPet}
+                    onShareSnap={handleShareSnap}
+                    onUploadPhoto={handleUploadPhoto}
+                    onResetSample={() => {
+                      setActiveReport(SAMPLE_PUPPY_REPORT);
+                      setJudgeError(null);
+                    }}
+                    onOpenSettings={openSettings}
+                  />
+                  {renderCreamSheets('judge')}
+                </>
+              )}
+
+              {activeScreen === 'gallery' && (
+                <>
+                  <PassportGalleryScreen
+                    coins={coins}
+                    energy={energy}
+                    maxEnergy={maxEnergy}
+                    level={level}
+                    expPercent={expPercent}
+                    readyFarmCount={readyFarmCount}
+                    luredCount={luredRescued ? 0 : 1}
+                    passports={passports}
+                    walletAddress={wallet.address}
+                    onSelectYard={openSanctuaryScreen}
+                    onSelectFarm={openFarmScreen}
+                    onSelectVisit={openNeighborGardenScreen}
+                    onOpenModal={(m) => openModalIn('gallery', m)}
+                    onQuickCoins={() => openModalIn('gallery', 'shop')}
+                    onQuickEnergy={() =>
+                      setEnergy((e) => Math.min(maxEnergy, e + 5))
+                    }
+                    onOpenMintModal={() => {
+                      const target =
+                        pets.find((p) => p.passportEligible && !p.minted) ??
+                        pets[0];
+                      setMintModalPetId(target?.id ?? null);
+                      setMintModalOpen(true);
+                    }}
+                    onRefreshGallery={() => {
+                      setPassports((prev) => [...prev]);
+                    }}
+                    onOpenSettings={openSettings}
+                  />
+                  {renderCreamSheets('gallery')}
+                </>
+              )}
+            </>
+          )}
+        </section>
       </div>
 
-      {/* 9:16 MOBILE PORTRAIT FRAMES */}
-      <div className="w-full max-w-[1620px] flex-1 flex flex-wrap items-center justify-center gap-4 px-2 pb-3 sm:pb-0">
-        {/* 1. HOME SANCTUARY FRAME */}
-        <section
-          aria-label="Pet Sanctuary"
-          className={`relative ${frameSizeClass} rounded-[36px] border-[3px] border-[#DFCBBF] shadow-[0_14px_34px_rgba(138,116,126,0.16)] overflow-hidden bg-[#FFFDF9] ${
-            mobileScreen === 'sanctuary' ? 'block' : 'hidden'
-          } ${showSanctuaryOnDesktop ? 'lg:block' : 'lg:hidden'}`}
-        >
-          <SanctuaryScreen
-            coins={coins}
-            energy={energy}
-            maxEnergy={maxEnergy}
-            level={level}
-            expPercent={expPercent}
-            streakDays={streakDays}
-            fenceHours={fenceHours}
-            theme={theme}
+      {/* GLOBAL MODALS (Settings/Guide, Welcome/Profile, Quest/Journey, Core Wallet, Passport Mint) */}
+      {(walletModalOpen ||
+        questModalOpen ||
+        mintModalOpen ||
+        settingsModal.open ||
+        profileModalState.open) && (
+        <div className="fixed inset-0 z-50 pointer-events-auto">
+          <AppSettingsModal
+            open={settingsModal.open}
+            initialTab={settingsModal.tab}
+            keeperName={keeperName}
+            soundEnabled={soundEnabled}
+            showTextLabels={showTextLabels}
+            skyTheme={skyTheme}
+            inGame={appPhase === 'playing'}
+            walletLabel={
+              wallet.connected
+                ? shortenAddress(wallet.address)
+                : 'Not Connected'
+            }
+            onClose={() => setSettingsModal((s) => ({ ...s, open: false }))}
+            onChangeKeeperName={setKeeperName}
+            onToggleSound={handleToggleSound}
+            onToggleShowTextLabels={handleToggleShowTextLabels}
+            onToggleSkyTheme={handleToggleSkyTheme}
+            onOpenWallet={() => setWalletModalOpen(true)}
+            onReturnToTitle={() => {
+              setActiveModal(null);
+              setAppPhase('start');
+            }}
+            onResetSave={handleResetSave}
+          />
+
+          <WalletConnectModal
+            open={walletModalOpen}
+            wallet={wallet}
+            onClose={() => setWalletModalOpen(false)}
+            onConnectCore={handleConnectCore}
+            onSwitchFuji={handleSwitchFuji}
+            onVerifyAuth={handleVerifyAuth}
+            onDisconnect={handleDisconnectWallet}
+          />
+
+          <FirstBondQuestModal
+            open={questModalOpen}
+            quest={firstBondQuest}
             pets={pets}
-            toys={toys}
+            currentPhase={currentJourneyPhase}
+            hasMintedPassport={pets.some((p) => p.minted)}
+            walletConnected={wallet.connected && wallet.isAvalancheFuji}
+            onClose={() => setQuestModalOpen(false)}
+            onJumpToPhase={handleJumpToJourneyPhase}
+            onQuickWelcome={() => {
+              setQuestModalOpen(false);
+              if (!activeReport.cropped) {
+                setProfileModalState({
+                  open: true,
+                  mode: 'welcome',
+                  petId: null,
+                });
+              } else {
+                openModalIn('sanctuary', 'snap');
+              }
+            }}
+            onQuickFeed={() => {
+              setQuestModalOpen(false);
+              const firstFood = (
+                Object.keys(foodInventory) as FoodItemType[]
+              ).find((k) => foodInventory[k] > 0);
+              if (firstFood) {
+                handleFeedPet(firstFood, pets[0]?.id);
+                openSanctuaryScreen();
+              } else {
+                setProfileModalState({
+                  open: true,
+                  mode: 'profile',
+                  petId: pets[0]?.id ?? null,
+                });
+              }
+            }}
+            onQuickPlay={() => {
+              setQuestModalOpen(false);
+              const ownedToy = toys.find((t) => t.owned) ?? toys[0];
+              handlePlayToy(ownedToy, pets[0]?.id);
+              openSanctuaryScreen();
+            }}
+            onClaimReward={handleClaimQuestReward}
+          />
+
+          <PetProfileModal
+            open={profileModalState.open}
+            mode={profileModalState.mode}
+            pet={profileTargetPet}
+            pendingReport={
+              profileModalState.mode === 'welcome' ? activeReport : null
+            }
+            shopItems={shopItems}
             foodInventory={foodInventory}
-            limits={limits}
-            luredCount={luredRescued ? 0 : 1}
-            activeBait={activeBait}
-            readyFarmCount={readyFarmCount}
-            onCarePet={handleCarePet}
-            onFeedPet={handleFeedPet}
-            onPlayToy={handlePlayToy}
-            onTapClover={handleTapClover}
+            coins={coins}
+            onClose={() =>
+              setProfileModalState((s) => ({ ...s, open: false }))
+            }
+            onConfirmWelcome={(customName) => {
+              welcomeDiscoveredPet(customName);
+              setProfileModalState((s) => ({ ...s, open: false }));
+              openSanctuaryScreen();
+            }}
+            onCareAction={handleProfileCareAction}
+            onFeedSpecificPet={(petId, food) => handleFeedPet(food, petId)}
+            onEquipAccessory={handleEquipAccessory}
+            onBuyAndEquipHat={handleBuyAndEquipHat}
+            onUpdateHatTransform={handleUpdateHatTransform}
             onOpenFarm={openFarmScreen}
-            onOpenModal={(m) => openModalIn('sanctuary', m)}
-            onQuickCoins={() => openModalIn('sanctuary', 'shop')}
-            onQuickEnergy={() => setEnergy((e) => Math.min(maxEnergy, e + 5))}
-          />
-          {renderCreamSheets('sanctuary')}
-        </section>
-
-        {/* 2. MY CROP FARM FRAME */}
-        <section
-          aria-label="My Crop Farm"
-          className={`relative ${frameSizeClass} rounded-[36px] border-[3px] border-[#DFCBBF] shadow-[0_14px_34px_rgba(138,116,126,0.16)] overflow-hidden bg-[#FFFDF9] ${
-            mobileScreen === 'farm' ? 'block' : 'hidden'
-          } ${showFarmOnDesktop ? 'lg:block' : 'lg:hidden'}`}
-        >
-          <FarmScreen
-            coins={coins}
-            energy={energy}
-            maxEnergy={maxEnergy}
-            level={level}
-            expPercent={expPercent}
-            waterCharges={waterCharges}
-            maxWater={maxWater}
-            cropPlots={cropPlots}
-            trees={trees}
-            seedInventory={seedInventory}
-            foodInventory={foodInventory}
-            marketListings={marketListings}
-            readyFarmCount={readyFarmCount}
-            luredCount={luredRescued ? 0 : 1}
-            onSelectYard={openSanctuaryScreen}
-            onOpenModal={(m) => openModalIn('farm', m)}
-            onQuickCoins={() => openModalIn('farm', 'shop')}
-            onRefillWater={handleRefillWater}
-            onTapPlot={handleTapPlot}
-            onTapTree={handleTapTree}
-            onBuySeed={handleBuySeed}
-            onListOnMarket={handleListOnMarket}
-            onCancelMarketListing={handleCancelMarketListing}
-            onCollectMarketSale={handleCollectMarketSale}
-          />
-          {renderCreamSheets('farm')}
-        </section>
-
-        {/* 3. VISITING NEIGHBOR GARDEN FRAME (Separate Screen) */}
-        <section
-          aria-label="Visit Neighbor Garden"
-          className={`relative ${frameSizeClass} rounded-[36px] border-[3px] border-[#DFCBBF] shadow-[0_14px_34px_rgba(138,116,126,0.16)] overflow-hidden bg-[#FFFDF9] ${
-            mobileScreen === 'neighborGarden' ? 'block' : 'hidden'
-          } ${showNeighborGardenOnDesktop ? 'lg:block' : 'lg:hidden'}`}
-        >
-          <NeighborGardenScreen
-            coins={coins}
-            energy={energy}
-            maxEnergy={maxEnergy}
-            level={level}
-            expPercent={expPercent}
-            readyFarmCount={readyFarmCount}
-            luredCount={luredRescued ? 0 : 1}
-            neighbors={neighbors}
-            visitingNeighbor={visitingNeighbor}
-            onVisitNeighbor={handleVisitNeighbor}
-            onLeaveNeighbor={handleLeaveNeighbor}
-            onOpenNeighborFarm={openNeighborFarmScreen}
-            onSelectYard={openSanctuaryScreen}
-            onSelectFarm={openFarmScreen}
-            onOpenModal={(m) => openModalIn('neighborGarden', m)}
-            onQuickCoins={() => openModalIn('neighborGarden', 'shop')}
-            onQuickEnergy={() => setEnergy((e) => Math.min(maxEnergy, e + 5))}
-            onNeighborPat={handleNeighborPat}
-            onNeighborGift={handleNeighborGift}
-          />
-          {renderCreamSheets('neighborGarden')}
-        </section>
-
-        {/* 4. VISITING NEIGHBOR FARM FRAME (Only shown when visiting a player's garden) */}
-        {visitingNeighbor && (
-          <section
-            aria-label={`${visitingNeighbor.ownerName}'s Crop Farm`}
-            className={`relative ${frameSizeClass} rounded-[36px] border-[3px] border-[#DFCBBF] shadow-[0_14px_34px_rgba(138,116,126,0.16)] overflow-hidden bg-[#FFFDF9] ${
-              mobileScreen === 'neighborFarm' ? 'block' : 'hidden'
-            } ${showNeighborFarmOnDesktop ? 'lg:block' : 'lg:hidden'}`}
-          >
-            <NeighborFarmScreen
-              coins={coins}
-              energy={energy}
-              maxEnergy={maxEnergy}
-              level={level}
-              expPercent={expPercent}
-              readyFarmCount={readyFarmCount}
-              luredCount={luredRescued ? 0 : 1}
-              activeNeighbor={visitingNeighbor}
-              onSelectNeighborGarden={openNeighborGardenScreen}
-              onSelectYard={openSanctuaryScreen}
-              onSelectFarm={openFarmScreen}
-              onOpenModal={(m) => openModalIn('neighborFarm', m)}
-              onQuickCoins={() => openModalIn('neighborFarm', 'shop')}
-              onQuickEnergy={() => setEnergy((e) => Math.min(maxEnergy, e + 5))}
-              onWaterNeighborPlot={handleWaterNeighborPlot}
-              onWaterNeighborTree={handleWaterNeighborTree}
-              onGiftNeighbor={handleGiftNeighborById}
-            />
-            {renderCreamSheets('neighborFarm')}
-          </section>
-        )}
-
-        {/* 5. AI PHOTO JUDGE FRAME */}
-        <section
-          aria-label="AI Photo Judge Card"
-          className={`relative ${frameSizeClass} rounded-[36px] border-[3px] border-[#E8CFD9] shadow-[0_14px_34px_rgba(138,116,126,0.16)] overflow-hidden bg-[#FFF5F8] ${
-            mobileScreen === 'judge' ? 'block' : 'hidden'
-          } ${showJudgeOnDesktop ? 'lg:block' : 'lg:hidden'}`}
-        >
-          <JudgeCardScreen
-            coins={coins}
-            energy={energy}
-            maxEnergy={maxEnergy}
-            level={level}
-            expPercent={expPercent}
-            readyFarmCount={readyFarmCount}
-            luredCount={luredRescued ? 0 : 1}
-            report={activeReport}
-            isJudging={isJudging}
-            judgeError={judgeError}
-            onSelectYard={openSanctuaryScreen}
-            onSelectFarm={openFarmScreen}
-            onOpenModal={(m) => openModalIn('judge', m)}
-            onQuickCoins={() => openModalIn('judge', 'shop')}
-            onQuickEnergy={() => setEnergy((e) => Math.min(maxEnergy, e + 5))}
-            onCropIntoSanctuary={handleCropIntoSanctuary}
-            onMintPet={handleMintPet}
-            onShareSnap={handleShareSnap}
-            onUploadPhoto={handleUploadPhoto}
-            onResetSample={() => {
-              setActiveReport(SAMPLE_PUPPY_REPORT);
-              setJudgeError(null);
+            onOpenMintPassport={(petId) => {
+              setProfileModalState((s) => ({ ...s, open: false }));
+              setMintModalPetId(petId);
+              setMintModalOpen(true);
             }}
           />
-          {renderCreamSheets('judge')}
-        </section>
-      </div>
+
+          <PassportMintModal
+            open={mintModalOpen}
+            pets={pets}
+            initialPetId={mintModalPetId}
+            wallet={wallet}
+            nextTokenNumber={passports.length + 1}
+            existingPassports={passports}
+            onClose={() => setMintModalOpen(false)}
+            onOpenWallet={() => setWalletModalOpen(true)}
+            onOpenQuest={() => {
+              setMintModalOpen(false);
+              setQuestModalOpen(true);
+            }}
+            onPassportMinted={handlePassportMinted}
+            onOpenGallery={openGalleryScreen}
+          />
+        </div>
+      )}
     </div>
+    </UiLabelsProvider>
+    </SkyThemeProvider>
   );
 }

@@ -1,13 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Droplets, Gift, Heart, Store, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  Droplets,
+  Gift,
+  Heart,
+  Home,
+  Sprout,
+  Store,
+  Users,
+} from 'lucide-react';
 import { NeighborGarden } from '../types';
 import {
   CosmeticStallIllustration,
   FarmhouseIllustration,
 } from './HandDrawnAssets';
+import {
+  CropFoodIcon,
+  FlameMiniIcon,
+  ShieldMiniIcon,
+  ToyStickerIcon,
+} from './GameIcons';
 import { CroppedPetCutout } from './CroppedPetCutout';
 import { SanctuaryModalType } from './SanctuaryScreen';
-import { SharedBottomDock, SharedTopHud } from './SharedHud';
+import {
+  SharedBottomDock,
+  SharedTopHud,
+  useShowTextLabels,
+} from './SharedHud';
 
 interface NeighborGardenScreenProps {
   coins: number;
@@ -29,6 +48,7 @@ interface NeighborGardenScreenProps {
   onQuickEnergy: () => void;
   onNeighborPat: (petId: string) => string;
   onNeighborGift: () => string;
+  onOpenSettings?: () => void;
 }
 
 export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
@@ -51,7 +71,9 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
   onQuickEnergy,
   onNeighborPat,
   onNeighborGift,
+  onOpenSettings,
 }) => {
+  const showLabels = useShowTextLabels();
   const [petPositions, setPetPositions] = useState<
     Record<string, { x: number; y: number; flip: boolean }>
   >({});
@@ -173,48 +195,30 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
         onOpenProfile={() => onOpenModal('profile')}
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}
+        onOpenSettings={onOpenSettings}
         subRow={
           visitingNeighbor ? (
-            <div className="w-full flex items-center justify-between gap-1.5 px-0.5">
-              <button
-                type="button"
-                onClick={onLeaveNeighbor}
-                className="bg-[#FFFDF9] border-2 border-[#D9C3B4] rounded-full px-2.5 py-0.5 shadow-xs flex items-center gap-1 text-[11px] font-extrabold text-[#4B3C46] active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
-              >
-                <ArrowLeft className="w-3 h-3" />
-                <span>Leave</span>
-              </button>
-
-              <div className="bg-[#FFF5F8] border-2 border-[#E8CFD9] rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-[#4B3C46] whitespace-nowrap">
-                🏡 {visitingNeighbor.ownerName} · ❤️ {visitingNeighbor.patsUsed}/
-                {visitingNeighbor.maxPats}
-              </div>
-
-              <button
-                type="button"
-                onClick={onOpenNeighborFarm}
-                className="bg-[#E8F8CE] border-2 border-[#BDD996] rounded-full px-2.5 py-0.5 shadow-xs text-[11px] font-extrabold text-[#4B3C46] active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
-              >
-                🌾 Farm
-              </button>
+            <div className="bg-[#FFF5F8] border-2 border-[#E8CFD9] rounded-full px-3 py-0.5 text-[11px] font-extrabold text-[#4B3C46] whitespace-nowrap">
+              🏡 {visitingNeighbor.ownerName} · ❤️ {visitingNeighbor.patsUsed}/
+              {visitingNeighbor.maxPats}
             </div>
-          ) : (
+          ) : showLabels ? (
             <div className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-3 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] text-[11.5px] font-extrabold text-[#4B3C46] whitespace-nowrap">
               🏘️ Visit a Neighbor’s Garden
             </div>
-          )
+          ) : null
         }
       />
 
       {/* 2. CENTER WORLD */}
       <main className="relative z-10 flex-1 min-h-0 mx-3 mt-0.5 mb-0.5">
         {!visitingNeighbor ? (
-          /* Neighbor Directory when no garden is currently visited */
-          <div className="w-full h-full flex flex-col justify-center gap-2.5 px-1">
+          /* Neighbor Directory lowered into comfortable one-hand reach */
+          <div className="w-full h-full flex flex-col justify-end gap-2.5 px-1 pb-2">
             <div className="bg-[#FFFDF9]/92 border-2 border-[#DFCBBF] rounded-[24px] p-3 shadow-[0_10px_24px_rgba(138,116,126,0.14)] space-y-2">
               <div className="flex items-center justify-between px-1">
                 <span className="font-display text-[13.5px] font-extrabold text-[#4B3C46]">
-                  🏘️ Pick a Garden to Visit
+                  🏘️ {showLabels ? 'Pick a Garden to Visit' : 'Neighbors'}
                 </span>
                 <Users className="w-4 h-4 text-[#8A747E]" />
               </div>
@@ -234,20 +238,24 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
                       />
                     </div>
                     <div className="min-w-0">
-                      <div className="font-display text-[13px] font-extrabold text-[#4B3C46] truncate">
+                      <div className="font-display text-[13.5px] font-extrabold text-[#4B3C46] truncate">
                         {n.ownerName}
                       </div>
-                      <div className="text-[10.5px] font-bold text-[#8A747E] truncate">
-                        {n.gardenName} · 🔥 {n.streakDays}d
+                      <div className="text-[10.5px] font-bold text-[#8A747E] truncate inline-flex items-center gap-1">
+                        <span>{n.gardenName} ·</span>
+                        <FlameMiniIcon className="w-3 h-3" />
+                        <span>{n.streakDays}d</span>
                       </div>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => onVisitNeighbor(n.id)}
-                    className="buttercup-cta rounded-full px-3 py-1 text-[11.5px] font-extrabold text-[#4B3C46] cursor-pointer whitespace-nowrap shrink-0"
+                    aria-label={`Visit ${n.ownerName}`}
+                    className="buttercup-cta rounded-full px-4 min-h-[42px] text-[12px] font-extrabold text-[#4B3C46] cursor-pointer whitespace-nowrap shrink-0 inline-flex items-center justify-center gap-1.5"
                   >
-                    Visit
+                    <Home className="w-4 h-4 stroke-[2.4] shrink-0" />
+                    {showLabels && <span>Visit</span>}
                   </button>
                 </div>
               ))}
@@ -314,8 +322,12 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
                   className="absolute -bottom-2.5 bg-[#FFF3BF] border-2 border-[#C99D66] rounded-full px-3 py-0.5 shadow-[0_3px_8px_rgba(138,116,126,0.16)] flex items-center gap-1 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
                   title="Switch Neighbor"
                 >
-                  <span className="font-display text-[11px] font-extrabold text-[#4B3C46] tabular-nums">
-                    🔥 {visitingNeighbor.streakDays}d · 🛡️ 24h
+                  <span className="font-display text-[11px] font-extrabold text-[#4B3C46] tabular-nums inline-flex items-center gap-1">
+                    <FlameMiniIcon className="w-3.5 h-3.5" />
+                    <span>{visitingNeighbor.streakDays}d</span>
+                    <span className="opacity-50">·</span>
+                    <ShieldMiniIcon className="w-3.5 h-3.5" />
+                    <span>24h</span>
                   </span>
                 </button>
               </div>
@@ -351,12 +363,12 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
               <button
                 key={toy.id}
                 type="button"
-                onClick={() => showToastAt('🎾 Fun!', toy.x, toy.y - 10)}
+                onClick={() => showToastAt('Fun!', toy.x, toy.y - 10)}
                 style={{ left: `${toy.x}%`, top: `${toy.y}%` }}
-                className="absolute -translate-x-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-[#FFFDF9]/90 border-2 border-[#D9C3B4] shadow-xs flex items-center justify-center text-[18px] active:scale-90 transition-transform cursor-pointer"
+                className="absolute -translate-x-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-[#FFFDF9]/92 border-2 border-[#D9C3B4] shadow-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
                 title={toy.name}
               >
-                {toy.icon}
+                <ToyStickerIcon toyId={toy.id} name={toy.name} className="w-5 h-5" />
               </button>
             ))}
 
@@ -401,7 +413,7 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
                         {pet.needsCare === 'heart' ? (
                           <Heart className="w-4 h-4 fill-[#FF85A1] text-[#FF85A1]" />
                         ) : pet.needsCare === 'food' ? (
-                          <span className="text-[13px] leading-none">🥕</span>
+                          <CropFoodIcon item="carrot" className="w-4 h-4" />
                         ) : (
                           <Droplets className="w-4 h-4 fill-[#7CCBFF] text-[#7CCBFF]" />
                         )}
@@ -419,6 +431,7 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
                       alt={pet.name}
                       mode={pet.cutoutMode ?? 'auto'}
                       accessory={pet.accessory}
+                      hatTransform={pet.hatTransform}
                       flip={pos.flip}
                       className="w-[76px] h-[76px]"
                     />
@@ -438,19 +451,50 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
         onSelectYard={onSelectYard}
         onSelectFarm={onSelectFarm}
         onSelectVisit={() => onOpenModal('visit')}
-        onSelectRescue={() => onOpenModal('rescue')}
         onSelectBag={() => onOpenModal('bag')}
         onSelectAlbum={() => onOpenModal('album')}
         primaryCta={
           visitingNeighbor ? (
-            <div className="w-full flex items-center justify-center gap-2">
+            <div className="w-full grid grid-cols-4 gap-1.5">
+              <button
+                type="button"
+                onClick={onLeaveNeighbor}
+                aria-label="Leave Neighbor Garden"
+                title="Leave"
+                className="cream-btn rounded-full px-2 min-h-[48px] font-display text-[11.5px] font-extrabold text-[#4B3C46] bg-[#FFFDF9] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
+              >
+                <ArrowLeft className={showLabels ? 'w-3.5 h-3.5 shrink-0' : 'w-5 h-5 shrink-0'} />
+                {showLabels && <span>Back</span>}
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenNeighborFarm}
+                aria-label={`${visitingNeighbor.ownerName}'s Farm`}
+                title="Visit Farm"
+                className="cream-btn rounded-full px-2 min-h-[48px] font-display text-[11.5px] font-extrabold text-[#4B3C46] bg-[#E8F8CE] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
+              >
+                <Sprout
+                  className={
+                    showLabels ? 'w-3.5 h-3.5 shrink-0' : 'w-5 h-5 shrink-0'
+                  }
+                />
+                {showLabels && <span>Farm</span>}
+              </button>
+
               <button
                 type="button"
                 onClick={() => onOpenModal('neighborMarket')}
-                className="cream-btn rounded-full px-4 h-[38px] font-display text-[13px] font-extrabold text-[#4B3C46] bg-[#EFF8FF] flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                aria-label="Neighbor Stall"
+                title="Stall"
+                className="cream-btn rounded-full px-2 min-h-[48px] font-display text-[11.5px] font-extrabold text-[#4B3C46] bg-[#EFF8FF] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
               >
-                <Store className="w-4 h-4" />
-                <span>Buy Crops</span>
+                <Store
+                  className={
+                    showLabels ? 'w-3.5 h-3.5 shrink-0' : 'w-5 h-5 shrink-0'
+                  }
+                />
+                {showLabels && <span>Stall</span>}
               </button>
 
               <button
@@ -459,20 +503,38 @@ export const NeighborGardenScreen: React.FC<NeighborGardenScreenProps> = ({
                   const msg = onNeighborGift();
                   showToastAt(msg, 65, 65);
                 }}
-                className="buttercup-cta rounded-full px-4 h-[38px] font-display text-[13px] font-extrabold text-[#4B3C46] flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                aria-label="Gift Neighbor"
+                title={visitingNeighbor.gifted ? 'Gifted' : 'Gift +25'}
+                className="buttercup-cta rounded-full px-2 min-h-[48px] font-display text-[11.5px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
               >
-                <Gift className="w-4 h-4" />
-                <span>{visitingNeighbor.gifted ? 'Gifted ✓' : 'Gift +25'}</span>
+                <Gift
+                  className={
+                    showLabels ? 'w-3.5 h-3.5 shrink-0' : 'w-5 h-5 shrink-0'
+                  }
+                />
+                {showLabels ? (
+                  <span>{visitingNeighbor.gifted ? '✓' : '+25'}</span>
+                ) : visitingNeighbor.gifted ? (
+                  <span className="text-[12px]">✓</span>
+                ) : null}
               </button>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => onOpenModal('visit')}
-              className="buttercup-cta rounded-full px-6 h-[38px] font-display text-[13.5px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+              aria-label="Choose Neighbor"
+              title="Choose Neighbor"
+              className={`buttercup-cta rounded-full font-display font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap ${
+                showLabels ? 'px-6 min-h-[48px] text-[14px]' : 'w-16 h-16'
+              }`}
             >
-              <Users className="w-4 h-4 stroke-[2.4]" />
-              <span>Choose Neighbor</span>
+              <Users
+                className={
+                  showLabels ? 'w-4.5 h-4.5 stroke-[2.4]' : 'w-7 h-7 stroke-[2.3]'
+                }
+              />
+              {showLabels && <span>Choose Neighbor</span>}
             </button>
           )
         }

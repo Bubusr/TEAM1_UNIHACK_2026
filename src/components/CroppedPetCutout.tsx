@@ -1,5 +1,7 @@
-import React, { useEffect, useId, useState } from 'react';
-import { CutoutMode } from '../types';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { CutoutMode, HatTransform } from '../types';
+import { resolveAssetUrl } from '../assets/petImages';
+import { HatStickerIcon } from './GameIcons';
 
 const processedCache = new Map<string, string>();
 
@@ -170,11 +172,38 @@ async function processCutoutImage(
   });
 }
 
+export const DEFAULT_HAT_TRANSFORM: Required<HatTransform> = {
+  x: 50,
+  y: 18,
+  scale: 1,
+  rotate: 0,
+};
+
+export const HAT_STICKER_MAP: Record<
+  string,
+  { icon: string; label: string }
+> = {
+  'straw-hat': { icon: '👒', label: 'Straw Hat' },
+  'ribbon-bow': { icon: '🎀', label: 'Pink Bow' },
+  'flower-crown': { icon: '🌸', label: 'Daisy Crown' },
+  'sunny-cap': { icon: '🧢', label: 'Sunny Cap' },
+  'top-hat': { icon: '🎩', label: 'Dapper Hat' },
+  'royal-crown': { icon: '👑', label: 'Royal Crown' },
+};
+
+function clamp(val: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, val));
+}
+
 interface CroppedPetCutoutProps {
   photoUrl: string;
   alt: string;
   mode?: CutoutMode;
   accessory?: string | null;
+  hatTransform?: HatTransform;
+  hatSize?: 'sm' | 'md' | 'lg';
+  draggableHat?: boolean;
+  onHatTransformChange?: (next: HatTransform) => void;
   flip?: boolean;
   className?: string;
 }
@@ -184,27 +213,95 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
   alt,
   mode = 'auto',
   accessory,
+  hatTransform,
+  hatSize = 'md',
+  draggableHat = false,
+  onHatTransformChange,
   flip = false,
   className = 'w-[84px] h-[84px]',
 }) => {
   const clipId = useId().replace(/:/g, '');
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [draggingHat, setDraggingHat] = useState(false);
+  const resolvedPhotoUrl = resolveAssetUrl(photoUrl);
   const [cutout, setCutout] = useState<{ url: string; isSilhouette: boolean }>({
-    url: photoUrl,
+    url: resolvedPhotoUrl,
     isSilhouette: mode === 'silhouette',
   });
 
   useEffect(() => {
     let active = true;
-    processCutoutImage(photoUrl, mode).then((res) => {
+    processCutoutImage(resolvedPhotoUrl, mode).then((res) => {
       if (active) setCutout(res);
     });
     return () => {
       active = false;
     };
-  }, [photoUrl, mode]);
+  }, [resolvedPhotoUrl, mode]);
+
+  const hatMeta = accessory ? HAT_STICKER_MAP[accessory] : undefined;
+  const baseHat: Required<HatTransform> = {
+    x: hatTransform?.x ?? DEFAULT_HAT_TRANSFORM.x,
+    y: hatTransform?.y ?? DEFAULT_HAT_TRANSFORM.y,
+    scale: hatTransform?.scale ?? DEFAULT_HAT_TRANSFORM.scale,
+    rotate: hatTransform?.rotate ?? DEFAULT_HAT_TRANSFORM.rotate,
+  };
+  const renderX = flip ? 100 - baseHat.x : baseHat.x;
+  const renderRotate = flip ? -baseHat.rotate : baseHat.rotate;
+
+  const hatSvgSizeClass =
+    hatSize === 'sm'
+      ? 'w-5 h-5'
+      : hatSize === 'lg'
+      ? 'w-10 h-10'
+      : 'w-7 h-7';
+
+  const updateHatFromPointer = (clientX: number, clientY: number) => {
+    if (!containerRef.current || !onHatTransformChange) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const rawX = ((clientX - rect.left) / rect.width) * 100;
+    const rawY = ((clientY - rect.top) / rect.height) * 100;
+    const nextX = clamp(Math.round(flip ? 100 - rawX : rawX), 8, 92);
+    const nextY = clamp(Math.round(rawY), 4, 88);
+    onHatTransformChange({
+      ...baseHat,
+      x: nextX,
+      y: nextY,
+    });
+  };
+
+  const handleHatPointerDown = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!draggableHat || !onHatTransformChange) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDraggingHat(true);
+    updateHatFromPointer(e.clientX, e.clientY);
+  };
+
+  const handleHatPointerMove = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!draggingHat) return;
+    e.preventDefault();
+    e.stopPropagation();
+    updateHatFromPointer(e.clientX, e.clientY);
+  };
+
+  const handleHatPointerUp = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!draggingHat) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setDraggingHat(false);
+  };
 
   return (
-    <div className={`relative flex items-center justify-center ${className}`}>
+    <div
+      ref={containerRef}
+      className={`relative flex items-center justify-center ${className}`}
+    >
       {/* Soft Grass Contact Shadow */}
       <div
         aria-hidden="true"
@@ -215,7 +312,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
         /* Scissor-cropped organic silhouette matching the Polaroid cut-line */
         <svg
           viewBox="0 0 200 200"
-          className="w-full h-full overflow-visible"
+          className="w-full h-full overflow-visible pointer-events-none"
           style={{
             transform: flip ? 'scaleX(-1)' : undefined,
             filter:
@@ -249,7 +346,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
           src={cutout.url}
           alt={alt}
           referrerPolicy="no-referrer"
-          className="w-full h-full object-contain pointer-events-none"
+          className="w-full h-full object-contain pointer-events-none select-none"
           style={{
             transform: flip ? 'scaleX(-1)' : undefined,
             filter:
@@ -258,21 +355,33 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
         />
       )}
 
-      {/* Optional Cosmetic Accessory Sticker on Pet's Head */}
-      {accessory === 'straw-hat' && (
+      {/* Cosmetic Hat Sticker on Pet's Head (draggable when enabled) */}
+      {hatMeta && accessory && (
         <span
-          aria-hidden="true"
-          className="absolute -top-2 left-1/2 -translate-x-1/2 text-[22px] leading-none drop-shadow-sm pointer-events-none"
+          aria-hidden={!draggableHat}
+          role={draggableHat ? 'slider' : undefined}
+          aria-label={draggableHat ? `Drag to position ${hatMeta.label}` : undefined}
+          onPointerDown={handleHatPointerDown}
+          onPointerMove={handleHatPointerMove}
+          onPointerUp={handleHatPointerUp}
+          onPointerCancel={handleHatPointerUp}
+          style={{
+            left: `${renderX}%`,
+            top: `${baseHat.y}%`,
+            transform: `translate(-50%, -50%) rotate(${renderRotate}deg) scale(${baseHat.scale})`,
+            touchAction: draggableHat ? 'none' : undefined,
+          }}
+          className={`absolute flex items-center justify-center leading-none drop-shadow-sm select-none ${
+            draggableHat
+              ? `cursor-grab active:cursor-grabbing z-20 rounded-full p-1.5 transition-shadow ${
+                  draggingHat
+                    ? 'ring-2 ring-[#D9AA4C] bg-[#FFFDF9]/55'
+                    : 'ring-1 ring-dashed ring-[#C99D66]/80 bg-[#FFFDF9]/25'
+                }`
+              : 'pointer-events-none'
+          }`}
         >
-          👒
-        </span>
-      )}
-      {accessory === 'flower-crown' && (
-        <span
-          aria-hidden="true"
-          className="absolute -top-2 left-1/2 -translate-x-1/2 text-[20px] leading-none drop-shadow-sm pointer-events-none"
-        >
-          🌸
+          <HatStickerIcon hatId={accessory} className={hatSvgSizeClass} />
         </span>
       )}
     </div>

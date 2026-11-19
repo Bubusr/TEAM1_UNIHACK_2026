@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Droplets, Gift, Store } from 'lucide-react';
+import { Droplets, Gift, Home, Store } from 'lucide-react';
 import { NeighborGarden } from '../types';
 import { FOOD_META } from './FarmScreen';
+import { CropFoodIcon } from './GameIcons';
 import { SanctuaryModalType } from './SanctuaryScreen';
-import { SharedBottomDock, SharedTopHud } from './SharedHud';
+import {
+  SharedBottomDock,
+  SharedTopHud,
+  useShowTextLabels,
+} from './SharedHud';
 
 interface NeighborFarmScreenProps {
   coins: number;
@@ -23,6 +28,7 @@ interface NeighborFarmScreenProps {
   onWaterNeighborPlot: (neighborId: string, plotId: string) => string;
   onWaterNeighborTree: (neighborId: string, treeId: string) => string;
   onGiftNeighbor: (neighborId: string) => string;
+  onOpenSettings?: () => void;
 }
 
 export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
@@ -43,7 +49,9 @@ export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
   onWaterNeighborPlot,
   onWaterNeighborTree,
   onGiftNeighbor,
+  onOpenSettings,
 }) => {
+  const showLabels = useShowTextLabels();
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [toast, setToast] = useState<string | null>(null);
 
@@ -139,50 +147,43 @@ export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
         onOpenProfile={() => onOpenModal('profile')}
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}
+        onOpenSettings={onOpenSettings}
         rightBadge={
           <div className="relative flex items-center">
-            <div className="w-6.5 h-6.5 rounded-full bg-[#DFF3FF] border-2 border-[#8DC3E8] flex items-center justify-center relative z-10 -mr-2 shadow-xs">
+            <div className="w-6 h-6 rounded-full bg-[#DFF3FF] border-2 border-[#8DC3E8] flex items-center justify-center relative z-10 -mr-2 shadow-xs">
               <Droplets className="w-3.5 h-3.5 fill-[#7CCBFF] text-[#499AD3]" />
             </div>
             <div
               className="cream-pill rounded-full pl-3 pr-2 py-0.5 flex items-center gap-1 min-h-[32px]"
               title="Daily neighbor watering helps"
             >
-              <span className="font-display text-[13px] font-extrabold text-[#4B3C46] tabular-nums whitespace-nowrap">
+              <span className="font-display text-[12px] font-extrabold text-[#4B3C46] tabular-nums whitespace-nowrap">
                 {activeNeighbor.waterHelpsUsed}/{activeNeighbor.maxWaterHelps}
               </span>
             </div>
           </div>
         }
         subRow={
-          <div className="w-full flex items-center justify-between gap-2 px-0.5">
-            <button
-              type="button"
-              onClick={onSelectNeighborGarden}
-              className="bg-[#FFFDF9] border-2 border-[#D9C3B4] rounded-full px-2.5 py-0.5 shadow-xs flex items-center gap-1 text-[11px] font-extrabold text-[#4B3C46] active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              <span>{activeNeighbor.ownerName}’s Garden</span>
-            </button>
-
-            <div className="bg-[#FFF5F8] border-2 border-[#E8CFD9] rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-[#4B3C46] whitespace-nowrap">
-              🌾 {activeNeighbor.ownerName}’s Farm
-            </div>
+          <div className="bg-[#FFF5F8] border-2 border-[#E8CFD9] rounded-full px-3 py-0.5 text-[11px] font-extrabold text-[#4B3C46] whitespace-nowrap">
+            🌾 {activeNeighbor.ownerName}
+            {showLabels ? '’s Farm' : ''}
           </div>
         }
       />
 
-      {/* 2. NEIGHBOR FARM WORLD */}
-      <main className="relative z-20 flex-1 min-h-0 px-3.5 py-1 flex flex-col justify-between">
+      {/* 2. NEIGHBOR FARM WORLD (Positioned in comfortable one-hand thumb arc) */}
+      <main className="relative z-20 flex-1 min-h-0 px-3.5 py-1 flex flex-col justify-end gap-3">
         {/* Top Row: Neighbor Signpost + 2 Orchard Trees */}
         <div className="flex items-end justify-between gap-2 pt-0.5">
           <div className="bg-[#FFF7EC] border-2 border-[#D4B8A5] rounded-2xl px-2.5 py-1.5 shadow-xs flex flex-col items-start">
             <span className="font-display text-[11px] font-extrabold text-[#4B3C46] leading-tight">
               🚜 {activeNeighbor.gardenName}
             </span>
-            <span className="text-[9.5px] font-bold text-[#8A747E]">
-              Tap 💧 to help {activeNeighbor.ownerName}!
-            </span>
+            {showLabels && (
+              <span className="text-[9.5px] font-bold text-[#8A747E]">
+                Tap 💧 to help {activeNeighbor.ownerName}!
+              </span>
+            )}
           </div>
 
           <div className="flex items-end gap-2">
@@ -207,15 +208,21 @@ export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
                   <div className="relative w-15 h-15 rounded-full bg-[#92DC7E] border-2 border-[#75BD63] shadow-[inset_0_-4px_0_#7AC768,0_4px_10px_rgba(75,60,70,0.12)] flex items-center justify-center">
                     <div className="absolute top-1.5 left-2.5 w-5 h-3 rounded-full bg-[#B4EC9F]/70" />
                     {isReady ? (
-                      <div className="grid grid-cols-2 gap-0.5 text-[14px] leading-none">
-                        <span>{meta.icon}</span>
-                        <span>{meta.icon}</span>
+                      <div className="grid grid-cols-2 gap-0.5 animate-bounce">
+                        <CropFoodIcon item={tree.fruit} className="w-4 h-4" />
+                        <CropFoodIcon item={tree.fruit} className="w-4 h-4" />
                       </div>
                     ) : (
-                      <span className="bg-[#FFFDF9]/90 border border-[#D9C3B4] rounded-full px-1.5 py-0.5 text-[9px] font-extrabold text-[#4B3C46] tabular-nums">
-                        {!tree.watered ? '💧 ' : ''}
-                        {secsLeft}s
-                      </span>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="flex items-center gap-0.5 opacity-80">
+                          <CropFoodIcon item={tree.fruit} className="w-3.5 h-3.5" />
+                          <CropFoodIcon item={tree.fruit} className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="bg-[#FFFDF9]/92 border border-[#D9C3B4] rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold text-[#4B3C46] tabular-nums leading-none">
+                          {!tree.watered ? '💧 ' : ''}
+                          {secsLeft}s
+                        </span>
+                      </div>
                     )}
                   </div>
                   <div className="w-3 h-3 bg-[#E6B88A] border-2 border-[#B38964] -mt-1 rounded-b-md" />
@@ -261,15 +268,27 @@ export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
 
                   {!plot.crop && (
                     <span className="text-[12px] font-extrabold text-[#A6826E]">
-                      Empty
+                      {showLabels ? 'Empty' : '·'}
                     </span>
                   )}
 
                   {plot.crop && !isReady && (
                     <>
-                      <span className="text-[19px] leading-none">
-                        {progress > 0.5 ? '🪴' : '🌱'}
-                      </span>
+                      <div className="relative flex items-end justify-center h-6">
+                        {progress < 0.5 ? (
+                          <>
+                            <CropFoodIcon item="sprout" className="w-5 h-5" />
+                            <span className="absolute -top-1.5 -right-2.5 opacity-90">
+                              <CropFoodIcon item={plot.crop} className="w-3.5 h-3.5" />
+                            </span>
+                          </>
+                        ) : (
+                          <div className="flex items-end gap-0.5">
+                            <CropFoodIcon item="sprout" className="w-3.5 h-3.5" />
+                            <CropFoodIcon item={plot.crop} className="w-5 h-5" />
+                          </div>
+                        )}
+                      </div>
                       <span className="mt-1 bg-[#FFFDF9]/90 rounded-full px-1.5 py-0.5 text-[9px] font-extrabold text-[#4B3C46] tabular-nums">
                         {plot.watered ? '✓ ' : '💧 '}
                         {Math.max(
@@ -282,8 +301,8 @@ export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
                   )}
 
                   {plot.crop && isReady && (
-                    <span className="text-[24px] leading-none animate-bounce">
-                      {meta?.icon}
+                    <span className="animate-bounce">
+                      <CropFoodIcon item={plot.crop} className="w-7 h-7" />
                     </span>
                   )}
                 </button>
@@ -292,13 +311,13 @@ export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
           </div>
         </div>
 
-        {/* Toast + Linked Garden Notice */}
+        {/* Toast Feedback */}
         <div className="min-h-[26px] flex items-center justify-center pb-1">
           {toast ? (
             <div className="bg-[#FFFDF9] border-2 border-[#D9C3B4] rounded-full px-3 py-0.5 text-[11.5px] font-extrabold text-[#4B3C46] shadow-sm animate-bounce">
               {toast}
             </div>
-          ) : (
+          ) : showLabels ? (
             <button
               type="button"
               onClick={onSelectNeighborGarden}
@@ -306,7 +325,7 @@ export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
             >
               Visiting {activeNeighbor.ownerName}’s Garden 🏡
             </button>
-          )}
+          ) : null}
         </div>
       </main>
 
@@ -318,29 +337,67 @@ export const NeighborFarmScreen: React.FC<NeighborFarmScreenProps> = ({
         onSelectYard={onSelectYard}
         onSelectFarm={onSelectFarm}
         onSelectVisit={() => onOpenModal('visit')}
-        onSelectRescue={() => onOpenModal('rescue')}
         onSelectBag={() => onOpenModal('bag')}
         onSelectAlbum={() => onOpenModal('album')}
         primaryCta={
-          <div className="w-full flex items-center justify-center gap-2">
+          <div className="w-full grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={onSelectNeighborGarden}
+              aria-label="Neighbor Garden"
+              title="Garden"
+              className="cream-btn rounded-full px-2 min-h-[48px] font-display text-[12px] font-extrabold text-[#4B3C46] bg-[#FFFDF9] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
+            >
+              <Home
+                className={
+                  showLabels
+                    ? 'w-4 h-4 stroke-[2.4] shrink-0'
+                    : 'w-5.5 h-5.5 stroke-[2.4] shrink-0'
+                }
+              />
+              {showLabels && <span>Garden</span>}
+            </button>
+
             <button
               type="button"
               onClick={() => onOpenModal('neighborMarket')}
-              className="buttercup-cta rounded-full px-4 h-[38px] font-display text-[13px] font-extrabold text-[#4B3C46] flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              aria-label="Neighbor Stall"
+              title="Stall"
+              className="buttercup-cta relative rounded-full px-2 min-h-[48px] font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
             >
-              <Store className="w-4 h-4 stroke-[2.4]" />
-              <span>
-                {activeNeighbor.ownerName}’s Stall ({availableStallCount})
-              </span>
+              <Store
+                className={
+                  showLabels
+                    ? 'w-4 h-4 stroke-[2.4] shrink-0'
+                    : 'w-5.5 h-5.5 stroke-[2.4] shrink-0'
+                }
+              />
+              {showLabels ? (
+                <span>Stall ({availableStallCount})</span>
+              ) : (
+                <span className="text-[11.5px] tabular-nums">
+                  {availableStallCount}
+                </span>
+              )}
             </button>
 
             <button
               type="button"
               onClick={() => showToast(onGiftNeighbor(activeNeighbor.id))}
-              className="cream-btn rounded-full px-3.5 h-[38px] font-display text-[12.5px] font-extrabold text-[#4B3C46] bg-[#FFF3F8] flex items-center gap-1 cursor-pointer whitespace-nowrap"
+              aria-label="Gift Neighbor"
+              title={activeNeighbor.gifted ? 'Gifted' : 'Gift +25'}
+              className="cream-btn rounded-full px-2 min-h-[48px] font-display text-[12px] font-extrabold text-[#4B3C46] bg-[#FFF3F8] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
             >
-              <Gift className="w-3.5 h-3.5" />
-              <span>{activeNeighbor.gifted ? 'Gifted ✓' : 'Gift +25'}</span>
+              <Gift
+                className={
+                  showLabels ? 'w-4 h-4 shrink-0' : 'w-5.5 h-5.5 shrink-0'
+                }
+              />
+              {showLabels ? (
+                <span>{activeNeighbor.gifted ? 'Gifted ✓' : 'Gift +25'}</span>
+              ) : activeNeighbor.gifted ? (
+                <span className="text-[12px]">✓</span>
+              ) : null}
             </button>
           </div>
         }

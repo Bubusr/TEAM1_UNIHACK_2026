@@ -16,7 +16,7 @@
   }
 
   body {
-    font-family: 'Fredoka', 'Baloo 2', ui-rounded, system-ui, sans-serif;
+    font-family: 'Fredoka', 'Baloo 2', ui-rounded, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
     color: #4B3C46;
     background-color: #F6F4FB;
     margin: 0;
@@ -27,64 +27,66 @@
 }
 
 .font-display {
-  font-family: 'Baloo 2', 'Fredoka', ui-rounded, system-ui, sans-serif;
+  font-family: 'Baloo 2', 'Fredoka', ui-rounded, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Airy Pastel Light-Mode UI Tokens (Locket-inspired clarity) */
+/* Airy Pastel Storybook UI Tokens (Squishy Marshmallow Polish) */
 .cream-pill {
   background-color: #FFFDF9;
-  border: 2px solid #D9C3B4;
-  box-shadow: 0 3px 10px rgba(138, 116, 126, 0.12), inset 0 -2px 0 #F5ECE4;
+  border: 2px solid #DFC4B5;
+  box-shadow: 0 3px 10px rgba(164, 126, 138, 0.14), inset 0 2px 0 rgba(255, 255, 255, 0.92), inset 0 -2.5px 0 #F6E9E2;
+  transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .cream-squircle {
   background-color: #FFFDF9;
-  border: 2px solid #D9C3B4;
+  border: 2px solid #DFC4B5;
   border-radius: 22px;
-  box-shadow: 0 4px 12px rgba(138, 116, 126, 0.12), inset 0 -3px 0 #F5ECE4;
+  box-shadow: 0 4px 12px rgba(164, 126, 138, 0.14), inset 0 2px 0 rgba(255, 255, 255, 0.92), inset 0 -3px 0 #F6E9E2;
+  transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .cream-card {
   background-color: #FFFDF9;
-  border: 2px solid #DFCBBF;
+  border: 2px solid #E4CBBF;
   border-radius: 30px;
-  box-shadow: 0 10px 28px rgba(145, 125, 145, 0.14), inset 0 -4px 0 #F7EFE8;
+  box-shadow: 0 10px 28px rgba(164, 126, 146, 0.15), inset 0 2px 0 rgba(255, 255, 255, 0.92), inset 0 -4px 0 #F7ECE6;
 }
 
 .buttercup-cta {
-  background-color: #FFE07D;
-  border: 2px solid #C99D66;
-  box-shadow: 0 5px 14px rgba(226, 174, 72, 0.28), inset 0 2px 0 rgba(255, 255, 255, 0.8), inset 0 -3px 0 #F3C44E;
-  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  background: linear-gradient(180deg, #FFE89A 0%, #FFDC72 100%);
+  border: 2px solid #CE9F66;
+  box-shadow: 0 5px 14px rgba(226, 174, 72, 0.3), inset 0 2.5px 0 rgba(255, 255, 255, 0.85), inset 0 -3.5px 0 #F1BE46;
+  transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 160ms ease;
 }
 
 .buttercup-cta:hover {
-  transform: translateY(-1px);
+  transform: translateY(-1.5px) scale(1.015);
 }
 
 .buttercup-cta:active {
-  transform: translateY(1.5px);
-  box-shadow: 0 2px 6px rgba(226, 174, 72, 0.24), inset 0 -1px 0 #F3C44E;
+  transform: translateY(1.5px) scale(0.96);
+  box-shadow: 0 2px 6px rgba(226, 174, 72, 0.24), inset 0 -1px 0 #F1BE46;
 }
 
 .cream-btn {
   background-color: #FFFDF9;
-  border: 2px solid #D9C3B4;
-  box-shadow: 0 3px 10px rgba(138, 116, 126, 0.11), inset 0 -2px 0 #F5ECE4;
-  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2px solid #DFC4B5;
+  box-shadow: 0 3px 10px rgba(164, 126, 138, 0.12), inset 0 2px 0 rgba(255, 255, 255, 0.92), inset 0 -2.5px 0 #F6E9E2;
+  transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 160ms ease;
 }
 
 .cream-btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.01);
 }
 
 .cream-btn:active {
-  transform: translateY(1.5px);
-  box-shadow: 0 1px 4px rgba(138, 116, 126, 0.1);
+  transform: translateY(1.5px) scale(0.96);
+  box-shadow: 0 1px 4px rgba(164, 126, 138, 0.1);
 }
 
 /* Soft Pastel Gingham Backdrop for Screen 2 */
@@ -105,13 +107,22 @@
     linear-gradient(180deg, #FFFDF9 0%, #F7F4FC 100%);
 }
 
-/* Gentle animations */
+/* Cozy Golden-Hour Peach & Lavender Sunset Backdrop */
+.pastel-studio-bg-sunset {
+  background:
+    radial-gradient(circle at 15% 15%, #FFE0C8 0%, transparent 46%),
+    radial-gradient(circle at 86% 18%, #EED4FF 0%, transparent 48%),
+    radial-gradient(circle at 50% 88%, #FFF1C9 0%, transparent 52%),
+    linear-gradient(180deg, #FFF3EE 0%, #F7E8FA 100%);
+}
+
+/* Gentle cozy animations */
 @keyframes petHop {
   0%, 100% {
-    transform: translateY(0px) scale(1);
+    transform: translateY(0px) scale(1.02, 0.98);
   }
   50% {
-    transform: translateY(-4px) scale(1.02, 0.98);
+    transform: translateY(-5px) scale(0.98, 1.03);
   }
 }
 
@@ -120,7 +131,57 @@
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translateY(-3.5px);
+  }
+}
+
+@keyframes cloudDrift {
+  0%, 100% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+}
+
+@keyframes heartFloatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0px) scale(0.45);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -44px) scale(0.8);
+  }
+}
+
+@keyframes chimneyPuff {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.65);
+  }
+  35% {
+    opacity: 0.9;
+    transform: translateY(-2px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(1.15);
+  }
+}
+
+@keyframes petalTwinkle {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
   }
 }
 
@@ -142,12 +203,82 @@
   }
 }
 
+@keyframes petEat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  25% {
+    transform: translateY(2px) scale(1.07, 0.93);
+  }
+  50% {
+    transform: translateY(-3px) scale(0.97, 1.05);
+  }
+  75% {
+    transform: translateY(2px) scale(1.06, 0.94);
+  }
+}
+
+@keyframes petPlay {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-10px) rotate(-8deg) scale(1.06);
+  }
+  50% {
+    transform: translateY(-2px) rotate(0deg) scale(0.96, 1.04);
+  }
+  75% {
+    transform: translateY(-10px) rotate(8deg) scale(1.06);
+  }
+}
+
+@keyframes petHappy {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  35% {
+    transform: translateY(-9px) scale(1.08, 0.96);
+  }
+  68% {
+    transform: translateY(1px) scale(0.96, 1.03);
+  }
+}
+
 .animate-pet-hop {
-  animation: petHop 2.2s ease-in-out infinite;
+  animation: petHop 2.3s ease-in-out infinite;
+}
+
+.animate-pet-eat {
+  animation: petEat 0.55s ease-in-out infinite;
+}
+
+.animate-pet-play {
+  animation: petPlay 0.7s ease-in-out infinite;
+}
+
+.animate-pet-happy {
+  animation: petHappy 0.6s ease-in-out infinite;
 }
 
 .animate-bubble-float {
   animation: bubbleFloat 1.8s ease-in-out infinite;
+}
+
+.animate-cloud-drift {
+  animation: cloudDrift 9s ease-in-out infinite;
+}
+
+.animate-heart-float {
+  animation: heartFloatUp 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-chimney-puff {
+  animation: chimneyPuff 3.4s ease-in-out infinite;
+}
+
+.animate-petal-twinkle {
+  animation: petalTwinkle 3.2s ease-in-out infinite;
 }
 
 .animate-dash-march {
@@ -158,9 +289,24 @@
   animation: butterflyFloat 5.5s ease-in-out infinite;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-pet-hop,
+  .animate-pet-eat,
+  .animate-pet-play,
+  .animate-pet-happy,
   .animate-bubble-float,
+  .animate-cloud-drift,
+  .animate-heart-float,
+  .animate-chimney-puff,
+  .animate-petal-twinkle,
   .animate-dash-march,
   .animate-butterfly {
     animation: none;

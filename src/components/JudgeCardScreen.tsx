@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
-import { Camera, Check, Share2, Sparkles } from 'lucide-react';
+import {
+  Camera,
+  Check,
+  Scissors,
+  Search,
+  Share2,
+  Sparkles,
+  Sun,
+  Target,
+} from 'lucide-react';
 import { JudgeReport } from '../types';
-import { CrystalMintIcon } from './HandDrawnAssets';
+import { CrystalMintIcon, PawCoinIcon } from './HandDrawnAssets';
+import { ShieldMiniIcon } from './GameIcons';
+import { resolveAssetUrl } from '../assets/petImages';
 import { SanctuaryModalType } from './SanctuaryScreen';
-import { SharedBottomDock, SharedTopHud } from './SharedHud';
+import {
+  SharedBottomDock,
+  SharedTopHud,
+  useShowTextLabels,
+} from './SharedHud';
 
 interface JudgeCardScreenProps {
   coins: number;
@@ -26,6 +41,7 @@ interface JudgeCardScreenProps {
   onShareSnap: () => void;
   onUploadPhoto: (file: File) => void;
   onResetSample: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
@@ -49,7 +65,9 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
   onShareSnap,
   onUploadPhoto,
   onResetSample,
+  onOpenSettings,
 }) => {
+  const showLabels = useShowTextLabels();
   const [sharedFeedback, setSharedFeedback] = useState(false);
 
   const handleShareClick = () => {
@@ -70,33 +88,13 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
         onOpenProfile={() => onOpenModal('profile')}
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}
+        onOpenSettings={onOpenSettings}
         subRow={
-          <div className="flex items-center justify-center gap-1.5">
-            <div className="bg-[#FFFDF9] border-2 border-[#DFCBBF] rounded-full px-3 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.08)] flex items-center gap-1 text-[11.5px] font-extrabold text-[#4B3C46] whitespace-nowrap">
-              <span>📸 {report.theme}</span>
-              <span className="text-[#4EA866]">
-                {report.themeMatch ? '✓' : '•'}
-              </span>
-            </div>
-
-            <label
-              className="bg-[#FFFDF9] border-2 border-[#DFCBBF] rounded-full px-2.5 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.08)] flex items-center gap-1 text-[11.5px] font-extrabold text-[#4B3C46] cursor-pointer hover:bg-[#FFF5F8] active:scale-95 transition-transform whitespace-nowrap"
-              title="Snap or upload a pet photo"
-              aria-label="Upload pet photo"
-            >
-              <Camera className="w-3.5 h-3.5 text-[#C99D66]" />
-              <span>Snap</span>
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) onUploadPhoto(file);
-                  e.target.value = '';
-                }}
-              />
-            </label>
+          <div className="bg-[#FFFDF9] border-2 border-[#DFCBBF] rounded-full px-3 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.08)] flex items-center gap-1 text-[11.5px] font-extrabold text-[#4B3C46] whitespace-nowrap">
+            <span>📸 {report.theme}</span>
+            <span className="text-[#4EA866]">
+              {report.themeMatch ? '✓' : '•'}
+            </span>
           </div>
         }
       />
@@ -125,7 +123,7 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
 
           <div className="relative aspect-square w-full rounded-[17px] overflow-hidden bg-[#FFF6FA]">
             <img
-              src={report.photoUrl}
+              src={resolveAssetUrl(report.photoUrl)}
               alt={`${report.petName} snapshot`}
               referrerPolicy="no-referrer"
               className={`w-full h-full object-cover transition-opacity duration-200 ${
@@ -157,8 +155,8 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
               />
             </svg>
 
-            <div className="absolute top-2.5 left-2.5 bg-[#FFFDF9]/95 rounded-full w-6.5 h-6.5 flex items-center justify-center text-[12px] shadow-sm">
-              ✂️
+            <div className="absolute top-2.5 left-2.5 bg-[#FFFDF9]/95 rounded-full w-6.5 h-6.5 flex items-center justify-center shadow-sm text-[#8A747E]">
+              <Scissors className="w-3.5 h-3.5 stroke-[2.3]" />
             </div>
 
             {isJudging && (
@@ -193,45 +191,115 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
           </div>
         </div>
 
-        {/* 1-Row Pastel Criteria Chips */}
-        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-          <span className="bg-[#FFFDF9] border border-[#E5D7CE] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap">
-            🔍 {report.sharp}
-          </span>
-          <span className="bg-[#FFF8DC] border border-[#EFE0A8] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap">
-            ☀️ {report.light}
-          </span>
-          <span className="bg-[#E8F8EC] border border-[#C3E8CD] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] whitespace-nowrap">
-            🐾 {report.species}
-          </span>
-          <span className="bg-[#E6F4FF] border border-[#C2E1F7] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap">
-            🎯 {report.themeScore}
-          </span>
+        {/* Clean Unboxed Criteria Line */}
+        <div className="text-center text-[12px] font-extrabold text-[#6E5B65] tabular-nums whitespace-nowrap flex items-center justify-center gap-2">
+          {showLabels ? (
+            `Sharp ${report.sharp} · Light ${report.light} · ${report.species} · Theme ${report.themeScore}`
+          ) : (
+            <>
+              <span className="inline-flex items-center gap-0.5">
+                <Search className="w-3.5 h-3.5 text-[#7B6670]" />
+                {report.sharp}
+              </span>
+              <span className="opacity-45">·</span>
+              <span className="inline-flex items-center gap-0.5">
+                <Sun className="w-3.5 h-3.5 text-[#D99B38]" />
+                {report.light}
+              </span>
+              <span className="opacity-45">·</span>
+              <span className="inline-flex items-center gap-0.5">
+                <Target className="w-3.5 h-3.5 text-[#E06C97]" />
+                {report.themeScore}
+              </span>
+            </>
+          )}
         </div>
 
-        {/* Rewards + Mint / Share */}
-        <div className="w-full max-w-[290px] flex flex-col gap-1.5">
-          <div className="text-center text-[11.5px] font-extrabold text-[#7B6670] whitespace-nowrap">
-            +{report.coinsReward} 🪙 · +{report.expReward} EXP · 🛡️ 24h
+        {/* Rewards + One-Handed Snap / Mint / Share */}
+        <div className="w-full max-w-[320px] flex flex-col gap-1.5">
+          <div className="text-center text-[11.5px] font-extrabold text-[#7B6670] whitespace-nowrap flex items-center justify-center gap-1.5">
+            <span className="inline-flex items-center gap-0.5">
+              <span>+{report.coinsReward}</span>
+              <PawCoinIcon className="w-3.5 h-3.5" />
+            </span>
+            <span className="opacity-45">·</span>
+            <span className="inline-flex items-center gap-0.5">
+              <span>+{report.expReward}</span>
+              {showLabels ? (
+                <span>EXP</span>
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 text-[#D99B38]" />
+              )}
+            </span>
+            <span className="opacity-45">·</span>
+            <span className="inline-flex items-center gap-0.5">
+              <ShieldMiniIcon className="w-3.5 h-3.5" />
+              <span>24h</span>
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
+            <label
+              className="cream-btn rounded-full min-h-[46px] px-2 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap bg-[#FFFDF9]"
+              title="Snap a new pet photo"
+              aria-label="Snap pet photo"
+            >
+              <Camera
+                className={`${
+                  showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
+                } text-[#C99D66] shrink-0`}
+              />
+              {showLabels && <span>Snap</span>}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onUploadPhoto(file);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+
             <button
               type="button"
               onClick={onMintPet}
-              className="cream-btn rounded-full py-1.5 px-3 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap bg-[#F0F8FF]"
+              aria-label={report.minted ? 'Minted' : 'Mint Pet Passport'}
+              title={report.minted ? 'Minted' : 'Mint Passport'}
+              className="cream-btn rounded-full min-h-[46px] px-2 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap bg-[#F0F8FF]"
             >
-              <CrystalMintIcon className="w-3.5 h-3.5 shrink-0" />
-              <span>{report.minted ? 'Minted ✓' : 'Mint'}</span>
+              <CrystalMintIcon
+                className={`${showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'} shrink-0`}
+              />
+              {showLabels ? (
+                <span>{report.minted ? 'Minted ✓' : 'Mint'}</span>
+              ) : report.minted ? (
+                <span className="text-[12px]">✓</span>
+              ) : null}
             </button>
 
             <button
               type="button"
               onClick={handleShareClick}
-              className="cream-btn rounded-full py-1.5 px-3 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap bg-[#FFF3F8]"
+              aria-label="Share Snapshot"
+              title="Share"
+              className="cream-btn rounded-full min-h-[46px] px-2 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap bg-[#FFF3F8]"
             >
-              <Share2 className="w-3.5 h-3.5 text-[#8A747E] shrink-0" />
-              <span>{sharedFeedback ? 'Copied ✓' : 'Share'}</span>
+              {sharedFeedback ? (
+                <Check
+                  className={`${
+                    showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
+                  } text-[#3F7B52] shrink-0 stroke-[2.8]`}
+                />
+              ) : (
+                <Share2
+                  className={`${
+                    showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
+                  } text-[#8A747E] shrink-0`}
+                />
+              )}
+              {showLabels && <span>{sharedFeedback ? 'Copied ✓' : 'Share'}</span>}
             </button>
           </div>
         </div>
@@ -245,7 +313,6 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
         onSelectYard={onSelectYard}
         onSelectFarm={onSelectFarm}
         onSelectVisit={() => onOpenModal('visit')}
-        onSelectRescue={() => onOpenModal('rescue')}
         onSelectBag={() => onOpenModal('bag')}
         onSelectAlbum={() => onOpenModal('album')}
         primaryCta={
@@ -253,15 +320,32 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
             type="button"
             onClick={onCropIntoSanctuary}
             disabled={isJudging}
-            className="buttercup-cta rounded-full px-6 h-[38px] font-display text-[14px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 whitespace-nowrap"
+            aria-label={
+              report.cropped ? 'Welcomed in Garden' : 'Welcome to Garden'
+            }
+            title={report.cropped ? 'Welcomed in Garden' : 'Welcome to Garden'}
+            className={`buttercup-cta rounded-full font-display font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 whitespace-nowrap ${
+              showLabels ? 'px-6 min-h-[48px] text-[14.5px]' : 'w-16 h-16'
+            }`}
           >
             {report.cropped ? (
               <>
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Added to Garden</span>
+                <Check
+                  className={
+                    showLabels
+                      ? 'w-4.5 h-4.5 stroke-[3]'
+                      : 'w-7 h-7 stroke-[3]'
+                  }
+                />
+                {showLabels && <span>Welcomed in Garden</span>}
               </>
             ) : (
-              <span>✂️ Add to Garden</span>
+              <>
+                <span className={showLabels ? 'text-[16px]' : 'text-[26px]'}>
+                  ✂️
+                </span>
+                {showLabels && <span>Welcome to Garden</span>}
+              </>
             )}
           </button>
         }
