@@ -27,7 +27,7 @@ if (rawCreds) {
     // rawCreds is not valid JSON string, will rely on file fallback
   }
 } else {
-  const localSaPath = path.resolve(__dirname, '../../firebase-service-account.json');
+  const localSaPath = path.resolve(process.cwd(), 'firebase-service-account.json');
   if (fs.existsSync(localSaPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(localSaPath, 'utf8'));
