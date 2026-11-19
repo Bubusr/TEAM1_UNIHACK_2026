@@ -87,14 +87,57 @@ export async function checkRedirectResult(): Promise<User | null> {
     if (cred?.user) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(DEV_KEEPER_STORAGE_KEY);
+        sessionStorage.removeItem('paws_auth_redirect_pending');
       }
       devCurrentUser = null;
       return cred.user;
     }
   } catch (err) {
     console.warn('getRedirectResult check:', err);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('paws_auth_redirect_pending');
+    }
+    throw err;
   }
   return null;
+}
+
+export async function signInWithGoogleRedirect(): Promise<void> {
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('paws_auth_redirect_pending', '1');
+  }
+  try {
+    await signInWithRedirect(auth, googleProvider);
+  } catch (err: any) {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('paws_auth_redirect_pending');
+    }
+    console.error('Firebase signInWithRedirect error:', err?.code, err?.message, err);
+
+    // If unauthorized domain happens in dev fallback mode:
+    if (import.meta.env.DEV && err?.code === 'auth/unauthorized-domain') {
+      console.warn(
+        '⚠️ Firebase auth/unauthorized-domain: Falling back to Local Dev Keeper.'
+      );
+      const profile: DevKeeperProfile = {
+        uid: 'dev-keeper-001',
+        email: 'keeper@pawsandpicket.local',
+        displayName: 'Dev Keeper (Local)',
+      };
+      const devUser = makeDevUser(profile);
+      devCurrentUser = devUser;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(DEV_KEEPER_STORAGE_KEY, JSON.stringify(profile));
+      }
+      devAuthListeners.forEach((fn) => fn(devUser));
+      return;
+    }
+
+    const code = err?.code ? `[${err.code}] ` : '';
+    const errObj = new Error(`${code}${err?.message || 'Google Sign-In failed.'}`);
+    (errObj as any).code = err?.code;
+    throw errObj;
+  }
 }
 
 export async function signInWithGooglePopup(): Promise<User> {

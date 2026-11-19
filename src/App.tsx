@@ -34,6 +34,7 @@ import { processedCache, processCutoutImage } from './components/CroppedPetCutou
 import {
   checkRedirectResult,
   signInWithGooglePopup,
+  signInWithGoogleRedirect,
   signOutKeeper,
   subscribeToAuth,
 } from './lib/firebase';
@@ -621,7 +622,36 @@ export default function App() {
       refreshBrowserWallet();
     });
 
-    void checkRedirectResult();
+    const isRedirectPending =
+      typeof window !== 'undefined' &&
+      sessionStorage.getItem('paws_auth_redirect_pending') === '1';
+
+    if (isRedirectPending) {
+      setAuthLoading(true);
+      setProfileBusy('auth');
+    }
+
+    checkRedirectResult()
+      .then((user) => {
+        if (user) {
+          setProfileFeedback({
+            type: 'ok',
+            text: 'Signed in & Cloud Sanctuary synced ✓',
+          });
+        }
+      })
+      .catch((err) => {
+        setProfileFeedback({
+          type: 'err',
+          text: err instanceof Error ? err.message : 'Google Sign-In failed.',
+        });
+      })
+      .finally(() => {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('paws_auth_redirect_pending');
+        }
+        setProfileBusy(null);
+      });
 
     const unsubAuth = subscribeToAuth(async (firebaseUser) => {
       setAuthLoading(false);
@@ -1702,26 +1732,13 @@ export default function App() {
     setProfileBusy('auth');
     setProfileFeedback(null);
     try {
-      await signInWithGooglePopup();
-      const res = getStoredGuestToken()
-        ? await apiMergeGuestIntoKeeper()
-        : { mergeResult: {}, state: await fetchKeeperState() };
-      applyKeeperServerState(res.state);
-      const mergedCount = Number(res.mergeResult?.migratedPetCount || 0);
-      setProfileFeedback({
-        type: 'ok',
-        text:
-          mergedCount > 0
-            ? `Signed in & merged ${mergedCount} guest pet(s) into Cloud Sanctuary ✓`
-            : 'Signed in & Cloud Sanctuary synced ✓',
-      });
+      await signInWithGoogleRedirect();
     } catch (err) {
+      setProfileBusy(null);
       setProfileFeedback({
         type: 'err',
         text: err instanceof Error ? err.message : 'Google Sign-In failed.',
       });
-    } finally {
-      setProfileBusy(null);
     }
   };
 
