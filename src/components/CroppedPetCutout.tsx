@@ -13,12 +13,29 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
+export function isTransparentOrCutout(url: string): boolean {
+  if (!url) return false;
+  if (url.startsWith('data:image/png')) return true;
+  if (url.endsWith('.png')) return true;
+  if (processedCache.has(url)) return true;
+  return false;
+}
+
+// Pre-warm ISNet background removal model in browser background
+if (typeof window !== 'undefined') {
+  void import('@imgly/background-removal')
+    .then(({ preload }) => {
+      void preload({ model: 'isnet_fp16' }).catch(() => {});
+    })
+    .catch(() => {});
+}
+
 /**
- * Downscale image to max 320px data URL before feeding to AI model.
- * Processing 320x320 is ~10x faster than 960x960 (~0.6s vs 4s)
- * while maintaining crisp resolution for the 84px - 140px pet avatar.
+ * Downscale image to max 512px PNG before feeding to AI model.
+ * 512x512 matches ISNet's native neural architecture for crisp edges
+ * without JPEG compression block artifacts around fur, paws, and snouts.
  */
-function getDownscaledDataUrl(src: string, maxDim = 320): Promise<string> {
+function getDownscaledDataUrl(src: string, maxDim = 512): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -46,7 +63,7 @@ function getDownscaledDataUrl(src: string, maxDim = 320): Promise<string> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        resolve(canvas.toDataURL('image/png'));
       } catch {
         resolve(src);
       }
@@ -56,192 +73,35 @@ function getDownscaledDataUrl(src: string, maxDim = 320): Promise<string> {
   });
 }
 
-/**
- * Checks if image corners share a uniform backdrop (studio white, green screen, solid wall, etc.).
- * If uniform, applies edge BFS flood-fill to make the background transparent in < 5ms.
- */
-function extractUniformCanvasCutout(
-  src: string
-): Promise<{ isUniform: boolean; dataUrl: string } | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const size = 256;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        if (!ctx) {
-          resolve(null);
-          return;
-        }
 
-        // Cover-draw centered square
-        const minSide = Math.min(img.width, img.height);
-        const sx = (img.width - minSide) / 2;
-        const sy = (img.height - minSide) / 2;
-        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-
-        const imageData = ctx.getImageData(0, 0, size, size);
-        const data = imageData.data;
-
-        // Sample 4 corners to check background uniformity
-        const cornerCoords = [
-          [2, 2],
-          [size - 3, 2],
-          [2, size - 3],
-          [size - 3, size - 3],
-        ];
-        let avgR = 0;
-        let avgG = 0;
-        let avgB = 0;
-        for (const [cx, cy] of cornerCoords) {
-          const i = (cy * size + cx) * 4;
-          avgR += data[i];
-          avgG += data[i + 1];
-          avgB += data[i + 2];
-        }
-        avgR /= 4;
-        avgG /= 4;
-        avgB /= 4;
-
-        let maxCornerSpread = 0;
-        for (const [cx, cy] of cornerCoords) {
-          const i = (cy * size + cx) * 4;
-          const d =
-            Math.abs(data[i] - avgR) +
-            Math.abs(data[i + 1] - avgG) +
-            Math.abs(data[i + 2] - avgB);
-          if (d > maxCornerSpread) maxCornerSpread = d;
-        }
-
-        // Low color variance across corners means uniform backdrop (any color: white, green, pastel, gray, etc.)
-        const isUniformBg = maxCornerSpread < 55;
-        if (!isUniformBg) {
-          resolve({ isUniform: false, dataUrl: '' });
-          return;
-        }
-
-        // Edge BFS flood-fill to remove connected uniform background cleanly
-        const total = size * size;
-        const visited = new Uint8Array(total);
-        const isBg = new Uint8Array(total);
-        const queue = new Int32Array(total);
-        let head = 0;
-        let tail = 0;
-
-        const threshold = 28;
-        const softEdge = 42;
-
-        const matchesBg = (idx: number) => {
-          const p = idx * 4;
-          const dr = data[p] - avgR;
-          const dg = data[p + 1] - avgG;
-          const db = data[p + 2] - avgB;
-          return Math.sqrt(dr * dr + dg * dg + db * db);
-        };
-
-        const enqueue = (x: number, y: number) => {
-          if (x < 0 || y < 0 || x >= size || y >= size) return;
-          const idx = y * size + x;
-          if (visited[idx]) return;
-          visited[idx] = 1;
-          const dist = matchesBg(idx);
-          if (dist <= threshold) {
-            isBg[idx] = 1;
-            queue[tail++] = idx;
-          }
-        };
-
-        for (let x = 0; x < size; x++) {
-          enqueue(x, 0);
-          enqueue(x, size - 1);
-        }
-        for (let y = 0; y < size; y++) {
-          enqueue(0, y);
-          enqueue(size - 1, y);
-        }
-
-        while (head < tail) {
-          const cur = queue[head++];
-          const cx = cur % size;
-          const cy = (cur - cx) / size;
-          enqueue(cx + 1, cy);
-          enqueue(cx - 1, cy);
-          enqueue(cx, cy + 1);
-          enqueue(cx, cy - 1);
-        }
-
-        // Apply transparency + edge feathering
-        for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-            const idx = y * size + x;
-            const p = idx * 4;
-            if (isBg[idx]) {
-              data[p + 3] = 0;
-            } else {
-              const dist = matchesBg(idx);
-              const touchesBg =
-                (x > 0 && isBg[idx - 1]) ||
-                (x < size - 1 && isBg[idx + 1]) ||
-                (y > 0 && isBg[idx - size]) ||
-                (y < size - 1 && isBg[idx + size]);
-              if (touchesBg && dist < softEdge) {
-                data[p + 3] = Math.round(
-                  255 * Math.min(1, Math.max(0.25, (dist - 10) / softEdge))
-                );
-              }
-            }
-          }
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-        const dataUrl = canvas.toDataURL('image/png');
-        resolve({ isUniform: true, dataUrl });
-      } catch {
-        resolve(null);
-      }
-    };
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
 
 /**
- * 2-Tier background removal:
- * 1. Fast Canvas BFS flood-fill for uniform/studio/solid backgrounds (< 5ms).
- * 2. Optimized AI Segmentation Model (@imgly/background-removal) for complex outdoor/natural scenes (< 1s).
- * Fallback to crisp species silhouette sticker if AI is unavailable or loading.
+ * High-precision neural background removal (@imgly/background-removal)
+ * using ISNet FP16 across all animal photos (dogs, cats, bunnies).
+ * Starter & neighbor pets are pre-loaded directly as transparent PNGs (0ms).
  */
 async function executeCutout(
   src: string,
   mode: CutoutMode,
   cacheKey: string
 ): Promise<{ url: string; isSilhouette: boolean }> {
-  // Step 1: Check uniform background via fast Canvas inspection (< 5ms)
-  try {
-    const canvasResult = await extractUniformCanvasCutout(src);
-    if (canvasResult && canvasResult.isUniform) {
-      processedCache.set(cacheKey, canvasResult.dataUrl);
-      processedCache.set(`auto:${src}`, canvasResult.dataUrl);
-      processedCache.set(`studio:${src}`, canvasResult.dataUrl);
-      return { url: canvasResult.dataUrl, isSilhouette: false };
-    }
-  } catch (err) {
-    console.debug('[CroppedPetCutout] Canvas inspection skipped:', err);
+  // If already transparent PNG or dataUrl, return as-is immediately (0ms)
+  if (isTransparentOrCutout(src)) {
+    processedCache.set(cacheKey, src);
+    processedCache.set(`auto:${src}`, src);
+    processedCache.set(`studio:${src}`, src);
+    processedCache.set(src, src);
+    return { url: src, isSilhouette: false };
   }
 
-  // Step 2: For outdoor / complex non-uniform scenes, trigger AI background removal model
+  // Real AI Segmentation Model (@imgly/background-removal) for pet photos
   if (mode === 'auto' || mode === 'studio') {
     try {
-      // Downscale to 320px data URL for 10x faster ONNX execution (~0.8s)
-      const inputSrc = await getDownscaledDataUrl(src, 320);
+      const inputSrc = await getDownscaledDataUrl(src, 512);
 
       const { removeBackground } = await import('@imgly/background-removal');
       const blob = await removeBackground(inputSrc, {
-        model: 'isnet_quint8',
+        model: 'isnet_fp16',
         debug: false,
         rescale: true,
       });
@@ -250,17 +110,18 @@ async function executeCutout(
       processedCache.set(`auto:${src}`, resultUrl);
       processedCache.set(`studio:${src}`, resultUrl);
       processedCache.set(src, resultUrl);
+      processedCache.set(resultUrl, resultUrl);
       return { url: resultUrl, isSilhouette: false };
     } catch (aiErr) {
       console.warn(
-        '[CroppedPetCutout] AI background removal model fallback to silhouette:',
+        '[CroppedPetCutout] AI background removal model fallback:',
         aiErr
       );
     }
   }
 
-  // Step 3: Fallback to species sticker silhouette
-  return { url: src, isSilhouette: true };
+  // Fallback to species sticker silhouette ONLY if explicitly mode === 'silhouette'
+  return { url: src, isSilhouette: mode === 'silhouette' };
 }
 
 export function processCutoutImage(
@@ -377,6 +238,15 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
   // Initialize with cached transparent cutout if available, OR clean sticker silhouette.
   // NEVER flashes raw rectangular un-cutout photo on the garden grass!
   const [cutout, setCutout] = useState<{ url: string; isSilhouette: boolean }>(() => {
+    if (isTransparentOrCutout(photoUrl)) {
+      const cached =
+        processedCache.get(photoUrl) ||
+        processedCache.get(`${mode}:${photoUrl}`) ||
+        processedCache.get(`auto:${photoUrl}`) ||
+        processedCache.get(`studio:${photoUrl}`) ||
+        photoUrl;
+      return { url: cached, isSilhouette: false };
+    }
     const cached =
       processedCache.get(photoUrl) ||
       processedCache.get(`${mode}:${photoUrl}`) ||
@@ -387,7 +257,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
     }
     return {
       url: photoUrl,
-      isSilhouette: true,
+      isSilhouette: mode === 'silhouette',
     };
   });
 
@@ -395,6 +265,16 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
 
   useEffect(() => {
     let active = true;
+    if (isTransparentOrCutout(photoUrl)) {
+      const cached =
+        processedCache.get(photoUrl) ||
+        processedCache.get(`${mode}:${photoUrl}`) ||
+        processedCache.get(`auto:${photoUrl}`) ||
+        processedCache.get(`studio:${photoUrl}`) ||
+        photoUrl;
+      setCutout({ url: cached, isSilhouette: false });
+      return;
+    }
     const cached =
       processedCache.get(photoUrl) ||
       processedCache.get(`${mode}:${photoUrl}`) ||

@@ -554,6 +554,8 @@ export default function App() {
     setPets(
       state.pets.map((p) => {
         const cached =
+          (p.petUid && processedCache.get(p.petUid)) ||
+          (p.id && processedCache.get(p.id)) ||
           processedCache.get(p.photoUrl) ||
           processedCache.get(`auto:${p.photoUrl}`) ||
           processedCache.get(`studio:${p.photoUrl}`);
@@ -1347,6 +1349,7 @@ export default function App() {
         processedCache.set(activeReport.photoUrl, cutoutUrl);
         processedCache.set(`studio:${activeReport.photoUrl}`, cutoutUrl);
         processedCache.set(`auto:${activeReport.photoUrl}`, cutoutUrl);
+        processedCache.set(cutoutUrl, cutoutUrl);
       }
 
       if (hasServerSession && activeReport.submissionUid) {
@@ -1359,6 +1362,7 @@ export default function App() {
             processedCache.set(result.petUid, cutoutUrl);
             processedCache.set(`studio:${result.petUid}`, cutoutUrl);
             processedCache.set(`auto:${result.petUid}`, cutoutUrl);
+            processedCache.set(cutoutUrl, cutoutUrl);
           }
           applyKeeperServerState(state);
           setSelectedPetId(result.petUid);
