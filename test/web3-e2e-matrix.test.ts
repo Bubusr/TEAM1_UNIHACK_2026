@@ -22,7 +22,9 @@ import {
 
 describe('Web3 End-to-End Test Matrix (Phase H)', () => {
   const runId = crypto.randomBytes(4).toString('hex');
-  const CONTRACT_ADDR = '0x2aA2EbA597E8E2a1bB727Fd4317dBb6cEC2Bee31';
+  const CONTRACT_ADDR =
+    process.env.PET_PASSPORT_CONTRACT_ADDRESS ||
+    '0x1a5913d8a00247ccad7bb0ed879b3be43ca112b0';
 
   const testWallet = ethers.Wallet.createRandom();
   const WALLET_ADDR = testWallet.address.toLowerCase();
