@@ -82,7 +82,7 @@ export function validateImageUpload(
   };
 }
 
-export const GEMINI_REQUEST_TIMEOUT_MS = 10000; // 10s per candidate model call
+export const GEMINI_REQUEST_TIMEOUT_MS = 25000; // 25s per candidate model call
 export const GEMINI_MAX_ATTEMPTS = 1; // Disables uncontrolled internal SDK retries
 
 export async function analyzePetPhotoWithGemini(params: {
@@ -186,6 +186,9 @@ Analyze this image strictly and honestly.
         msg.includes('RESOURCE_EXHAUSTED') ||
         msg.includes('timeout') ||
         msg.includes('timed out') ||
+        msg.includes('DEADLINE_EXCEEDED') ||
+        msg.includes('Deadline expired') ||
+        msg.includes('deadline') ||
         msg.includes('aborted');
       if (!isTemporary) {
         break;
@@ -203,10 +206,13 @@ Analyze this image strictly and honestly.
       msg.includes('overloaded') ||
       msg.includes('timeout') ||
       msg.includes('timed out') ||
+      msg.includes('DEADLINE_EXCEEDED') ||
+      msg.includes('Deadline expired') ||
+      msg.includes('deadline') ||
       msg.includes('aborted')
     ) {
       const friendlyErr = new Error(
-        'Google Gemini AI is currently experiencing high demand or timed out. Please wait a few moments and snap again!'
+        'Google Gemini AI is currently experiencing high demand or request deadline expired. Please wait a moment and snap again!'
       );
       (friendlyErr as Error & { statusCode?: number }).statusCode = 503;
       throw friendlyErr;
