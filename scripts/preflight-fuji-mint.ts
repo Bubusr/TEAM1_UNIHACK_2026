@@ -100,8 +100,8 @@ export async function runPreflight(options: PreflightOptions = {}) {
     console.log('  → Please connect your Core Wallet or pass --sender <0x...>');
   } else {
     try {
-      const checksummedSender = ethers.getAddress(senderAddress);
-      const checksummedRecipient = ethers.getAddress(recipientAddress!);
+      const checksummedSender = ethers.getAddress(senderAddress.toLowerCase());
+      const checksummedRecipient = ethers.getAddress(recipientAddress!.toLowerCase());
       console.log(`  • Transaction Sender:       ${checksummedSender} (Connected Core Wallet)`);
       console.log(`  • NFT Recipient:            ${checksummedRecipient} (Verified Keeper Wallet)`);
       console.log(`  • Trusted EIP-712 Signer:   ${onChainSigner} (Paws & Picket Backend)`);
