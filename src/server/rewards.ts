@@ -12,6 +12,7 @@ export const aiJudgeSchema = z.object({
   species: z.string().trim().min(1).max(24),
   pose: z.string().trim().min(1).max(24),
   petName: z.string().trim().min(1).max(24),
+  box_2d: z.array(z.number()).length(4).optional(),
 });
 
 export type ValidatedAiEvaluation = z.infer<typeof aiJudgeSchema>;
@@ -31,6 +32,7 @@ export interface ServerComputedJudgeOutcome {
   petName: string;
   coinsReward: number;
   expReward: number;
+  box_2d?: [number, number, number, number];
 }
 
 export function sanitizeOneWord(input: string, fallback: string): string {
@@ -68,6 +70,16 @@ export function calculateJudgeOutcome(
   const pose = sanitizeOneWord(evalData.pose, 'Cozy');
   const petName = sanitizeOneWord(evalData.petName, 'Clover');
 
+  let box_2d: [number, number, number, number] | undefined = undefined;
+  if (Array.isArray(evalData.box_2d) && evalData.box_2d.length === 4) {
+    const [ymin, xmin, ymax, xmax] = evalData.box_2d.map((v) =>
+      Math.max(0, Math.min(1000, Math.round(Number(v) || 0)))
+    );
+    if (ymax > ymin && xmax > xmin) {
+      box_2d = [ymin, xmin, ymax, xmax];
+    }
+  }
+
   if (!evalData.isAnimal || confidence < 60) {
     return {
       isAnimal: false,
@@ -84,6 +96,7 @@ export function calculateJudgeOutcome(
       petName,
       coinsReward: 0,
       expReward: 0,
+      box_2d,
     };
   }
 
@@ -111,6 +124,7 @@ export function calculateJudgeOutcome(
       petName,
       coinsReward: 150,
       expReward: 50,
+      box_2d,
     };
   }
 
@@ -130,6 +144,7 @@ export function calculateJudgeOutcome(
       petName,
       coinsReward: 75,
       expReward: 25,
+      box_2d,
     };
   }
 
@@ -148,6 +163,7 @@ export function calculateJudgeOutcome(
     petName,
     coinsReward: 20,
     expReward: 10,
+    box_2d,
   };
 }
 

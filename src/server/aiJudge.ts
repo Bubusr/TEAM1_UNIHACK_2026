@@ -135,7 +135,8 @@ Analyze this image strictly and honestly.
 2. Set confidence (0-100) for how sure you are that this is a genuine animal photograph.
 3. Score sharp (0-100), light (0-100), and themeScore (0-100) against today's theme: "${params.theme}".
 4. Set themeMatch boolean.
-5. Provide species (1 word like Dog, Cat, Bunny, Corgi, Bird, Hamster), pose (1 word like Playful, Cozy, Curious, Happy, Sleepy), and a cute 1-word petName.`,
+5. Provide species (1 word like Dog, Cat, Bunny, Corgi, Bird, Hamster), pose (1 word like Playful, Cozy, Curious, Happy, Sleepy), and a cute 1-word petName.
+6. Return the primary animal bounding box box_2d: [ymin, xmin, ymax, xmax] normalized on a 0-1000 scale.`,
             },
           ],
         },
@@ -153,6 +154,11 @@ Analyze this image strictly and honestly.
               species: { type: Type.STRING },
               pose: { type: Type.STRING },
               petName: { type: Type.STRING },
+              box_2d: {
+                type: Type.ARRAY,
+                items: { type: Type.INTEGER },
+                description: '[ymin, xmin, ymax, xmax] from 0 to 1000',
+              },
             },
             required: [
               'isAnimal',

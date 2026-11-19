@@ -1336,7 +1336,11 @@ export default function App() {
 
       if (!cutoutUrl) {
         try {
-          const res = await processCutoutImage(activeReport.photoUrl, 'auto');
+          const res = await processCutoutImage(
+            activeReport.photoUrl,
+            'auto',
+            activeReport.box_2d
+          );
           if (res && !res.isSilhouette) {
             cutoutUrl = res.url;
           }
@@ -1399,6 +1403,7 @@ export default function App() {
         bondXp: 15,
         careCount: 0,
         minted: false,
+        box_2d: activeReport.box_2d,
       };
 
       setPets((prev) =>
@@ -1594,11 +1599,16 @@ export default function App() {
         cropped: false,
         minted: false,
         unjudged: false,
+        box_2d: Array.isArray(payload.box_2d) && payload.box_2d.length === 4
+          ? (payload.box_2d as [number, number, number, number])
+          : undefined,
       };
 
       setActiveReport(judgedReport);
+      // Pre-warm Pipeline B with animal detection bounding box ROI
+      void processCutoutImage(dataUrl, 'auto', judgedReport.box_2d);
       if (judgedReport.photoUrl && judgedReport.photoUrl !== dataUrl) {
-        void processCutoutImage(judgedReport.photoUrl, 'auto');
+        void processCutoutImage(judgedReport.photoUrl, 'auto', judgedReport.box_2d);
       }
       setAlbum((prev) => [judgedReport, ...prev]);
     } catch (err: unknown) {

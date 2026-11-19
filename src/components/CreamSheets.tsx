@@ -259,6 +259,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                           mode={pet.cutoutMode ?? 'auto'}
                           accessory={pet.accessory}
                           className="w-11 h-11"
+                          bbox={pet.box_2d}
                         />
                       </div>
                       <div>
@@ -1368,6 +1369,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                                   mode={pet.cutoutMode ?? 'auto'}
                                   accessory={pet.accessory}
                                   className="w-10 h-10"
+                                  bbox={pet.box_2d}
                                 />
                               </div>
                               <div className="min-w-0">

@@ -1,89 +1,203 @@
-import React, { useEffect, useId, useState } from 'react';
-import { CutoutMode } from '../types';
+import React, { useState, useEffect, useId } from 'react';
+import type { CutoutMode } from '../types';
 
+// In-memory LRU-style cache for segmented transparent PNGs (prevents re-computing across renders)
 export const processedCache = new Map<string, string>();
-const inFlightRequests = new Map<string, Promise<{ url: string; isSilhouette: boolean }>>();
+const inFlightRequests = new Map<
+  string,
+  Promise<{ url: string; isSilhouette: boolean }>
+>();
+
+function isTransparentOrCutout(url: string): boolean {
+  if (!url) return false;
+  return (
+    url.startsWith('data:image/png') ||
+    url.endsWith('.png') ||
+    url.includes('/cropped_') ||
+    url.includes('/neighbor_')
+  );
+}
 
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
 }
 
-export function isTransparentOrCutout(url: string): boolean {
-  if (!url) return false;
-  if (url.startsWith('data:image/png')) return true;
-  if (url.endsWith('.png')) return true;
-  if (processedCache.has(url)) return true;
-  return false;
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(img);
+    img.src = src;
+  });
 }
 
-// Pre-warm ISNet background removal model in browser background
+// Warm up ISNet neural network model in browser memory immediately on app load
 if (typeof window !== 'undefined') {
   void import('@imgly/background-removal')
     .then(({ preload }) => {
-      void preload({ model: 'isnet_fp16' }).catch(() => {});
+      void preload({ model: 'isnet_fp16' });
     })
     .catch(() => {});
 }
 
 /**
- * Downscale image to max 512px PNG before feeding to AI model.
- * 512x512 matches ISNet's native neural architecture for crisp edges
- * without JPEG compression block artifacts around fur, paws, and snouts.
+ * Connected Component Analysis (Mask Refinement):
+ * Clears disconnected stray speckles, grass bits, and dirt islands (<80px)
+ * leaving only the clean, solid pet body.
  */
-function getDownscaledDataUrl(src: string, maxDim = 512): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        let width = img.naturalWidth || img.width;
-        let height = img.naturalHeight || img.height;
-        if (width <= maxDim && height <= maxDim) {
-          resolve(src);
-          return;
+function refineMaskIslands(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  minComponentSize = 80
+): void {
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const data = imgData.data;
+  const totalPixels = width * height;
+  const isForeground = new Uint8Array(totalPixels);
+  const visited = new Uint8Array(totalPixels);
+
+  for (let i = 0; i < totalPixels; i++) {
+    if (data[i * 4 + 3] > 25) {
+      isForeground[i] = 1;
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pIdx = y * width + x;
+      if (isForeground[pIdx] && !visited[pIdx]) {
+        const component: number[] = [pIdx];
+        const queue: number[] = [pIdx];
+        visited[pIdx] = 1;
+
+        while (queue.length > 0) {
+          const curr = queue.pop()!;
+          const cy = Math.floor(curr / width);
+          const cx = curr % width;
+
+          const neighbors = [
+            [cx + 1, cy],
+            [cx - 1, cy],
+            [cx, cy + 1],
+            [cx, cy - 1],
+          ];
+
+          for (const [nx, ny] of neighbors) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              const nIdx = ny * width + nx;
+              if (isForeground[nIdx] && !visited[nIdx]) {
+                visited[nIdx] = 1;
+                queue.push(nIdx);
+                component.push(nIdx);
+              }
+            }
+          }
         }
-        if (width > height) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
+
+        // If component is a small detached noise island, erase it completely
+        if (component.length < minComponentSize) {
+          for (const idx of component) {
+            data[idx * 4 + 3] = 0;
+          }
         }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(src);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/png'));
-      } catch {
-        resolve(src);
       }
-    };
-    img.onerror = () => resolve(src);
-    img.src = src;
-  });
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
 }
 
-
+/**
+ * Downscale full image to max 512px PNG before feeding to ISNet.
+ */
+function getDownscaledDataUrl(img: HTMLImageElement, maxDim = 512): string {
+  let width = img.naturalWidth || img.width;
+  let height = img.naturalHeight || img.height;
+  if (width <= maxDim && height <= maxDim) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return img.src;
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+  if (width > height) {
+    height = Math.round((height * maxDim) / width);
+    width = maxDim;
+  } else {
+    width = Math.round((width * maxDim) / height);
+    height = maxDim;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return img.src;
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL('image/png');
+}
 
 /**
- * High-precision neural background removal (@imgly/background-removal)
- * using ISNet FP16 across all animal photos (dogs, cats, bunnies).
- * Starter & neighbor pets are pre-loaded directly as transparent PNGs (0ms).
+ * Pipeline B: Crop ROI based on Animal Detection Bounding Box + 12% padding.
+ */
+function cropRoiToCanvas(
+  img: HTMLImageElement,
+  bbox: [number, number, number, number],
+  maxDim = 512
+): { roiDataUrl: string; roiW: number; roiH: number } {
+  const origW = img.naturalWidth || img.width;
+  const origH = img.naturalHeight || img.height;
+  const [ymin, xmin, ymax, xmax] = bbox;
+
+  // Add 12% margin around the animal to avoid clipping ears, tail, or paws
+  const bw = xmax - xmin;
+  const bh = ymax - ymin;
+  const padX = Math.round(bw * 0.12);
+  const padY = Math.round(bh * 0.12);
+
+  const normYmin = Math.max(0, ymin - padY);
+  const normXmin = Math.max(0, xmin - padX);
+  const normYmax = Math.min(1000, ymax + padY);
+  const normXmax = Math.min(1000, xmax + padX);
+
+  const cropX = Math.round((normXmin / 1000) * origW);
+  const cropY = Math.round((normYmin / 1000) * origH);
+  const cropW = Math.max(10, Math.round(((normXmax - normXmin) / 1000) * origW));
+  const cropH = Math.max(10, Math.round(((normYmax - normYmin) / 1000) * origH));
+
+  const scale = Math.min(maxDim / cropW, maxDim / cropH);
+  const targetW = Math.round(cropW * scale);
+  const targetH = Math.round(cropH * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return { roiDataUrl: img.src, roiW: targetW, roiH: targetH };
+  }
+
+  ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
+  return { roiDataUrl: canvas.toDataURL('image/png'), roiW: targetW, roiH: targetH };
+}
+
+/**
+ * High-precision neural background removal:
+ * Pipeline B: Animal Detection ROI -> ISNet FP16 -> Mask Refinement
  */
 async function executeCutout(
   src: string,
   mode: CutoutMode,
-  cacheKey: string
+  cacheKey: string,
+  bbox?: [number, number, number, number]
 ): Promise<{ url: string; isSilhouette: boolean }> {
   // If already transparent PNG or dataUrl, return as-is immediately (0ms)
   if (isTransparentOrCutout(src)) {
@@ -94,27 +208,59 @@ async function executeCutout(
     return { url: src, isSilhouette: false };
   }
 
-  // Real AI Segmentation Model (@imgly/background-removal) for pet photos
   if (mode === 'auto' || mode === 'studio') {
     try {
-      const inputSrc = await getDownscaledDataUrl(src, 512);
-
       const { removeBackground } = await import('@imgly/background-removal');
-      const blob = await removeBackground(inputSrc, {
+      const img = await loadImage(src);
+
+      let inputDataUrl: string;
+      let targetW: number;
+      let targetH: number;
+
+      // Pipeline B: Use animal detection bounding box ROI if available
+      if (bbox && bbox.length === 4 && bbox[2] > bbox[0] && bbox[3] > bbox[1]) {
+        const cropped = cropRoiToCanvas(img, bbox, 512);
+        inputDataUrl = cropped.roiDataUrl;
+        targetW = cropped.roiW;
+        targetH = cropped.roiH;
+      } else {
+        inputDataUrl = getDownscaledDataUrl(img, 512);
+        targetW = img.naturalWidth || 512;
+        targetH = img.naturalHeight || 512;
+      }
+
+      // 1. Neural Segmentation with ISNet FP16
+      const blob = await removeBackground(inputDataUrl, {
         model: 'isnet_fp16',
         debug: false,
         rescale: true,
       });
-      const resultUrl = await blobToDataUrl(blob);
-      processedCache.set(cacheKey, resultUrl);
-      processedCache.set(`auto:${src}`, resultUrl);
-      processedCache.set(`studio:${src}`, resultUrl);
-      processedCache.set(src, resultUrl);
-      processedCache.set(resultUrl, resultUrl);
-      return { url: resultUrl, isSilhouette: false };
+
+      const rawCutoutUrl = await blobToDataUrl(blob);
+
+      // 2. Mask Refinement: Disconnected Component Cleanup
+      const cutoutImg = await loadImage(rawCutoutUrl);
+      const refineCanvas = document.createElement('canvas');
+      refineCanvas.width = cutoutImg.naturalWidth || targetW;
+      refineCanvas.height = cutoutImg.naturalHeight || targetH;
+      const rCtx = refineCanvas.getContext('2d');
+
+      let finalUrl = rawCutoutUrl;
+      if (rCtx) {
+        rCtx.drawImage(cutoutImg, 0, 0);
+        refineMaskIslands(rCtx, refineCanvas.width, refineCanvas.height, 80);
+        finalUrl = refineCanvas.toDataURL('image/png');
+      }
+
+      processedCache.set(cacheKey, finalUrl);
+      processedCache.set(`auto:${src}`, finalUrl);
+      processedCache.set(`studio:${src}`, finalUrl);
+      processedCache.set(src, finalUrl);
+      processedCache.set(finalUrl, finalUrl);
+      return { url: finalUrl, isSilhouette: false };
     } catch (aiErr) {
       console.warn(
-        '[CroppedPetCutout] AI background removal model fallback:',
+        '[CroppedPetCutout] AI background removal fallback:',
         aiErr
       );
     }
@@ -126,13 +272,14 @@ async function executeCutout(
 
 export function processCutoutImage(
   src: string,
-  mode: CutoutMode
+  mode: CutoutMode,
+  bbox?: [number, number, number, number]
 ): Promise<{ url: string; isSilhouette: boolean }> {
   if (mode === 'silhouette') {
     return Promise.resolve({ url: src, isSilhouette: true });
   }
 
-  const cacheKey = `${mode}:${src}`;
+  const cacheKey = bbox ? `${mode}:${src}:${bbox.join(',')}` : `${mode}:${src}`;
   const cached =
     processedCache.get(src) ||
     processedCache.get(cacheKey) ||
@@ -147,7 +294,7 @@ export function processCutoutImage(
     return existing;
   }
 
-  const request = executeCutout(src, mode, cacheKey).finally(() => {
+  const request = executeCutout(src, mode, cacheKey, bbox).finally(() => {
     inFlightRequests.delete(cacheKey);
   });
 
@@ -202,6 +349,7 @@ interface CroppedPetCutoutProps {
   accessory?: string | null;
   flip?: boolean;
   className?: string;
+  bbox?: [number, number, number, number];
 }
 
 const SPECIES_SILHOUETTES: Record<string, string> = {
@@ -232,11 +380,10 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
   accessory,
   flip = false,
   className = 'w-[84px] h-[84px]',
+  bbox,
 }) => {
   const clipId = useId().replace(/:/g, '');
 
-  // Initialize with cached transparent cutout if available, OR clean sticker silhouette.
-  // NEVER flashes raw rectangular un-cutout photo on the garden grass!
   const [cutout, setCutout] = useState<{ url: string; isSilhouette: boolean }>(() => {
     if (isTransparentOrCutout(photoUrl)) {
       const cached =
@@ -284,38 +431,43 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
       setCutout({ url: cached, isSilhouette: false });
       return;
     }
-    processCutoutImage(photoUrl, mode).then((res) => {
+    processCutoutImage(photoUrl, mode, bbox).then((res) => {
       if (active) setCutout(res);
     });
     return () => {
       active = false;
     };
-  }, [photoUrl, mode]);
+  }, [photoUrl, mode, bbox]);
+
+  const accessoriesMap: Record<string, string> = {
+    'item-bell': '🔔',
+    'item-ribbon': '🎀',
+    'item-flower': '🌸',
+  };
 
   return (
-    <div className={`relative flex items-center justify-center ${className}`}>
-      {/* Soft Grass Contact Shadow */}
-      <div
-        aria-hidden="true"
-        className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-[58%] h-2.5 rounded-full bg-[#69B558]/40 blur-[1px]"
-      />
-
+    <div
+      className={`relative inline-flex items-center justify-center select-none ${className}`}
+      style={{ transform: flip ? 'scaleX(-1)' : 'none' }}
+    >
       {cutout.isSilhouette ? (
-        /* Scissor-cropped organic silhouette matching the Polaroid cut-line */
         <svg
           viewBox="0 0 200 200"
-          className="w-full h-full overflow-visible transition-opacity duration-300"
-          style={{
-            transform: flip ? 'scaleX(-1)' : undefined,
-            filter:
-              'drop-shadow(0 0 2px #FFFDF9) drop-shadow(0 0 1px #FFFDF9) drop-shadow(0 3px 4px rgba(75,60,70,0.22))',
-          }}
+          className="w-full h-full drop-shadow-[0_4px_10px_rgba(40,24,10,0.18)]"
+          aria-label={alt}
         >
           <defs>
-            <clipPath id={`pet-cut-${clipId}`}>
+            <clipPath id={`clip-${clipId}`}>
               <path d={silhouettePath} />
             </clipPath>
           </defs>
+          <path
+            d={silhouettePath}
+            fill="#FFFBF0"
+            stroke="#6B4E2E"
+            strokeWidth="5"
+            strokeLinejoin="round"
+          />
           <image
             href={cutout.url}
             x="0"
@@ -323,45 +475,25 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
             width="200"
             height="200"
             preserveAspectRatio="xMidYMid slice"
-            clipPath={`url(#pet-cut-${clipId})`}
-          />
-          <path
-            d={silhouettePath}
-            fill="none"
-            stroke="#FFFDF9"
-            strokeWidth="5"
+            clipPath={`url(#clip-${clipId})`}
           />
         </svg>
       ) : (
-        /* Transparent background cutout (Canvas or AI Model) with crisp sticker outline */
         <img
           src={cutout.url}
           alt={alt}
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-contain pointer-events-none transition-opacity duration-300"
-          style={{
-            transform: flip ? 'scaleX(-1)' : undefined,
-            filter:
-              'drop-shadow(0 0 1.8px #FFFDF9) drop-shadow(0 0 1.8px #FFFDF9) drop-shadow(0 3px 4px rgba(75,60,70,0.22))',
-          }}
+          className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.15)] pointer-events-none"
+          loading="eager"
+          decoding="async"
         />
       )}
 
-      {/* Optional Cosmetic Accessory Sticker on Pet's Head */}
-      {accessory === 'straw-hat' && (
+      {accessory && accessoriesMap[accessory] && (
         <span
-          aria-hidden="true"
-          className="absolute -top-2 left-1/2 -translate-x-1/2 text-[22px] leading-none drop-shadow-sm pointer-events-none"
+          className="absolute -top-1 -right-1 text-base pointer-events-none select-none drop-shadow"
+          style={{ transform: flip ? 'scaleX(-1)' : 'none' }}
         >
-          👒
-        </span>
-      )}
-      {accessory === 'flower-crown' && (
-        <span
-          aria-hidden="true"
-          className="absolute -top-2 left-1/2 -translate-x-1/2 text-[20px] leading-none drop-shadow-sm pointer-events-none"
-        >
-          🌸
+          {accessoriesMap[accessory]}
         </span>
       )}
     </div>

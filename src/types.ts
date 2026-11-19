@@ -91,6 +91,7 @@ export interface SanctuaryPet {
   questPetDone?: boolean;
   questFeedDone?: boolean;
   questPlayDone?: boolean;
+  box_2d?: [number, number, number, number];
 }
 
 export interface NeighborGarden {
@@ -144,6 +145,7 @@ export interface JudgeReport {
   cropped?: boolean;
   minted?: boolean;
   unjudged?: boolean;
+  box_2d?: [number, number, number, number];
 }
 
 export interface ShopItem {

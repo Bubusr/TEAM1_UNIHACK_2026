@@ -549,6 +549,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                     accessory={pet.accessory}
                     flip={pos.flip}
                     className="w-[78px] h-[78px]"
+                    bbox={pet.box_2d}
                   />
                 </div>
                 {isSelected && (
