@@ -169,11 +169,23 @@ Pet documents in Firestore collection `pets`:
 
 ---
 
-## 11. Steps Remaining for Milestone I (Real Fuji Mint)
+## 11. Milestone I (Real Fuji Mint) — COMPLETED & ACCEPTED
 
-1. Enable billing on project `paws-local` or configure container hosting.
-2. Deploy backend Express server to Cloud Run and configure `APP_URL`.
-3. Run `PRODUCTION_SMOKE_TEST.md` against the live HTTPS URL.
-4. Connect Keeper's Core Wallet to act as Transaction Sender & NFT Recipient.
-5. User gives explicit approval to broadcast `mintWithClaim` on Avalanche Fuji C-Chain.
-6. Verify token #1 mint and event log independently on Snowtrace.
+All steps of Milestone I have been successfully executed and verified on Avalanche Fuji:
+
+1. **HTTPS Access Established:** Running via Cloudflare tunnel (`https://chi-low-fantastic-aaron.trycloudflare.com`).
+2. **Keeper Wallet Bound:** Verified via EIP-191 challenge signature (`0xC05De09A4AF5eda0B5e191a1F569A787Ee5aA889`).
+3. **Explicit User Gate:** Confirmed with exact authorization string.
+4. **On-Chain Transaction Minted:** Broadcasted directly from Core Wallet to Avalanche Fuji C-Chain:
+   - **Token ID:** `1`
+   - **Transaction Hash:** [`0xbf87e4929ea7426ecabd643176895c296d5fbfc8f17771b24bde6aedca2c415d`](https://testnet.snowtrace.io/tx/0xbf87e4929ea7426ecabd643176895c296d5fbfc8f17771b24bde6aedca2c415d)
+   - **Token On Snowtrace:** [`0x2aA2EbA597E8E2a1bB727Fd4317dBb6cEC2Bee31?a=1`](https://testnet.snowtrace.io/token/0x2aA2EbA597E8E2a1bB727Fd4317dBb6cEC2Bee31?a=1)
+   - **Block Number:** `61311936`
+   - **Gas Used:** `291,898` (~0.00000004 AVAX)
+5. **Reconciliation Complete:** Firestore database reflects `mintStatus: "minted"`, `tokenId: "1"`, and milestone memory.
+6. **Detailed Reports:**
+   - [`MEMBER03_E2E_MINT_REPORT.md`](file:///Users/apple/HACKATHON/MEMBER03_E2E_MINT_REPORT.md)
+   - [`MEMBER03_OFFCHAIN_RECONCILIATION_REPORT.md`](file:///Users/apple/HACKATHON/MEMBER03_OFFCHAIN_RECONCILIATION_REPORT.md)
+   - [`MEMBER03_WEB3_SECURITY_REPORT.md`](file:///Users/apple/HACKATHON/MEMBER03_WEB3_SECURITY_REPORT.md)
+   - [`MEMBER03_E2E_PREFLIGHT.md`](file:///Users/apple/HACKATHON/MEMBER03_E2E_PREFLIGHT.md)
+   - [`MEMBER03_VOUCHER_SECURITY_REPORT.md`](file:///Users/apple/HACKATHON/MEMBER03_VOUCHER_SECURITY_REPORT.md)
