@@ -1406,6 +1406,11 @@ export default function App() {
       const txHash = await executeFujiMintTx({
         contractAddress,
         recipient: claim.recipient,
+        petId: (claim as any).petId,
+        petName: (claim as any).petName,
+        species: (claim as any).species,
+        score: (claim as any).score,
+        tokenURI: (claim as any).tokenURI || claim.metadataUri,
         petIdHash: claim.petIdHash,
         metadataUri: claim.metadataUri,
         nonce: claim.nonce,

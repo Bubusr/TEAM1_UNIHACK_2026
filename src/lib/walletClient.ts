@@ -141,6 +141,7 @@ async function callProviderRpc<T>(
 }
 
 const PASSPORT_CLIENT_ABI = [
+  'function mintWithClaim((address recipient, uint256 petId, string petName, string species, uint256 score, string tokenURI, uint256 nonce, uint256 deadline) claim, bytes signature) external returns (uint256)',
   'function mintWithClaim(address recipient, bytes32 petIdHash, string metadataUri, uint256 nonce, uint256 deadline, bytes signature) external returns (uint256)',
 ] as const;
 
@@ -563,8 +564,13 @@ export async function signChallengeMessage(
 export async function executeFujiMintTx(params: {
   contractAddress: string;
   recipient: string;
-  petIdHash: string;
-  metadataUri: string;
+  petId?: string | number;
+  petName?: string;
+  species?: string;
+  score?: number;
+  tokenURI?: string;
+  petIdHash?: string;
+  metadataUri?: string;
   nonce: string;
   deadline: number;
   signature: string;
@@ -583,7 +589,7 @@ export async function executeFujiMintTx(params: {
   const signerAddr = (await signer.getAddress()).toLowerCase();
   if (signerAddr !== params.recipient.toLowerCase()) {
     throw new Error(
-      `Switch your active wallet account to your verified wallet (${params.recipient.slice(0, 6)}...${params.recipient.slice(-4)}).`
+      `Switch your active wallet account to your verified wallet (${params.recipient.slice(0, 6)}...${params.recipient.slice(-4)}). Active account is ${signerAddr.slice(0, 6)}...${signerAddr.slice(-4)}.`
     );
   }
 
@@ -593,14 +599,33 @@ export async function executeFujiMintTx(params: {
     signer
   );
 
-  const tx = await contract.mintWithClaim(
-    params.recipient,
-    params.petIdHash,
-    params.metadataUri,
-    BigInt(params.nonce),
-    BigInt(params.deadline),
-    params.signature
-  );
+  let tx;
+  if (params.petId !== undefined && params.petName !== undefined) {
+    const claimTuple = [
+      params.recipient,
+      BigInt(params.petId),
+      params.petName,
+      params.species || 'pet',
+      BigInt(params.score ?? 80),
+      params.tokenURI || params.metadataUri || '',
+      BigInt(params.nonce),
+      BigInt(params.deadline),
+    ];
+    tx = await contract['mintWithClaim((address,uint256,string,string,uint256,string,uint256,uint256),bytes)'](
+      claimTuple,
+      params.signature
+    );
+  } else {
+    tx = await contract['mintWithClaim(address,bytes32,string,uint256,uint256,bytes)'](
+      params.recipient,
+      params.petIdHash || ethers.ZeroHash,
+      params.metadataUri || '',
+      BigInt(params.nonce),
+      BigInt(params.deadline),
+      params.signature
+    );
+  }
+
   const receipt = await tx.wait(1);
   if (!receipt || receipt.status !== 1) {
     throw new Error('Mint transaction failed on Avalanche Fuji.');
