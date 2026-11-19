@@ -8,6 +8,53 @@ const inFlightRequests = new Map<
   Promise<{ url: string; isSilhouette: boolean }>
 >();
 
+// Persistent IndexedDB cache for transparent PNG cutouts (survives page refresh F5)
+const IDB_NAME = 'paws_cutouts_v1';
+const IDB_STORE = 'cutouts';
+
+function getCutoutIdb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      return reject(new Error('IndexedDB unavailable'));
+    }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function getPersistentCutout(key: string): Promise<string | null> {
+  try {
+    const db = await getCutoutIdb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.get(key);
+      req.onsuccess = () => resolve((req.result as string) || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function setPersistentCutout(key: string, dataUrl: string): Promise<void> {
+  try {
+    const db = await getCutoutIdb();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    store.put(dataUrl, key);
+  } catch {
+    // Non-critical cache failure
+  }
+}
+
 function isTransparentOrCutout(url: string): boolean {
   if (!url) return false;
   return (
@@ -257,6 +304,10 @@ async function executeCutout(
       processedCache.set(`studio:${src}`, finalUrl);
       processedCache.set(src, finalUrl);
       processedCache.set(finalUrl, finalUrl);
+
+      // Persist transparent PNG to IndexedDB so page reload (F5) is instant (0ms)
+      void setPersistentCutout(src, finalUrl);
+      void setPersistentCutout(cacheKey, finalUrl);
       return { url: finalUrl, isSilhouette: false };
     } catch (aiErr) {
       console.warn(
@@ -270,13 +321,13 @@ async function executeCutout(
   return { url: src, isSilhouette: mode === 'silhouette' };
 }
 
-export function processCutoutImage(
+export async function processCutoutImage(
   src: string,
   mode: CutoutMode,
   bbox?: [number, number, number, number]
 ): Promise<{ url: string; isSilhouette: boolean }> {
   if (mode === 'silhouette') {
-    return Promise.resolve({ url: src, isSilhouette: true });
+    return { url: src, isSilhouette: true };
   }
 
   const cacheKey = bbox ? `${mode}:${src}:${bbox.join(',')}` : `${mode}:${src}`;
@@ -286,7 +337,18 @@ export function processCutoutImage(
     processedCache.get(`auto:${src}`) ||
     processedCache.get(`studio:${src}`);
   if (cached) {
-    return Promise.resolve({ url: cached, isSilhouette: false });
+    return { url: cached, isSilhouette: false };
+  }
+
+  // Check persistent IndexedDB cache (fast 2ms lookup) before computing
+  const persisted =
+    (await getPersistentCutout(cacheKey)) || (await getPersistentCutout(src));
+  if (persisted) {
+    processedCache.set(src, persisted);
+    processedCache.set(cacheKey, persisted);
+    processedCache.set(`auto:${src}`, persisted);
+    processedCache.set(`studio:${src}`, persisted);
+    return { url: persisted, isSilhouette: false };
   }
 
   const existing = inFlightRequests.get(cacheKey);
@@ -402,9 +464,10 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
     if (cached) {
       return { url: cached, isSilhouette: false };
     }
+    // Always start with species sticker silhouette to prevent any flash of raw background photo
     return {
       url: photoUrl,
-      isSilhouette: mode === 'silhouette',
+      isSilhouette: true,
     };
   });
 
@@ -431,9 +494,31 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
       setCutout({ url: cached, isSilhouette: false });
       return;
     }
-    processCutoutImage(photoUrl, mode, bbox).then((res) => {
-      if (active) setCutout(res);
+
+    const cacheKey = bbox ? `${mode}:${photoUrl}:${bbox.join(',')}` : `${mode}:${photoUrl}`;
+
+    // 1. First check persistent IndexedDB cache (2-5ms) to avoid re-running ISNet on page refresh
+    void Promise.all([
+      getPersistentCutout(cacheKey),
+      getPersistentCutout(photoUrl),
+    ]).then(([persistedKey, persistedSrc]) => {
+      if (!active) return;
+      const hit = persistedKey || persistedSrc;
+      if (hit) {
+        processedCache.set(photoUrl, hit);
+        processedCache.set(cacheKey, hit);
+        processedCache.set(`auto:${photoUrl}`, hit);
+        processedCache.set(`studio:${photoUrl}`, hit);
+        setCutout({ url: hit, isSilhouette: false });
+        return;
+      }
+
+      // 2. If IndexedDB cache miss, run AI Pipeline B ISNet FP16
+      void processCutoutImage(photoUrl, mode, bbox).then((res) => {
+        if (active) setCutout(res);
+      });
     });
+
     return () => {
       active = false;
     };
@@ -453,7 +538,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
       {cutout.isSilhouette ? (
         <svg
           viewBox="0 0 200 200"
-          className="w-full h-full drop-shadow-[0_4px_10px_rgba(40,24,10,0.18)]"
+          className="w-full h-full drop-shadow-[0_4px_10px_rgba(40,24,10,0.18)] animate-pulse transition-opacity duration-300"
           aria-label={alt}
         >
           <defs>
@@ -476,13 +561,14 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
             height="200"
             preserveAspectRatio="xMidYMid slice"
             clipPath={`url(#clip-${clipId})`}
+            opacity="0.85"
           />
         </svg>
       ) : (
         <img
           src={cutout.url}
           alt={alt}
-          className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.15)] pointer-events-none"
+          className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.15)] pointer-events-none transition-opacity duration-300"
           loading="eager"
           decoding="async"
         />
