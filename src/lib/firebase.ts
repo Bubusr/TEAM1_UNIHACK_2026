@@ -112,15 +112,14 @@ export async function signInWithGooglePopup(): Promise<User> {
     } catch (err: any) {
       console.error('Firebase signInWithPopup error:', err?.code, err?.message, err);
 
-      // If popup was cancelled/closed due to browser cross-origin policy, seamlessly fallback to redirect
-      if (
-        err?.code === 'auth/popup-closed-by-user' ||
-        err?.code === 'auth/cancelled-popup-request' ||
-        err?.code === 'auth/popup-blocked'
-      ) {
-        console.warn('Popup blocked/closed. Auto-falling back to signInWithRedirect...');
-        await signInWithRedirect(auth, googleProvider);
-        return new Promise<User>(() => {});
+      if (err?.code === 'auth/popup-closed-by-user') {
+        throw new Error('Sign-in popup was closed. Please try again.');
+      }
+      if (err?.code === 'auth/cancelled-popup-request') {
+        throw new Error('Sign-in was cancelled. Please try again.');
+      }
+      if (err?.code === 'auth/popup-blocked') {
+        throw new Error('Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.');
       }
 
       // If unauthorized domain happens in dev fallback mode:

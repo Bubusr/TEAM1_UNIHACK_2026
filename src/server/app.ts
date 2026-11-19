@@ -86,11 +86,6 @@ export function createApp() {
   const app = express();
   app.set('trust proxy', 1);
   app.use(express.json({ limit: '12mb' }));
-  app.use((_req, res, next) => {
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
-    next();
-  });
 
   const rootDir = path.resolve(__dirname, '../../');
   app.use(
