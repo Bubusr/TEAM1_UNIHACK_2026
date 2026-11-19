@@ -16,20 +16,15 @@ let appCredential: ReturnType<typeof cert> | undefined;
 
 if (rawCreds) {
   try {
-    const parsed = JSON.parse(rawCreds);
+    const parsed = typeof rawCreds === 'string' && rawCreds.startsWith('"') ? JSON.parse(JSON.parse(rawCreds)) : JSON.parse(rawCreds);
     appCredential = cert(parsed);
+    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      const credsPath = path.join(os.tmpdir(), 'gcp-app-credentials.json');
+      fs.writeFileSync(credsPath, JSON.stringify(parsed, null, 2), 'utf8');
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
+    }
   } catch {
     // rawCreds is not valid JSON string, will rely on file fallback
-  }
-
-  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    try {
-      const credsPath = path.join(os.tmpdir(), 'gcp-app-credentials.json');
-      fs.writeFileSync(credsPath, rawCreds, 'utf8');
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
-    } catch (err) {
-      console.warn('Failed to write credentials to tmpdir:', err);
-    }
   }
 } else {
   const localSaPath = path.resolve(__dirname, '../../firebase-service-account.json');

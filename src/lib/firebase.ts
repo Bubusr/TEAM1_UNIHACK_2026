@@ -4,6 +4,8 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   type User,
 } from 'firebase/auth';
@@ -77,42 +79,79 @@ function getStoredDevUser(): User | null {
   }
 }
 
-export async function signInWithGooglePopup(): Promise<User> {
+let signInInFlight: Promise<User> | null = null;
+
+export async function checkRedirectResult(): Promise<User | null> {
   try {
-    const credential = await signInWithPopup(auth, googleProvider);
-    // If real Google sign in succeeded, clear any leftover dev session
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(DEV_KEEPER_STORAGE_KEY);
-    }
-    devCurrentUser = null;
-    return credential.user;
-  } catch (err: any) {
-    console.error('Firebase signInWithPopup error:', err?.code, err?.message, err);
-
-    // If unauthorized domain happens in dev fallback mode:
-    if (import.meta.env.DEV && err?.code === 'auth/unauthorized-domain') {
-      console.warn(
-        '⚠️ Firebase auth/unauthorized-domain: Falling back to Local Dev Keeper.'
-      );
-      const profile: DevKeeperProfile = {
-        uid: 'dev-keeper-001',
-        email: 'keeper@pawsandpicket.local',
-        displayName: 'Dev Keeper (Local)',
-      };
-      const devUser = makeDevUser(profile);
-      devCurrentUser = devUser;
+    const cred = await getRedirectResult(auth);
+    if (cred?.user) {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(DEV_KEEPER_STORAGE_KEY, JSON.stringify(profile));
+        localStorage.removeItem(DEV_KEEPER_STORAGE_KEY);
       }
-      devAuthListeners.forEach((fn) => fn(devUser));
-      return devUser;
+      devCurrentUser = null;
+      return cred.user;
     }
-
-    const code = err?.code ? `[${err.code}] ` : '';
-    const errObj = new Error(`${code}${err?.message || 'Google Sign-In failed.'}`);
-    (errObj as any).code = err?.code;
-    throw errObj;
+  } catch (err) {
+    console.warn('getRedirectResult check:', err);
   }
+  return null;
+}
+
+export async function signInWithGooglePopup(): Promise<User> {
+  if (signInInFlight) return signInInFlight;
+
+  signInInFlight = (async () => {
+    try {
+      const credential = await signInWithPopup(auth, googleProvider);
+      // If real Google sign in succeeded, clear any leftover dev session
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(DEV_KEEPER_STORAGE_KEY);
+      }
+      devCurrentUser = null;
+      return credential.user;
+    } catch (err: any) {
+      console.error('Firebase signInWithPopup error:', err?.code, err?.message, err);
+
+      // If popup was cancelled/closed due to browser cross-origin policy, seamlessly fallback to redirect
+      if (
+        err?.code === 'auth/popup-closed-by-user' ||
+        err?.code === 'auth/cancelled-popup-request' ||
+        err?.code === 'auth/popup-blocked'
+      ) {
+        console.warn('Popup blocked/closed. Auto-falling back to signInWithRedirect...');
+        await signInWithRedirect(auth, googleProvider);
+        return new Promise<User>(() => {});
+      }
+
+      // If unauthorized domain happens in dev fallback mode:
+      if (import.meta.env.DEV && err?.code === 'auth/unauthorized-domain') {
+        console.warn(
+          '⚠️ Firebase auth/unauthorized-domain: Falling back to Local Dev Keeper.'
+        );
+        const profile: DevKeeperProfile = {
+          uid: 'dev-keeper-001',
+          email: 'keeper@pawsandpicket.local',
+          displayName: 'Dev Keeper (Local)',
+        };
+        const devUser = makeDevUser(profile);
+        devCurrentUser = devUser;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(DEV_KEEPER_STORAGE_KEY, JSON.stringify(profile));
+        }
+        devAuthListeners.forEach((fn) => fn(devUser));
+        return devUser;
+      }
+
+      const code = err?.code ? `[${err.code}] ` : '';
+      const errObj = new Error(`${code}${err?.message || 'Google Sign-In failed.'}`);
+      (errObj as any).code = err?.code;
+      throw errObj;
+    } finally {
+      signInInFlight = null;
+    }
+  })();
+
+  return signInInFlight;
 }
 
 export async function signOutKeeper(): Promise<void> {

@@ -32,6 +32,7 @@ import { DiscoverCameraModal } from './components/camera/DiscoverCameraModal';
 import { IpfsConsentModal } from './components/IpfsConsentModal';
 import { processedCache, processCutoutImage } from './components/CroppedPetCutout';
 import {
+  checkRedirectResult,
   signInWithGooglePopup,
   signOutKeeper,
   subscribeToAuth,
@@ -619,6 +620,8 @@ export default function App() {
     const unsubWallet = subscribePreferredWalletEvents(() => {
       refreshBrowserWallet();
     });
+
+    void checkRedirectResult();
 
     const unsubAuth = subscribeToAuth(async (firebaseUser) => {
       setAuthLoading(false);
