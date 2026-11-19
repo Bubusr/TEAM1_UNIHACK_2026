@@ -483,6 +483,14 @@ const PRELOADED_CUTOUTS: Record<string, string> = {
     '/src/assets/images/neighbor_shiba_dog_1794722670611.png',
   '/src/assets/images/neighbor_shiba_dog_1794722670611.png':
     '/src/assets/images/neighbor_shiba_dog_1794722670611.png',
+  '/src/assets/images/lured_stray_corgi_1794627550798.jpg':
+    '/src/assets/images/lured_stray_corgi_1794627550798.png',
+  '/src/assets/images/lured_stray_corgi_1794627550798.png':
+    '/src/assets/images/lured_stray_corgi_1794627550798.png',
+  '/src/assets/images/polaroid_golden_puppy_1794627548886.jpg':
+    '/src/assets/images/polaroid_golden_puppy_1794627548886.png',
+  '/src/assets/images/polaroid_golden_puppy_1794627548886.png':
+    '/src/assets/images/polaroid_golden_puppy_1794627548886.png',
 };
 
 for (const [src, pngPath] of Object.entries(PRELOADED_CUTOUTS)) {
