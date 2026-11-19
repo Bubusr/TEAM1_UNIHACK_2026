@@ -30,7 +30,7 @@ import { JudgeCardScreen } from './components/JudgeCardScreen';
 import { CreamSheets } from './components/CreamSheets';
 import { DiscoverCameraModal } from './components/camera/DiscoverCameraModal';
 import { IpfsConsentModal } from './components/IpfsConsentModal';
-import { processedCache } from './components/CroppedPetCutout';
+import { processedCache, processCutoutImage } from './components/CroppedPetCutout';
 import {
   signInWithGooglePopup,
   signOutKeeper,
@@ -75,7 +75,7 @@ const INITIAL_PETS: SanctuaryPet[] = [
     id: 'pet-calico',
     name: 'Mochi',
     species: 'cat',
-    photoUrl: '/src/assets/images/cropped_calico_cat_1794637541476.jpg',
+    photoUrl: '/src/assets/images/cropped_calico_cat_1794637541476.png',
     cutoutMode: 'studio',
     x: 34,
     y: 50,
@@ -88,7 +88,7 @@ const INITIAL_PETS: SanctuaryPet[] = [
     id: 'pet-retriever',
     name: 'Sunny',
     species: 'dog',
-    photoUrl: '/src/assets/images/cropped_golden_dog_1794637542709.jpg',
+    photoUrl: '/src/assets/images/cropped_golden_dog_1794637542709.png',
     cutoutMode: 'studio',
     x: 63,
     y: 45,
@@ -101,7 +101,7 @@ const INITIAL_PETS: SanctuaryPet[] = [
     id: 'pet-bunny',
     name: 'Pip',
     species: 'bunny',
-    photoUrl: '/src/assets/images/cropped_fluffy_bunny_1794637542800.jpg',
+    photoUrl: '/src/assets/images/cropped_fluffy_bunny_1794637542800.png',
     cutoutMode: 'studio',
     x: 50,
     y: 62,
@@ -551,7 +551,18 @@ export default function App() {
         owned: state.user.ownedToys.includes(t.id),
       }))
     );
-    setPets(state.pets);
+    setPets(
+      state.pets.map((p) => {
+        const cached =
+          processedCache.get(p.photoUrl) ||
+          processedCache.get(`auto:${p.photoUrl}`) ||
+          processedCache.get(`studio:${p.photoUrl}`);
+        if (cached) {
+          return { ...p, photoUrl: cached, cutoutMode: 'studio' };
+        }
+        return p;
+      })
+    );
     setSelectedPetId((cur) => resolveSelectedPetId(state.pets, cur));
     setFirstBondQuest(state.firstBondQuest);
     setLinkedWallet(state.wallet);
@@ -1315,11 +1326,40 @@ export default function App() {
   const handleCropIntoSanctuary = async () => {
     if (isJudging || judgeError || activeReport.unjudged) return;
     if (!activeReport.cropped) {
+      // 1. Ensure transparent cutout is ready before adding to sanctuary garden
+      let cutoutUrl =
+        processedCache.get(activeReport.photoUrl) ||
+        processedCache.get(`auto:${activeReport.photoUrl}`) ||
+        processedCache.get(`studio:${activeReport.photoUrl}`);
+
+      if (!cutoutUrl) {
+        try {
+          const res = await processCutoutImage(activeReport.photoUrl, 'auto');
+          if (res && !res.isSilhouette) {
+            cutoutUrl = res.url;
+          }
+        } catch {
+          // fallback to silhouette/original
+        }
+      }
+
+      if (cutoutUrl) {
+        processedCache.set(activeReport.photoUrl, cutoutUrl);
+        processedCache.set(`studio:${activeReport.photoUrl}`, cutoutUrl);
+        processedCache.set(`auto:${activeReport.photoUrl}`, cutoutUrl);
+      }
+
       if (hasServerSession && activeReport.submissionUid) {
         try {
           const { result, state } = await apiAddToGarden(
-            activeReport.submissionUid
+            activeReport.submissionUid,
+            cutoutUrl
           );
+          if (cutoutUrl && result.petUid) {
+            processedCache.set(result.petUid, cutoutUrl);
+            processedCache.set(`studio:${result.petUid}`, cutoutUrl);
+            processedCache.set(`auto:${result.petUid}`, cutoutUrl);
+          }
           applyKeeperServerState(state);
           setSelectedPetId(result.petUid);
           setActiveReport((r) => ({
@@ -1342,16 +1382,13 @@ export default function App() {
       setFenceHours(24);
       setEnergy((e) => Math.max(0, e - 5));
 
-      const cachedCutout =
-        processedCache.get(`auto:${activeReport.photoUrl}`) ||
-        processedCache.get(`studio:${activeReport.photoUrl}`);
-
+      const finalPhoto = cutoutUrl || activeReport.photoUrl;
       const newPet: SanctuaryPet = {
         id: `cropped-${activeReport.id}`,
         name: activeReport.petName,
         species: mapSpecies(activeReport.species),
-        photoUrl: cachedCutout || activeReport.photoUrl,
-        cutoutMode: cachedCutout ? 'studio' : 'auto',
+        photoUrl: finalPhoto,
+        cutoutMode: cutoutUrl ? 'studio' : 'auto',
         x: 48,
         y: 52,
         score: activeReport.overallScore,
@@ -1497,6 +1534,9 @@ export default function App() {
     try {
       const { dataUrl, base64, mimeType } = await prepareImageForJudge(file);
 
+      // Pre-warm background removal concurrently in the background while Gemini judges
+      void processCutoutImage(dataUrl, 'auto');
+
       setActiveReport({
         id: `pending-${Date.now()}`,
         submissionUid: undefined,
@@ -1553,6 +1593,9 @@ export default function App() {
       };
 
       setActiveReport(judgedReport);
+      if (judgedReport.photoUrl && judgedReport.photoUrl !== dataUrl) {
+        void processCutoutImage(judgedReport.photoUrl, 'auto');
+      }
       setAlbum((prev) => [judgedReport, ...prev]);
     } catch (err: unknown) {
       let msg = err instanceof Error ? err.message : 'Unable to judge photo.';

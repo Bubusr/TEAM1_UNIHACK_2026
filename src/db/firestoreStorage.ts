@@ -119,7 +119,7 @@ export async function firestoreGetOrCreateUser(
         name: 'Mochi',
         species: 'cat',
         pose: 'Cozy',
-        photoUrl: '/src/assets/images/cropped_calico_cat_1794637541476.jpg',
+        photoUrl: '/src/assets/images/cropped_calico_cat_1794637541476.png',
         cutoutMode: 'studio',
         posX: 34,
         posY: 50,
@@ -134,7 +134,7 @@ export async function firestoreGetOrCreateUser(
         name: 'Sunny',
         species: 'dog',
         pose: 'Happy',
-        photoUrl: '/src/assets/images/cropped_golden_dog_1794637542709.jpg',
+        photoUrl: '/src/assets/images/cropped_golden_dog_1794637542709.png',
         cutoutMode: 'studio',
         posX: 63,
         posY: 45,
@@ -149,7 +149,7 @@ export async function firestoreGetOrCreateUser(
         name: 'Pip',
         species: 'bunny',
         pose: 'Curious',
-        photoUrl: '/src/assets/images/cropped_fluffy_bunny_1794637542800.jpg',
+        photoUrl: '/src/assets/images/cropped_fluffy_bunny_1794637542800.png',
         cutoutMode: 'studio',
         posX: 50,
         posY: 62,
@@ -1446,6 +1446,7 @@ export async function firestoreAddSubmissionToSanctuary(params: {
   uid: string;
   submissionUid: string;
   idempotencyKey: string;
+  cutoutPhotoUrl?: string;
 }) {
   const userRef = adminDb.collection('users').doc(params.uid);
   const subRef = adminDb.collection('photoSubmissions').doc(params.submissionUid);
@@ -1482,10 +1483,11 @@ export async function firestoreAddSubmissionToSanctuary(params: {
     const nextExpPercent = gain % 100;
     const now = new Date().toISOString();
 
+    const chosenPhotoUrl = params.cutoutPhotoUrl || submission.photoUrl;
     const safePetPhotoUrl =
-      submission.photoUrl && submission.photoUrl.length > 900000
-        ? submission.photoUrl.slice(0, 1000) + '...[photo-too-large-for-firestore]'
-        : submission.photoUrl;
+      chosenPhotoUrl && chosenPhotoUrl.length > 900000
+        ? chosenPhotoUrl.slice(0, 1000) + '...[photo-too-large-for-firestore]'
+        : chosenPhotoUrl;
 
     const newPet = {
       petUid,
@@ -1498,7 +1500,7 @@ export async function firestoreAddSubmissionToSanctuary(params: {
       species: mapSpecies(submission.species),
       pose: submission.pose,
       photoUrl: safePetPhotoUrl,
-      cutoutMode: 'auto',
+      cutoutMode: params.cutoutPhotoUrl ? 'studio' : 'auto',
       posX: 48,
       posY: 52,
       flip: false,

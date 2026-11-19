@@ -409,6 +409,7 @@ export async function addSubmissionToSanctuary(params: {
   uid: string;
   submissionUid: string;
   idempotencyKey: string;
+  cutoutPhotoUrl?: string;
 }) {
   if (!process.env.DATABASE_URL) {
     return await firestoreAddSubmissionToSanctuary(params);
@@ -485,8 +486,8 @@ export async function addSubmissionToSanctuary(params: {
         name: submission.petName,
         species: mapSpecies(submission.species),
         pose: submission.pose,
-        photoUrl: submission.photoUrl,
-        cutoutMode: 'auto',
+        photoUrl: params.cutoutPhotoUrl || submission.photoUrl,
+        cutoutMode: params.cutoutPhotoUrl ? 'studio' : 'auto',
         posX: 48,
         posY: 52,
         flip: false,

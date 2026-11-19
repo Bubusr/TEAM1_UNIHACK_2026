@@ -170,7 +170,10 @@ export async function apiJudgePhoto(params: {
   );
 }
 
-export async function apiAddToGarden(submissionUid: string) {
+export async function apiAddToGarden(
+  submissionUid: string,
+  cutoutPhotoUrl?: string
+) {
   return apiFetch<{
     result: { petUid: string; coinsAdded?: number };
     state: KeeperServerState;
@@ -180,6 +183,7 @@ export async function apiAddToGarden(submissionUid: string) {
       method: 'POST',
       body: JSON.stringify({
         submissionUid,
+        cutoutPhotoUrl,
         idempotencyKey: newIdempotencyKey('garden'),
       }),
     },

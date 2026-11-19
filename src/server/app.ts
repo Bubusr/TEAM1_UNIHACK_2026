@@ -464,9 +464,10 @@ export function createApp() {
     actionLimiter,
     async (req: AuthRequest, res) => {
       try {
-        const { submissionUid, idempotencyKey } = req.body as {
+        const { submissionUid, idempotencyKey, cutoutPhotoUrl } = req.body as {
           submissionUid?: string;
           idempotencyKey?: string;
+          cutoutPhotoUrl?: string;
         };
         if (!submissionUid || !idempotencyKey) {
           return res
@@ -485,6 +486,7 @@ export function createApp() {
           uid: user.uid,
           submissionUid,
           idempotencyKey,
+          cutoutPhotoUrl,
         });
         const state = await getFullKeeperState(user.id);
         return res.json({ result, state });
