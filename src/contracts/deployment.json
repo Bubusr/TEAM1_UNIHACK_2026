@@ -1,0 +1,12 @@
+{
+  "network": "avalanche-fuji",
+  "chainId": 43113,
+  "contractAddress": "0x1a5913d8a00247ccad7bb0ed879b3be43ca112b0",
+  "deployerAddress": "0xd7fA1F935eaE310a80A5C5E8F45CE92cEBd54537",
+  "trustedSignerAddress": "0x2e3B039d3CB12e49475C08cB97041DFD1C88372f",
+  "deployTxHash": "0xd76c0bf245c702d4f8f835e6ebc61ec6fb577911a47948cc98e762faa07b8e9b",
+  "blockNumber": 61313149,
+  "gasUsed": "1981894",
+  "explorerUrl": "https://testnet.snowtrace.io/address/0x1a5913d8a00247ccad7bb0ed879b3be43ca112b0",
+  "deployedAt": "2026-11-19T03:27:46.650Z"
+}
