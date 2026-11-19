@@ -544,6 +544,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                   <CroppedPetCutout
                     photoUrl={pet.photoUrl}
                     alt={pet.name}
+                    species={pet.species}
                     mode={pet.cutoutMode ?? 'auto'}
                     accessory={pet.accessory}
                     flip={pos.flip}

@@ -173,15 +173,37 @@ async function processCutoutImage(
 interface CroppedPetCutoutProps {
   photoUrl: string;
   alt: string;
+  species?: string;
   mode?: CutoutMode;
   accessory?: string | null;
   flip?: boolean;
   className?: string;
 }
 
+const SPECIES_SILHOUETTES: Record<string, string> = {
+  Bunny:
+    'M100 70 C104 55 110 18 118 16 C124 16 126 38 122 68 C136 78 148 95 150 118 C152 142 146 168 140 180 C130 188 116 188 100 188 C84 188 70 188 60 180 C54 168 48 142 50 118 C52 95 64 78 78 68 C74 38 76 16 82 16 C90 18 96 55 100 70 Z',
+  Cat:
+    'M100 50 C106 38 116 22 126 22 C129 28 126 44 122 56 C136 64 146 76 148 94 C152 115 146 145 144 172 C135 186 118 188 100 188 C82 188 65 186 56 172 C54 145 48 115 52 94 C54 76 64 64 78 56 C74 44 71 28 74 22 C84 22 94 38 100 50 Z',
+  Kitten:
+    'M100 50 C106 38 116 22 126 22 C129 28 126 44 122 56 C136 64 146 76 148 94 C152 115 146 145 144 172 C135 186 118 188 100 188 C82 188 65 186 56 172 C54 145 48 115 52 94 C54 76 64 64 78 56 C74 44 71 28 74 22 C84 22 94 38 100 50 Z',
+  Bird:
+    'M100 32 C116 32 134 42 148 50 C136 60 134 72 136 88 C144 105 146 130 138 162 C130 184 115 190 100 186 C85 182 74 165 72 140 C68 110 72 82 76 60 C80 44 88 32 100 32 Z',
+  Hamster:
+    'M100 48 C110 46 118 36 124 38 C128 44 124 52 120 58 C138 68 152 86 154 112 C156 142 148 174 136 184 C124 190 112 190 100 190 C88 190 76 190 64 184 C52 174 44 142 46 112 C48 86 62 68 80 58 C76 52 72 44 76 38 C82 36 90 46 100 48 Z',
+  Dog:
+    'M100 28 C128 28 144 44 148 68 C156 78 154 96 142 102 C145 125 154 150 144 174 C135 186 118 188 100 188 C82 188 65 186 56 174 C46 150 55 125 58 102 C46 96 44 78 52 68 C56 44 72 28 100 28 Z',
+  Puppy:
+    'M100 28 C128 28 144 44 148 68 C156 78 154 96 142 102 C145 125 154 150 144 174 C135 186 118 188 100 188 C82 188 65 186 56 174 C46 150 55 125 58 102 C46 96 44 78 52 68 C56 44 72 28 100 28 Z',
+};
+
+const DEFAULT_SILHOUETTE =
+  'M100 28 C128 28 144 44 148 68 C156 78 154 96 142 102 C145 125 154 150 144 174 C135 186 118 188 100 188 C82 188 65 186 56 174 C46 150 55 125 58 102 C46 96 44 78 52 68 C56 44 72 28 100 28 Z';
+
 export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
   photoUrl,
   alt,
+  species,
   mode = 'auto',
   accessory,
   flip = false,
@@ -192,6 +214,8 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
     url: photoUrl,
     isSilhouette: mode === 'silhouette',
   });
+
+  const silhouettePath = (species && SPECIES_SILHOUETTES[species]) || DEFAULT_SILHOUETTE;
 
   useEffect(() => {
     let active = true;
@@ -224,7 +248,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
         >
           <defs>
             <clipPath id={`pet-cut-${clipId}`}>
-              <path d="M100 28 C128 28 144 44 148 68 C156 78 154 96 142 102 C145 125 154 150 144 174 C135 186 118 188 100 188 C82 188 65 186 56 174 C46 150 55 125 58 102 C46 96 44 78 52 68 C56 44 72 28 100 28 Z" />
+              <path d={silhouettePath} />
             </clipPath>
           </defs>
           <image
@@ -237,7 +261,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
             clipPath={`url(#pet-cut-${clipId})`}
           />
           <path
-            d="M100 28 C128 28 144 44 148 68 C156 78 154 96 142 102 C145 125 154 150 144 174 C135 186 118 188 100 188 C82 188 65 186 56 174 C46 150 55 125 58 102 C46 96 44 78 52 68 C56 44 72 28 100 28 Z"
+            d={silhouettePath}
             fill="none"
             stroke="#FFFDF9"
             strokeWidth="5"

@@ -255,6 +255,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                         <CroppedPetCutout
                           photoUrl={pet.photoUrl}
                           alt={pet.name}
+                          species={pet.species}
                           mode={pet.cutoutMode ?? 'auto'}
                           accessory={pet.accessory}
                           className="w-11 h-11"
@@ -1363,6 +1364,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                                 <CroppedPetCutout
                                   photoUrl={pet.photoUrl}
                                   alt={pet.name}
+                                  species={pet.species}
                                   mode={pet.cutoutMode ?? 'auto'}
                                   accessory={pet.accessory}
                                   className="w-10 h-10"
