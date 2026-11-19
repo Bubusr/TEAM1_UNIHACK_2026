@@ -491,9 +491,9 @@ export async function ensureFujiNetwork(): Promise<number> {
     if (rpcErr.code === 4001) {
       throw rpcErr;
     }
-    if (rpcErr.code === 4902) {
+    try {
       await callProviderRpc(provider, 'wallet_addEthereumChain', [FUJI_PARAMS]);
-    } else {
+    } catch {
       throw rpcErr;
     }
   }
