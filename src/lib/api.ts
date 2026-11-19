@@ -294,7 +294,10 @@ export async function apiUnlinkWallet() {
   );
 }
 
-export async function apiRequestMintClaim(petUid: string) {
+export async function apiRequestMintClaim(
+  petUid: string,
+  consent?: { accepted: boolean; consentVersion: string }
+) {
   return apiFetch<{
     chainId: number;
     contractAddress: string;
@@ -310,7 +313,7 @@ export async function apiRequestMintClaim(petUid: string) {
     '/api/web3/mint-claim',
     {
       method: 'POST',
-      body: JSON.stringify({ petUid }),
+      body: JSON.stringify({ petUid, consent, publicConsent: consent }),
     },
     'firebase'
   );

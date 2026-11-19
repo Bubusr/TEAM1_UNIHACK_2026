@@ -747,7 +747,12 @@ export function createApp() {
         );
         const publicConsent =
           req.body.publicConsent ??
-          (req.body.consentToPublicIpfs !== undefined
+          (req.body.consent !== undefined
+            ? {
+                accepted: Boolean(req.body.consent?.accepted),
+                consentVersion: req.body.consent?.consentVersion || '1.0',
+              }
+            : req.body.consentToPublicIpfs !== undefined
             ? {
                 accepted: Boolean(req.body.consentToPublicIpfs),
                 consentVersion: req.body.consentVersion,

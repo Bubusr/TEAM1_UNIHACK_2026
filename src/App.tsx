@@ -29,6 +29,7 @@ import { NeighborFarmScreen } from './components/NeighborFarmScreen';
 import { JudgeCardScreen } from './components/JudgeCardScreen';
 import { CreamSheets } from './components/CreamSheets';
 import { DiscoverCameraModal } from './components/camera/DiscoverCameraModal';
+import { IpfsConsentModal } from './components/IpfsConsentModal';
 import {
   signInWithGooglePopup,
   signOutKeeper,
@@ -1369,7 +1370,12 @@ export default function App() {
   };
 
   // Real Fuji Mint Flow (EIP-712 claim -> Fuji contract tx -> Receipt & Event verification)
-  const mintPassportByPetUid = async (petUid: string): Promise<boolean> => {
+  const [pendingConsentPet, setPendingConsentPet] = useState<SanctuaryPet | null>(null);
+
+  const mintPassportByPetUid = async (
+    petUid: string,
+    consent?: { accepted: boolean; consentVersion: string }
+  ): Promise<boolean> => {
     if (!authUser) {
       const msg = 'Sign in with Google inside Keeper Profile first.';
       setMintNotice(msg);
@@ -1395,7 +1401,7 @@ export default function App() {
     setProfileFeedback(null);
 
     try {
-      const { contractAddress, claim } = await apiRequestMintClaim(petUid);
+      const { contractAddress, claim } = await apiRequestMintClaim(petUid, consent);
       setMintNotice('Confirm Pet Passport mint in your Fuji wallet...');
       const txHash = await executeFujiMintTx({
         contractAddress,
@@ -1457,7 +1463,13 @@ export default function App() {
       openModalIn('judge', 'profile');
       return;
     }
-    await mintPassportByPetUid(linkedPetForActiveReport.petUid);
+    setPendingConsentPet(linkedPetForActiveReport);
+  };
+
+  const handleRequestMintFromProfile = (petUid: string) => {
+    const targetPet = pets.find((p) => p.petUid === petUid);
+    if (!targetPet) return;
+    setPendingConsentPet(targetPet);
   };
 
   const handleShareSnap = () => {
@@ -1844,7 +1856,7 @@ export default function App() {
         onConnectAndVerifyWallet={handleConnectAndVerifyWallet}
         onSwitchToFuji={handleSwitchToFuji}
         onUnlinkWallet={handleUnlinkWallet}
-        onMintPassportFromProfile={mintPassportByPetUid}
+        onMintPassportFromProfile={handleRequestMintFromProfile}
         onReconcilePet={handleReconcilePet}
         onSelectPet={setSelectedPetId}
         onBuyItem={handleBuyItem}
@@ -2176,6 +2188,20 @@ export default function App() {
         onCapturePhoto={handleUploadPhoto}
         currentTheme={theme}
         isSubmitting={isJudging}
+      />
+
+      {/* Public IPFS Consent Modal before Fuji NFT Mint */}
+      <IpfsConsentModal
+        isOpen={Boolean(pendingConsentPet)}
+        pet={pendingConsentPet}
+        isMinting={isMinting}
+        onClose={() => setPendingConsentPet(null)}
+        onConfirm={async (consent) => {
+          if (!pendingConsentPet?.petUid) return;
+          const targetPetUid = pendingConsentPet.petUid;
+          setPendingConsentPet(null);
+          await mintPassportByPetUid(targetPetUid, consent);
+        }}
       />
     </div>
   );
