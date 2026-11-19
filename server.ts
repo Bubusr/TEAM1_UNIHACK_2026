@@ -113,6 +113,60 @@ Otherwise verdict is "TRY AGAIN!" and tierLabel is "Keep Snapping!".`,
     }
   });
 
+  // ==========================================
+  // Blockchain Endpoints (Member 03)
+  // ==========================================
+  const {
+    getBlockchainStatus,
+    createPassportClaim,
+    verifyMintTransaction,
+  } = await import('./src/server/blockchainService.js');
+
+  app.get('/api/blockchain/status', async (_req, res) => {
+    try {
+      const status = await getBlockchainStatus();
+      return res.json(status);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Failed to fetch status' });
+    }
+  });
+
+  app.post('/api/blockchain/claim-passport', async (req, res) => {
+    try {
+      const { recipient, petId, petName, species, score, imageUrl } = req.body;
+      if (!recipient || !petId || !petName) {
+        return res.status(400).json({ error: 'Missing required parameters (recipient, petId, petName).' });
+      }
+
+      const claimData = await createPassportClaim({
+        recipient,
+        petId,
+        petName,
+        species: species || 'Pet',
+        score: Number(score || 80),
+        imageUrl,
+      });
+
+      return res.json(claimData);
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message || 'Failed to create passport claim.' });
+    }
+  });
+
+  app.post('/api/blockchain/verify-mint', async (req, res) => {
+    try {
+      const { txHash } = req.body;
+      if (!txHash) {
+        return res.status(400).json({ error: 'Missing txHash in request body.' });
+      }
+
+      const verification = await verifyMintTransaction(txHash);
+      return res.json(verification);
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message || 'Failed to verify transaction.' });
+    }
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
