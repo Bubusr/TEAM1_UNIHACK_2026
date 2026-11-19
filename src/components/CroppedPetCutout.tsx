@@ -2,25 +2,15 @@ import React, { useEffect, useId, useState } from 'react';
 import { CutoutMode } from '../types';
 
 const processedCache = new Map<string, string>();
+const inFlightRequests = new Map<string, Promise<{ url: string; isSilhouette: boolean }>>();
 
 /**
- * Checks if image corners share a uniform light studio background and, if so,
- * edge flood-fills transparent alpha so the real photographed pet sits cleanly on grass.
+ * Checks if image corners share a uniform backdrop (studio white, green screen, solid wall, etc.).
+ * If uniform, applies edge BFS flood-fill to make the background transparent in < 5ms.
  */
-async function processCutoutImage(
-  src: string,
-  mode: CutoutMode
-): Promise<{ url: string; isSilhouette: boolean }> {
-  if (mode === 'silhouette') {
-    return { url: src, isSilhouette: true };
-  }
-
-  const cacheKey = `${mode}:${src}`;
-  const cached = processedCache.get(cacheKey);
-  if (cached) {
-    return { url: cached, isSilhouette: false };
-  }
-
+function extractUniformCanvasCutout(
+  src: string
+): Promise<{ isUniform: boolean; dataUrl: string } | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -32,7 +22,7 @@ async function processCutoutImage(
         canvas.height = size;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) {
-          resolve({ url: src, isSilhouette: true });
+          resolve(null);
           return;
         }
 
@@ -45,7 +35,7 @@ async function processCutoutImage(
         const imageData = ctx.getImageData(0, 0, size, size);
         const data = imageData.data;
 
-        // Sample 4 corners to verify uniform studio backdrop
+        // Sample 4 corners to check background uniformity
         const cornerCoords = [
           [2, 2],
           [size - 3, 2],
@@ -75,15 +65,14 @@ async function processCutoutImage(
           if (d > maxCornerSpread) maxCornerSpread = d;
         }
 
-        const isUniformLight =
-          avgR > 215 && avgG > 215 && avgB > 215 && maxCornerSpread < 65;
-
-        if (mode === 'auto' && !isUniformLight) {
-          resolve({ url: src, isSilhouette: true });
+        // Low color variance across corners means uniform backdrop (any color: white, green, pastel, gray, etc.)
+        const isUniformBg = maxCornerSpread < 55;
+        if (!isUniformBg) {
+          resolve({ isUniform: false, dataUrl: '' });
           return;
         }
 
-        // Edge BFS flood-fill to remove connected studio background cleanly
+        // Edge BFS flood-fill to remove connected uniform background cleanly
         const total = size * size;
         const visited = new Uint8Array(total);
         const isBg = new Uint8Array(total);
@@ -91,8 +80,8 @@ async function processCutoutImage(
         let head = 0;
         let tail = 0;
 
-        const threshold = 24;
-        const softEdge = 36;
+        const threshold = 28;
+        const softEdge = 42;
 
         const matchesBg = (idx: number) => {
           const p = idx * 4;
@@ -133,7 +122,7 @@ async function processCutoutImage(
           enqueue(cx, cy - 1);
         }
 
-        // Apply transparency + subtle bottom floor shadow fade + edge feathering
+        // Apply transparency + edge feathering
         for (let y = 0; y < size; y++) {
           for (let x = 0; x < size; x++) {
             const idx = y * size + x;
@@ -141,7 +130,6 @@ async function processCutoutImage(
             if (isBg[idx]) {
               data[p + 3] = 0;
             } else {
-              // Feather immediate border pixels slightly for smooth cutout edges
               const dist = matchesBg(idx);
               const touchesBg =
                 (x > 0 && isBg[idx - 1]) ||
@@ -158,16 +146,88 @@ async function processCutoutImage(
         }
 
         ctx.putImageData(imageData, 0, 0);
-        const resultUrl = canvas.toDataURL('image/png');
-        processedCache.set(cacheKey, resultUrl);
-        resolve({ url: resultUrl, isSilhouette: false });
+        const dataUrl = canvas.toDataURL('image/png');
+        resolve({ isUniform: true, dataUrl });
       } catch {
-        resolve({ url: src, isSilhouette: mode !== 'studio' });
+        resolve(null);
       }
     };
-    img.onerror = () => resolve({ url: src, isSilhouette: true });
+    img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+/**
+ * 2-Tier background removal:
+ * 1. Fast Canvas BFS flood-fill for uniform/studio/solid backgrounds (< 5ms).
+ * 2. AI Segmentation Model (@imgly/background-removal) for complex outdoor/natural scenes.
+ * Fallback to crisp species silhouette sticker if AI is unavailable or loading.
+ */
+async function executeCutout(
+  src: string,
+  mode: CutoutMode,
+  cacheKey: string
+): Promise<{ url: string; isSilhouette: boolean }> {
+  // Step 1: Check uniform background via fast Canvas inspection
+  try {
+    const canvasResult = await extractUniformCanvasCutout(src);
+    if (canvasResult && canvasResult.isUniform) {
+      processedCache.set(cacheKey, canvasResult.dataUrl);
+      return { url: canvasResult.dataUrl, isSilhouette: false };
+    }
+  } catch (err) {
+    console.debug('[CroppedPetCutout] Canvas inspection skipped:', err);
+  }
+
+  // Step 2: For outdoor / complex non-uniform scenes, trigger AI background removal model
+  if (mode === 'auto' || mode === 'studio') {
+    try {
+      const { removeBackground } = await import('@imgly/background-removal');
+      const blob = await removeBackground(src, {
+        model: 'isnet_quint8',
+        debug: false,
+        rescale: true,
+      });
+      const resultUrl = URL.createObjectURL(blob);
+      processedCache.set(cacheKey, resultUrl);
+      return { url: resultUrl, isSilhouette: false };
+    } catch (aiErr) {
+      console.warn(
+        '[CroppedPetCutout] AI background removal model fallback to silhouette:',
+        aiErr
+      );
+    }
+  }
+
+  // Step 3: Fallback to species sticker silhouette
+  return { url: src, isSilhouette: true };
+}
+
+function processCutoutImage(
+  src: string,
+  mode: CutoutMode
+): Promise<{ url: string; isSilhouette: boolean }> {
+  if (mode === 'silhouette') {
+    return Promise.resolve({ url: src, isSilhouette: true });
+  }
+
+  const cacheKey = `${mode}:${src}`;
+  const cached = processedCache.get(cacheKey);
+  if (cached) {
+    return Promise.resolve({ url: cached, isSilhouette: false });
+  }
+
+  const existing = inFlightRequests.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+
+  const request = executeCutout(src, mode, cacheKey).finally(() => {
+    inFlightRequests.delete(cacheKey);
+  });
+
+  inFlightRequests.set(cacheKey, request);
+  return request;
 }
 
 interface CroppedPetCutoutProps {
@@ -239,7 +299,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
         /* Scissor-cropped organic silhouette matching the Polaroid cut-line */
         <svg
           viewBox="0 0 200 200"
-          className="w-full h-full overflow-visible"
+          className="w-full h-full overflow-visible transition-opacity duration-300"
           style={{
             transform: flip ? 'scaleX(-1)' : undefined,
             filter:
@@ -268,12 +328,12 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
           />
         </svg>
       ) : (
-        /* Transparent background studio cutout with crisp sticker outline */
+        /* Transparent background cutout (Canvas or AI Model) with crisp sticker outline */
         <img
           src={cutout.url}
           alt={alt}
           referrerPolicy="no-referrer"
-          className="w-full h-full object-contain pointer-events-none"
+          className="w-full h-full object-contain pointer-events-none transition-opacity duration-300"
           style={{
             transform: flip ? 'scaleX(-1)' : undefined,
             filter:
