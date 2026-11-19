@@ -1328,24 +1328,24 @@ export default function App() {
   const handleCropIntoSanctuary = async () => {
     if (isJudging || judgeError || activeReport.unjudged) return;
     if (!activeReport.cropped) {
-      // 1. Ensure transparent cutout is ready before adding to sanctuary garden
+      // 1. Ensure transparent cutout PNG is ready and persisted directly into Firestore
       let cutoutUrl =
         processedCache.get(activeReport.photoUrl) ||
-        processedCache.get(`auto:${activeReport.photoUrl}`) ||
-        processedCache.get(`studio:${activeReport.photoUrl}`);
+        processedCache.get(`studio:${activeReport.photoUrl}`) ||
+        processedCache.get(`auto:${activeReport.photoUrl}`);
 
-      if (!cutoutUrl) {
+      if (!cutoutUrl || !cutoutUrl.startsWith('data:image/png')) {
         try {
           const res = await processCutoutImage(
             activeReport.photoUrl,
             'auto',
             activeReport.box_2d
           );
-          if (res && !res.isSilhouette) {
+          if (res && res.url) {
             cutoutUrl = res.url;
           }
         } catch {
-          // fallback to silhouette/original
+          // fallback
         }
       }
 

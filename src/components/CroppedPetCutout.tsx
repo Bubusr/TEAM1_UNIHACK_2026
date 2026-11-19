@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { CutoutMode } from '../types';
 
 // In-memory LRU-style cache for segmented transparent PNGs (prevents re-computing across renders)
@@ -276,9 +276,9 @@ async function executeCutout(
         targetH = img.naturalHeight || 512;
       }
 
-      // 1. Neural Segmentation with ISNet FP16
+      // 1. Neural Segmentation with ISNet (quint8: fast & lightweight 42MB)
       const blob = await removeBackground(inputDataUrl, {
-        model: 'isnet_fp16',
+        model: 'isnet_quint8',
         debug: false,
         rescale: true,
       });
@@ -311,14 +311,27 @@ async function executeCutout(
       return { url: finalUrl, isSilhouette: false };
     } catch (aiErr) {
       console.warn(
-        '[CroppedPetCutout] AI background removal fallback:',
+        '[CroppedPetCutout] AI background removal fallback to ROI crop:',
         aiErr
       );
+      try {
+        const img = await loadImage(src);
+        const roiUrl =
+          bbox && bbox.length === 4
+            ? cropRoiToCanvas(img, bbox, 512).roiDataUrl
+            : getDownscaledDataUrl(img, 512);
+        processedCache.set(cacheKey, roiUrl);
+        processedCache.set(src, roiUrl);
+        void setPersistentCutout(src, roiUrl);
+        void setPersistentCutout(cacheKey, roiUrl);
+        return { url: roiUrl, isSilhouette: false };
+      } catch {
+        return { url: src, isSilhouette: false };
+      }
     }
   }
 
-  // Fallback to species sticker silhouette ONLY if explicitly mode === 'silhouette'
-  return { url: src, isSilhouette: mode === 'silhouette' };
+  return { url: src, isSilhouette: false };
 }
 
 export async function processCutoutImage(
@@ -444,8 +457,6 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
   className = 'w-[84px] h-[84px]',
   bbox,
 }) => {
-  const clipId = useId().replace(/:/g, '');
-
   const [cutout, setCutout] = useState<{ url: string; isSilhouette: boolean }>(() => {
     if (isTransparentOrCutout(photoUrl)) {
       const cached =
@@ -464,14 +475,11 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
     if (cached) {
       return { url: cached, isSilhouette: false };
     }
-    // Always start with species sticker silhouette to prevent any flash of raw background photo
     return {
       url: photoUrl,
       isSilhouette: true,
     };
   });
-
-  const silhouettePath = (species && SPECIES_SILHOUETTES[species]) || DEFAULT_SILHOUETTE;
 
   useEffect(() => {
     let active = true;
@@ -513,7 +521,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
         return;
       }
 
-      // 2. If IndexedDB cache miss, run AI Pipeline B ISNet FP16
+      // 2. If IndexedDB cache miss, run AI Pipeline B
       void processCutoutImage(photoUrl, mode, bbox).then((res) => {
         if (active) setCutout(res);
       });
@@ -535,44 +543,15 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
       className={`relative inline-flex items-center justify-center select-none ${className}`}
       style={{ transform: flip ? 'scaleX(-1)' : 'none' }}
     >
-      {cutout.isSilhouette ? (
-        <svg
-          viewBox="0 0 200 200"
-          className="w-full h-full drop-shadow-[0_4px_10px_rgba(40,24,10,0.18)] animate-pulse transition-opacity duration-300"
-          aria-label={alt}
-        >
-          <defs>
-            <clipPath id={`clip-${clipId}`}>
-              <path d={silhouettePath} />
-            </clipPath>
-          </defs>
-          <path
-            d={silhouettePath}
-            fill="#FFFBF0"
-            stroke="#6B4E2E"
-            strokeWidth="5"
-            strokeLinejoin="round"
-          />
-          <image
-            href={cutout.url}
-            x="0"
-            y="0"
-            width="200"
-            height="200"
-            preserveAspectRatio="xMidYMid slice"
-            clipPath={`url(#clip-${clipId})`}
-            opacity="0.85"
-          />
-        </svg>
-      ) : (
-        <img
-          src={cutout.url}
-          alt={alt}
-          className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.15)] pointer-events-none transition-opacity duration-300"
-          loading="eager"
-          decoding="async"
-        />
-      )}
+      <img
+        src={cutout.url}
+        alt={alt}
+        className={`w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.15)] pointer-events-none transition-all duration-300 ${
+          cutout.isSilhouette ? 'opacity-70 animate-pulse scale-95' : 'opacity-100 scale-100'
+        }`}
+        loading="eager"
+        decoding="async"
+      />
 
       {accessory && accessoriesMap[accessory] && (
         <span
