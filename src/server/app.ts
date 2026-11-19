@@ -86,6 +86,17 @@ export function createApp() {
   const app = express();
   app.set('trust proxy', 1);
   app.use(express.json({ limit: '12mb' }));
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      if (req.url.startsWith('/api')) {
+        console.log(
+          `[HTTP] ${req.method} ${req.url} -> ${res.statusCode} (${Date.now() - start}ms)`
+        );
+      }
+    });
+    next();
+  });
 
   const rootDir = path.resolve(__dirname, '../../');
   app.use(
@@ -862,6 +873,21 @@ export function createApp() {
         'Player-to-player adoption ownership transfers are scheduled for Phase 2 and disabled in Phase 1.',
     });
   });
+
+  // Global error handler for uncaught controller exceptions
+  app.use(
+    (
+      err: unknown,
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction
+    ) => {
+      console.error('[CRITICAL] Express uncaught API error:', err);
+      const code = getStatusCode(err, 500);
+      const msg = err instanceof Error ? err.message : 'Internal Server Error';
+      res.status(code).json({ error: msg });
+    }
+  );
 
   return app;
 }

@@ -1,6 +1,14 @@
 import 'dotenv/config';
 import { createApp, startServer } from './app.ts';
 
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught exception in server process:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled promise rejection at:', promise, 'reason:', reason);
+});
+
 export { createApp, startServer };
 
 const isMain =
