@@ -72,10 +72,13 @@ export function calculateJudgeOutcome(
 
   let box_2d: [number, number, number, number] | undefined = undefined;
   if (Array.isArray(evalData.box_2d) && evalData.box_2d.length === 4) {
-    const [ymin, xmin, ymax, xmax] = evalData.box_2d.map((v) =>
-      Math.max(0, Math.min(1000, Math.round(Number(v) || 0)))
+    const rawNums = evalData.box_2d.map((v) => Number(v) || 0);
+    const maxVal = Math.max(...rawNums);
+    const multiplier = maxVal <= 1.0 ? 1000 : maxVal <= 100.0 ? 10 : 1;
+    const [ymin, xmin, ymax, xmax] = rawNums.map((v) =>
+      Math.max(0, Math.min(1000, Math.round(v * multiplier)))
     );
-    if (ymax > ymin && xmax > xmin) {
+    if (ymax > ymin + 30 && xmax > xmin + 30) {
       box_2d = [ymin, xmin, ymax, xmax];
     }
   }

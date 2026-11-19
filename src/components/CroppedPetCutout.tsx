@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import type { CutoutMode } from '../types';
 
 // In-memory LRU-style cache for segmented transparent PNGs (prevents re-computing across renders)
@@ -162,6 +162,81 @@ function refineMaskIslands(
 }
 
 /**
+ * Auto-trim transparent margins and center pet tightly in a balanced square canvas.
+ * Ensures uploaded pets match starter pets (Mochi, Sunny, Pip) in scale and visual prominence.
+ */
+function tightCropAndCenter(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  outputSize = 320
+): string {
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const data = imgData.data;
+
+  let minX = width,
+    minY = height,
+    maxX = 0,
+    maxY = 0;
+  let hasPixels = false;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = data[(y * width + x) * 4 + 3];
+      if (alpha > 25) {
+        hasPixels = true;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  // Fallback if empty
+  if (!hasPixels || maxX <= minX || maxY <= minY) {
+    return ctx.canvas.toDataURL('image/png');
+  }
+
+  const contentW = maxX - minX + 1;
+  const contentH = maxY - minY + 1;
+
+  // Add 6% comfortable breathing room so pet ears/tail don't touch edges
+  const maxDim = Math.max(contentW, contentH);
+  const pad = Math.round(maxDim * 0.06);
+  const squareSide = maxDim + pad * 2;
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = outputSize;
+  outCanvas.height = outputSize;
+  const outCtx = outCanvas.getContext('2d');
+  if (!outCtx) return ctx.canvas.toDataURL('image/png');
+
+  // Scale content to fit comfortably into outputSize
+  const scale = outputSize / squareSide;
+  const drawW = Math.round(contentW * scale);
+  const drawH = Math.round(contentH * scale);
+  const drawX = Math.round((outputSize - drawW) / 2);
+  const drawY = Math.round((outputSize - drawH) / 2);
+
+  outCtx.imageSmoothingEnabled = true;
+  outCtx.imageSmoothingQuality = 'high';
+  outCtx.drawImage(
+    ctx.canvas,
+    minX,
+    minY,
+    contentW,
+    contentH,
+    drawX,
+    drawY,
+    drawW,
+    drawH
+  );
+
+  return outCanvas.toDataURL('image/png');
+}
+
+/**
  * Downscale full image to max 512px PNG before feeding to ISNet.
  */
 function getDownscaledDataUrl(img: HTMLImageElement, maxDim = 512): string {
@@ -202,11 +277,28 @@ function cropRoiToCanvas(
 ): { roiDataUrl: string; roiW: number; roiH: number } {
   const origW = img.naturalWidth || img.width;
   const origH = img.naturalHeight || img.height;
-  const [ymin, xmin, ymax, xmax] = bbox;
 
-  // Add 12% margin around the animal to avoid clipping ears, tail, or paws
+  // Auto-normalize bounding box scale (handles 0..1, 0..100, and 0..1000 scales)
+  const rawCoords = bbox.map(Number);
+  const maxVal = Math.max(...rawCoords);
+  const multiplier = maxVal <= 1.0 ? 1000 : maxVal <= 100.0 ? 10 : 1;
+  const [ymin, xmin, ymax, xmax] = rawCoords.map((v) =>
+    Math.max(0, Math.min(1000, Math.round(v * multiplier)))
+  );
+
   const bw = xmax - xmin;
   const bh = ymax - ymin;
+
+  // Guard against tiny/corrupt bounding boxes (<50px on 1000 scale) -> fallback to downscaled full image
+  if (bw < 50 || bh < 50) {
+    return {
+      roiDataUrl: getDownscaledDataUrl(img, maxDim),
+      roiW: origW,
+      roiH: origH,
+    };
+  }
+
+  // Add 12% margin around the animal to avoid clipping ears, tail, or paws
   const padX = Math.round(bw * 0.12);
   const padY = Math.round(bh * 0.12);
 
@@ -276,9 +368,9 @@ async function executeCutout(
         targetH = img.naturalHeight || 512;
       }
 
-      // 1. Neural Segmentation with ISNet (quint8: fast & lightweight 42MB)
+      // 1. Neural Segmentation with ISNet FP16
       const blob = await removeBackground(inputDataUrl, {
-        model: 'isnet_quint8',
+        model: 'isnet_fp16',
         debug: false,
         rescale: true,
       });
@@ -296,7 +388,8 @@ async function executeCutout(
       if (rCtx) {
         rCtx.drawImage(cutoutImg, 0, 0);
         refineMaskIslands(rCtx, refineCanvas.width, refineCanvas.height, 80);
-        finalUrl = refineCanvas.toDataURL('image/png');
+        // 3. Auto-trim transparent edges and center pet tightly for consistent garden scale
+        finalUrl = tightCropAndCenter(rCtx, refineCanvas.width, refineCanvas.height, 320);
       }
 
       processedCache.set(cacheKey, finalUrl);
@@ -311,27 +404,14 @@ async function executeCutout(
       return { url: finalUrl, isSilhouette: false };
     } catch (aiErr) {
       console.warn(
-        '[CroppedPetCutout] AI background removal fallback to ROI crop:',
+        '[CroppedPetCutout] AI background removal fallback:',
         aiErr
       );
-      try {
-        const img = await loadImage(src);
-        const roiUrl =
-          bbox && bbox.length === 4
-            ? cropRoiToCanvas(img, bbox, 512).roiDataUrl
-            : getDownscaledDataUrl(img, 512);
-        processedCache.set(cacheKey, roiUrl);
-        processedCache.set(src, roiUrl);
-        void setPersistentCutout(src, roiUrl);
-        void setPersistentCutout(cacheKey, roiUrl);
-        return { url: roiUrl, isSilhouette: false };
-      } catch {
-        return { url: src, isSilhouette: false };
-      }
     }
   }
 
-  return { url: src, isSilhouette: false };
+  // Fallback to species sticker silhouette ONLY if explicitly mode === 'silhouette'
+  return { url: src, isSilhouette: mode === 'silhouette' };
 }
 
 export async function processCutoutImage(
@@ -428,20 +508,22 @@ interface CroppedPetCutoutProps {
 }
 
 const SPECIES_SILHOUETTES: Record<string, string> = {
-  Bunny:
+  bunny:
     'M100 70 C104 55 110 18 118 16 C124 16 126 38 122 68 C136 78 148 95 150 118 C152 142 146 168 140 180 C130 188 116 188 100 188 C84 188 70 188 60 180 C54 168 48 142 50 118 C52 95 64 78 78 68 C74 38 76 16 82 16 C90 18 96 55 100 70 Z',
-  Cat:
+  cat:
     'M100 50 C106 38 116 22 126 22 C129 28 126 44 122 56 C136 64 146 76 148 94 C152 115 146 145 144 172 C135 186 118 188 100 188 C82 188 65 186 56 172 C54 145 48 115 52 94 C54 76 64 64 78 56 C74 44 71 28 74 22 C84 22 94 38 100 50 Z',
-  Kitten:
+  kitten:
     'M100 50 C106 38 116 22 126 22 C129 28 126 44 122 56 C136 64 146 76 148 94 C152 115 146 145 144 172 C135 186 118 188 100 188 C82 188 65 186 56 172 C54 145 48 115 52 94 C54 76 64 64 78 56 C74 44 71 28 74 22 C84 22 94 38 100 50 Z',
-  Bird:
+  bird:
     'M100 32 C116 32 134 42 148 50 C136 60 134 72 136 88 C144 105 146 130 138 162 C130 184 115 190 100 186 C85 182 74 165 72 140 C68 110 72 82 76 60 C80 44 88 32 100 32 Z',
-  Hamster:
+  hamster:
     'M100 48 C110 46 118 36 124 38 C128 44 124 52 120 58 C138 68 152 86 154 112 C156 142 148 174 136 184 C124 190 112 190 100 190 C88 190 76 190 64 184 C52 174 44 142 46 112 C48 86 62 68 80 58 C76 52 72 44 76 38 C82 36 90 46 100 48 Z',
-  Dog:
+  dog:
     'M100 28 C128 28 144 44 148 68 C156 78 154 96 142 102 C145 125 154 150 144 174 C135 186 118 188 100 188 C82 188 65 186 56 174 C46 150 55 125 58 102 C46 96 44 78 52 68 C56 44 72 28 100 28 Z',
-  Puppy:
+  puppy:
     'M100 28 C128 28 144 44 148 68 C156 78 154 96 142 102 C145 125 154 150 144 174 C135 186 118 188 100 188 C82 188 65 186 56 174 C46 150 55 125 58 102 C46 96 44 78 52 68 C56 44 72 28 100 28 Z',
+  corgi:
+    'M100 36 C116 28 132 14 142 16 C148 24 142 46 136 56 C148 66 156 82 154 104 C152 126 156 152 148 174 C138 186 118 188 100 188 C82 188 62 186 52 174 C44 152 48 126 46 104 C44 82 52 66 64 56 C58 46 52 24 58 16 C68 14 84 28 100 36 Z',
 };
 
 const DEFAULT_SILHOUETTE =
@@ -457,6 +539,8 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
   className = 'w-[84px] h-[84px]',
   bbox,
 }) => {
+  const clipId = useId().replace(/:/g, '');
+
   const [cutout, setCutout] = useState<{ url: string; isSilhouette: boolean }>(() => {
     if (isTransparentOrCutout(photoUrl)) {
       const cached =
@@ -475,11 +559,15 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
     if (cached) {
       return { url: cached, isSilhouette: false };
     }
+    // Always start with species sticker silhouette to prevent any flash of raw background photo
     return {
       url: photoUrl,
       isSilhouette: true,
     };
   });
+
+  const normalizedSpecies = species ? species.trim().toLowerCase() : '';
+  const silhouettePath = SPECIES_SILHOUETTES[normalizedSpecies] || DEFAULT_SILHOUETTE;
 
   useEffect(() => {
     let active = true;
@@ -521,7 +609,7 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
         return;
       }
 
-      // 2. If IndexedDB cache miss, run AI Pipeline B
+      // 2. If IndexedDB cache miss, run AI Pipeline B ISNet FP16
       void processCutoutImage(photoUrl, mode, bbox).then((res) => {
         if (active) setCutout(res);
       });
@@ -543,15 +631,44 @@ export const CroppedPetCutout: React.FC<CroppedPetCutoutProps> = ({
       className={`relative inline-flex items-center justify-center select-none ${className}`}
       style={{ transform: flip ? 'scaleX(-1)' : 'none' }}
     >
-      <img
-        src={cutout.url}
-        alt={alt}
-        className={`w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.15)] pointer-events-none transition-all duration-300 ${
-          cutout.isSilhouette ? 'opacity-70 animate-pulse scale-95' : 'opacity-100 scale-100'
-        }`}
-        loading="eager"
-        decoding="async"
-      />
+      {cutout.isSilhouette ? (
+        <svg
+          viewBox="0 0 200 200"
+          className="w-full h-full drop-shadow-[0_4px_10px_rgba(40,24,10,0.18)] animate-pulse transition-opacity duration-300"
+          aria-label={alt}
+        >
+          <defs>
+            <clipPath id={`clip-${clipId}`}>
+              <path d={silhouettePath} />
+            </clipPath>
+          </defs>
+          <path
+            d={silhouettePath}
+            fill="#FFFBF0"
+            stroke="#6B4E2E"
+            strokeWidth="5"
+            strokeLinejoin="round"
+          />
+          <image
+            href={cutout.url}
+            x="0"
+            y="0"
+            width="200"
+            height="200"
+            preserveAspectRatio="xMidYMid slice"
+            clipPath={`url(#clip-${clipId})`}
+            opacity="0.85"
+          />
+        </svg>
+      ) : (
+        <img
+          src={cutout.url}
+          alt={alt}
+          className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.15)] pointer-events-none transition-opacity duration-300"
+          loading="eager"
+          decoding="async"
+        />
+      )}
 
       {accessory && accessoriesMap[accessory] && (
         <span

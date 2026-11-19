@@ -240,8 +240,8 @@ function buildInitialNeighbors(): NeighborGarden[] {
           id: 'n-leo-corgi',
           name: 'Toast',
           species: 'corgi',
-          photoUrl: '/src/assets/images/lured_stray_corgi_1794627550798.jpg',
-          cutoutMode: 'silhouette',
+          photoUrl: '/src/assets/images/lured_stray_corgi_1794627550798.png',
+          cutoutMode: 'studio',
           x: 66,
           y: 49,
         },
@@ -1328,24 +1328,24 @@ export default function App() {
   const handleCropIntoSanctuary = async () => {
     if (isJudging || judgeError || activeReport.unjudged) return;
     if (!activeReport.cropped) {
-      // 1. Ensure transparent cutout PNG is ready and persisted directly into Firestore
+      // 1. Ensure transparent cutout is ready before adding to sanctuary garden
       let cutoutUrl =
         processedCache.get(activeReport.photoUrl) ||
-        processedCache.get(`studio:${activeReport.photoUrl}`) ||
-        processedCache.get(`auto:${activeReport.photoUrl}`);
+        processedCache.get(`auto:${activeReport.photoUrl}`) ||
+        processedCache.get(`studio:${activeReport.photoUrl}`);
 
-      if (!cutoutUrl || !cutoutUrl.startsWith('data:image/png')) {
+      if (!cutoutUrl) {
         try {
           const res = await processCutoutImage(
             activeReport.photoUrl,
             'auto',
             activeReport.box_2d
           );
-          if (res && res.url) {
+          if (res && !res.isSilhouette) {
             cutoutUrl = res.url;
           }
         } catch {
-          // fallback
+          // fallback to silhouette/original
         }
       }
 
@@ -1650,8 +1650,8 @@ export default function App() {
         id: 'pet-biscuit-corgi',
         name: 'Biscuit',
         species: 'corgi',
-        photoUrl: '/src/assets/images/lured_stray_corgi_1794627550798.jpg',
-        cutoutMode: 'silhouette',
+        photoUrl: '/src/assets/images/lured_stray_corgi_1794627550798.png',
+        cutoutMode: 'studio',
         x: 72,
         y: 62,
         score: 90,
