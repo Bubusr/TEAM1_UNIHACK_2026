@@ -15,6 +15,15 @@ async function main() {
     throw new Error('Missing DEPLOYER_PRIVATE_KEY for Fuji deployment.');
   }
 
+  const balance = await ethers.provider.getBalance(deployer.address);
+  const minRequired = ethers.parseEther('0.01');
+  console.log(`Deployer balance: ${ethers.formatEther(balance)} AVAX`);
+  if (balance < minRequired) {
+    throw new Error(
+      `Insufficient deployer balance: ${ethers.formatEther(balance)} AVAX. Minimum required is 0.01 AVAX.`
+    );
+  }
+
   const trustedSignerKey = process.env.TRUSTED_SIGNER_PRIVATE_KEY?.trim();
   const claimSigner = trustedSignerKey
     ? new ethers.Wallet(trustedSignerKey).address
@@ -29,7 +38,16 @@ async function main() {
   await contract.waitForDeployment();
 
   const address = await contract.getAddress();
+  const deployTx = contract.deploymentTransaction();
+  const receipt = deployTx ? await deployTx.wait() : null;
+
   console.log('PawsAndPicketPassport deployed at:', address);
+  if (deployTx && receipt) {
+    console.log('Deployment Transaction Hash:', deployTx.hash);
+    console.log('Block Number:', receipt.blockNumber);
+    console.log('Gas Used:', receipt.gasUsed.toString());
+    console.log('Deployed At:', new Date().toISOString());
+  }
   console.log(`Set PET_PASSPORT_CONTRACT_ADDRESS=${address}`);
 }
 

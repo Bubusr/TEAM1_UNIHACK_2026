@@ -473,4 +473,70 @@ describe('Wallet Discovery Prioritization, Fallbacks & UI States', () => {
     assert.equal(updatedState.chainId, 43113);
     unsub();
   });
+
+  it('differentiates distinct human-readable errors for connection rejection, network switch decline, missing account, and missing provider', async () => {
+    // 1. Missing provider
+    delete g.window;
+    await assert.rejects(
+      () => connectInjectedWallet(),
+      (err: unknown) =>
+        err instanceof WalletRpcError &&
+        err.message.includes('No desktop browser wallet detected')
+    );
+
+    // 2. Empty accounts returned
+    const emptyProvider: EthereumProvider = {
+      request: async ({ method }) => {
+        if (method === 'eth_requestAccounts') return [];
+        if (method === 'eth_chainId') return '0xa869';
+        return null;
+      },
+    };
+    g.window = createMockWindow({ avalanche: emptyProvider });
+    await assert.rejects(
+      () => connectInjectedWallet(),
+      (err: unknown) =>
+        err instanceof WalletRpcError &&
+        err.message.includes('Wallet connection was cancelled or no account was selected')
+    );
+
+    // 3. User rejects connection (4001)
+    const rejectConnectProvider: EthereumProvider = {
+      request: async ({ method }) => {
+        if (method === 'eth_requestAccounts') {
+          const err = new Error('User rejected') as Error & { code: number };
+          err.code = 4001;
+          throw err;
+        }
+        return null;
+      },
+    };
+    g.window = createMockWindow({ avalanche: rejectConnectProvider });
+    await assert.rejects(
+      () => connectInjectedWallet(),
+      (err: unknown) =>
+        err instanceof WalletRpcError &&
+        err.message.includes('Wallet connection rejected by user')
+    );
+
+    // 4. User declines network switch (4001)
+    const rejectSwitchProvider: EthereumProvider = {
+      request: async ({ method }) => {
+        if (method === 'eth_chainId') return '0x1'; // Ethereum Mainnet
+        if (method === 'wallet_switchEthereumChain') {
+          const err = new Error('User declined switch') as Error & { code: number };
+          err.code = 4001;
+          throw err;
+        }
+        return null;
+      },
+    };
+    g.window = createMockWindow({ avalanche: rejectSwitchProvider });
+    await assert.rejects(
+      () => ensureFujiNetwork(),
+      (err: unknown) =>
+        err instanceof WalletRpcError &&
+        err.message.includes('User declined to switch to Avalanche Fuji Testnet')
+    );
+  });
 });

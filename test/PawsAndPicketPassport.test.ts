@@ -331,4 +331,114 @@ describe('PawsAndPicketPassport', () => {
     assert.equal(passport.originalDiscoverer, alice.address);
     assert.equal(passport.petIdHash, petIdHash);
   });
+
+  it('allows owner to update claim signer, emits ClaimSignerUpdated, and accepts claims signed by new signer', async () => {
+    const { contract, ethers, owner, claimSigner, bob, alice } =
+      await deployFixture();
+    assert.equal(await contract.claimSigner(), claimSigner.address);
+
+    const tx = await (contract.connect(owner) as Contract).setClaimSigner(
+      bob.address
+    );
+    const receipt = await tx.wait();
+    assert.equal(receipt.status, 1);
+
+    // Verify claimSigner updated on-chain
+    assert.equal(await contract.claimSigner(), bob.address);
+
+    // Verify ClaimSignerUpdated event emitted
+    const parsedLogs = receipt.logs
+      .map((log: { topics: string[]; data: string }) => {
+        try {
+          return contract.interface.parseLog(log);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    const updatedEvent = parsedLogs.find(
+      (ev: { name: string } | null) => ev?.name === 'ClaimSignerUpdated'
+    );
+    assert.ok(updatedEvent, 'ClaimSignerUpdated event must be emitted');
+    assert.equal(updatedEvent.args.previousSigner, claimSigner.address);
+    assert.equal(updatedEvent.args.newSigner, bob.address);
+
+    // Verify a claim signed by the new signer (bob) is accepted for minting
+    const petIdHash = ethers.id('pet-new-signer-001');
+    const metadataUri = 'ipfs://QmNewSignerPassportMetaCid';
+    const latestBlock = await ethers.provider.getBlock('latest');
+    const deadline = (latestBlock?.timestamp ?? 0) + 3600;
+    const nonce = 8881n;
+
+    const newSignerSig = await signMintClaim(contract, bob, {
+      recipient: alice.address,
+      petIdHash,
+      metadataUri,
+      nonce,
+      deadline,
+    });
+
+    const mintTx = await (contract.connect(alice) as Contract).mintWithClaim(
+      alice.address,
+      petIdHash,
+      metadataUri,
+      nonce,
+      deadline,
+      newSignerSig
+    );
+    const mintReceipt = await mintTx.wait();
+    assert.equal(mintReceipt.status, 1);
+    assert.equal(await contract.ownerOf(1n), alice.address);
+
+    // Old signer signature must now be rejected
+    const oldSignerSig = await signMintClaim(contract, claimSigner, {
+      recipient: alice.address,
+      petIdHash: ethers.id('pet-new-signer-002'),
+      metadataUri,
+      nonce: 8882n,
+      deadline,
+    });
+    await assert.rejects(
+      (contract.connect(alice) as Contract).mintWithClaim(
+        alice.address,
+        ethers.id('pet-new-signer-002'),
+        metadataUri,
+        8882n,
+        deadline,
+        oldSignerSig
+      ),
+      /InvalidSignature/
+    );
+  });
+
+  it('rejects claim signer update when called by non-owner account', async () => {
+    const { contract, alice, bob, attacker } = await deployFixture();
+
+    await assert.rejects(
+      (contract.connect(alice) as Contract).setClaimSigner(bob.address),
+      /OwnableUnauthorizedAccount/
+    );
+    await assert.rejects(
+      (contract.connect(attacker) as Contract).setClaimSigner(attacker.address),
+      /OwnableUnauthorizedAccount/
+    );
+  });
+
+  it('rejects zero address when updating claim signer or deploying contract', async () => {
+    const { contract, ethers, owner } = await deployFixture();
+
+    // 1. Rejects zero address on setClaimSigner
+    await assert.rejects(
+      (contract.connect(owner) as Contract).setClaimSigner(ethers.ZeroAddress),
+      /InvalidClaimSigner/
+    );
+
+    // 2. Rejects zero address as initialClaimSigner during deployment
+    const Factory = await ethers.getContractFactory('PawsAndPicketPassport');
+    await assert.rejects(
+      Factory.deploy(owner.address, ethers.ZeroAddress),
+      /InvalidClaimSigner/
+    );
+  });
 });

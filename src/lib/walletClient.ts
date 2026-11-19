@@ -108,11 +108,19 @@ async function callProviderRpc<T>(
     if (err instanceof WalletRpcError) throw err;
     const { code, message } = extractRpcErrorDetails(err);
     if (code === 4001) {
-      throw new WalletRpcError(
-        method,
-        'Request cancelled or rejected in wallet.',
-        4001
-      );
+      let friendlyMsg = 'Request cancelled or rejected in wallet.';
+      if (method === 'eth_requestAccounts') {
+        friendlyMsg = 'Wallet connection rejected by user.';
+      } else if (method === 'wallet_switchEthereumChain') {
+        friendlyMsg = 'User declined to switch to Avalanche Fuji Testnet.';
+      } else if (method === 'wallet_addEthereumChain') {
+        friendlyMsg = 'User declined to add Avalanche Fuji network to wallet.';
+      } else if (method === 'personal_sign') {
+        friendlyMsg = 'Message signing was rejected in wallet.';
+      } else if (method === 'eth_sendTransaction') {
+        friendlyMsg = 'Transaction was rejected in wallet.';
+      }
+      throw new WalletRpcError(method, friendlyMsg, 4001);
     }
     if (code === -32002) {
       throw new WalletRpcError(
@@ -479,6 +487,9 @@ export async function ensureFujiNetwork(): Promise<number> {
             extractRpcErrorDetails(err).message,
             extractRpcErrorDetails(err).code
           );
+    if (rpcErr.code === 4001) {
+      throw rpcErr;
+    }
     if (rpcErr.code === 4902) {
       await callProviderRpc(provider, 'wallet_addEthereumChain', [FUJI_PARAMS]);
     } else {
