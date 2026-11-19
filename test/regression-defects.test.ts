@@ -358,23 +358,51 @@ describe('Regression Tests: DEF-01, DEF-02, DEF-05', () => {
           chainId: 43113,
           verifyingContract: mockContractAddress,
         };
-        const types = {
-          MintClaim: [
-            { name: 'recipient', type: 'address' },
-            { name: 'petIdHash', type: 'bytes32' },
-            { name: 'metadataUriHash', type: 'bytes32' },
-            { name: 'nonce', type: 'uint256' },
-            { name: 'deadline', type: 'uint256' },
-          ],
-        };
-        const value = {
-          recipient: claimResult.claim.recipient,
-          petIdHash: claimResult.claim.petIdHash,
-          metadataUriHash: ethers.keccak256(ethers.toUtf8Bytes(claimResult.claim.metadataUri)),
-          nonce: BigInt(claimResult.claim.nonce),
-          deadline: claimResult.claim.deadline,
-        };
-        const recovered = ethers.verifyTypedData(domain, types, value, claimResult.claim.signature);
+        const isPassportClaim = (claimResult.claim as any).petId !== undefined;
+        let recovered: string;
+        if (isPassportClaim) {
+          const types = {
+            PassportClaim: [
+              { name: 'recipient', type: 'address' },
+              { name: 'petId', type: 'uint256' },
+              { name: 'petName', type: 'string' },
+              { name: 'species', type: 'string' },
+              { name: 'score', type: 'uint256' },
+              { name: 'tokenURI', type: 'string' },
+              { name: 'nonce', type: 'uint256' },
+              { name: 'deadline', type: 'uint256' },
+            ],
+          };
+          const value = {
+            recipient: claimResult.claim.recipient,
+            petId: BigInt((claimResult.claim as any).petId),
+            petName: (claimResult.claim as any).petName,
+            species: (claimResult.claim as any).species,
+            score: BigInt((claimResult.claim as any).score),
+            tokenURI: (claimResult.claim as any).tokenURI,
+            nonce: BigInt(claimResult.claim.nonce),
+            deadline: BigInt(claimResult.claim.deadline),
+          };
+          recovered = ethers.verifyTypedData(domain, types, value, claimResult.claim.signature);
+        } else {
+          const types = {
+            MintClaim: [
+              { name: 'recipient', type: 'address' },
+              { name: 'petIdHash', type: 'bytes32' },
+              { name: 'metadataUriHash', type: 'bytes32' },
+              { name: 'nonce', type: 'uint256' },
+              { name: 'deadline', type: 'uint256' },
+            ],
+          };
+          const value = {
+            recipient: claimResult.claim.recipient,
+            petIdHash: claimResult.claim.petIdHash,
+            metadataUriHash: ethers.keccak256(ethers.toUtf8Bytes(claimResult.claim.metadataUri)),
+            nonce: BigInt(claimResult.claim.nonce),
+            deadline: claimResult.claim.deadline,
+          };
+          recovered = ethers.verifyTypedData(domain, types, value, claimResult.claim.signature);
+        }
         assert.equal(recovered.toLowerCase(), testSignerWallet.address.toLowerCase());
       } finally {
         process.env.PET_PASSPORT_CONTRACT_ADDRESS = originalContractAddress;

@@ -307,6 +307,11 @@ export async function apiRequestMintClaim(
     contractAddress: string;
     claim: {
       recipient: string;
+      petId?: string;
+      petName?: string;
+      species?: string;
+      score?: number;
+      tokenURI?: string;
       petIdHash: string;
       metadataUri: string;
       nonce: string;
