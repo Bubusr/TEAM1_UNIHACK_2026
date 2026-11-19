@@ -303,6 +303,195 @@ async function readPetPortraitBytes(
   throw new Error('Unsupported pet portrait source for IPFS upload.');
 }
 
+export function isValidIpfsCid(cid: unknown): cid is string {
+  if (typeof cid !== 'string') return false;
+  const trimmed = cid.trim();
+  if (!/^[a-zA-Z0-9]+$/.test(trimmed)) return false;
+  // CIDv0 (Qm... length >= 10, typically 46) or CIDv1 (baf... length >= 10, typically 59)
+  if (trimmed.startsWith('Qm') && trimmed.length >= 10) return true;
+  if (trimmed.startsWith('baf') && trimmed.length >= 10) return true;
+  return false;
+}
+
+export function redactSensitiveData(text: string, secrets: string[] = []): string {
+  if (!text || typeof text !== 'string') return '';
+  let result = text;
+
+  for (const s of secrets) {
+    if (s && typeof s === 'string' && s.length >= 4) {
+      const escaped = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(escaped, 'g'), '[REDACTED_SECRET]');
+    }
+  }
+
+  // Redact Bearer tokens
+  result = result.replace(/Bearer\s+([A-Za-z0-9_\-.~+/]+=*)/gi, 'Bearer [REDACTED_TOKEN]');
+
+  // Redact JWT tokens (header.payload.signature)
+  result = result.replace(/\beyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\b/g, '[REDACTED_JWT]');
+
+  // Redact Base64 data URIs
+  result = result.replace(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]{16,}/gi, 'data:image/...;base64,[REDACTED_BASE64]');
+
+  // Redact raw image base64 headers if leaked in error messages
+  result = result.replace(/\b(iVBORw0KGgo|\/9j\/4AAQSkZJRg|UklGR)[A-Za-z0-9+/=]{16,}\b/g, '[REDACTED_IMAGE_BASE64]');
+
+  // Redact filesystem paths containing user directories
+  result = result.replace(/(\/(?:Users|home)\/)[^\s/:,"]+/g, '$1[REDACTED_USER]');
+  result = result.replace(/([A-Za-z]:\\Users\\)[^\s\\:,"]+/g, '$1[REDACTED_USER]');
+
+  return result;
+}
+
+export function isTransientHttpError(status: number): boolean {
+  return status === 429 || status === 502 || status === 503 || status === 504;
+}
+
+export function isNonRetryableHttpError(status: number): boolean {
+  return (
+    status === 400 ||
+    status === 401 ||
+    status === 403 ||
+    status === 404 ||
+    status === 422
+  );
+}
+
+export function isTransientNetworkError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = err instanceof Error ? err.message : String(err);
+  const name = err instanceof Error ? err.name : '';
+  if (name === 'AbortError' || name === 'TimeoutError') return true;
+  if (/timeout|aborted|econnreset|etimedout|enotfound|eai_again|fetch failed|network error/i.test(msg)) {
+    return true;
+  }
+  return false;
+}
+
+export async function executePinataRequest(
+  url: string,
+  init: RequestInit,
+  options: {
+    fetchFn?: typeof fetch;
+    timeoutMs?: number;
+    maxRetries?: number;
+    retryDelayMs?: number;
+    apiKey: string;
+    actionName: string;
+  }
+): Promise<Response> {
+  const doFetch = options.fetchFn ?? fetch;
+  const timeoutMs = options.timeoutMs ?? 15000;
+  const maxRetries = options.maxRetries ?? 2;
+  const retryDelayMs = options.retryDelayMs ?? 500;
+  const secrets = [options.apiKey];
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    let timeoutId: NodeJS.Timeout | null = null;
+    let didTimeout = false;
+
+    if (timeoutMs > 0) {
+      timeoutId = setTimeout(() => {
+        didTimeout = true;
+        controller.abort(new Error(`Request timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    }
+
+    const abortPromise = new Promise<never>((_, reject) => {
+      controller.signal.addEventListener(
+        'abort',
+        () => {
+          reject(new Error(`Request timed out after ${timeoutMs}ms`));
+        },
+        { once: true }
+      );
+    });
+
+    try {
+      const response = await Promise.race([
+        doFetch(url, {
+          ...init,
+          signal: controller.signal,
+        }),
+        abortPromise,
+      ]);
+
+      if (timeoutId) clearTimeout(timeoutId);
+
+      if (response.ok) {
+        return response;
+      }
+
+      const status = response.status;
+      const rawBody = await response.text().catch(() => '');
+      const sanitizedBody = redactSensitiveData(rawBody, secrets);
+
+      if (isNonRetryableHttpError(status)) {
+        throw new Error(
+          redactSensitiveData(
+            `Pinata ${options.actionName} failed with non-retryable status ${status}: ${sanitizedBody}`,
+            secrets
+          )
+        );
+      }
+
+      if (isTransientHttpError(status) && attempt < maxRetries) {
+        const backoff = retryDelayMs * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, backoff));
+        continue;
+      }
+
+      throw new Error(
+        redactSensitiveData(
+          `Pinata ${options.actionName} failed (${status}) after ${attempt + 1} attempt(s): ${sanitizedBody}`,
+          secrets
+        )
+      );
+    } catch (err: any) {
+      if (timeoutId) clearTimeout(timeoutId);
+
+      // Re-throw non-retryable errors immediately
+      if (err?.message && err.message.includes('non-retryable status')) {
+        throw err;
+      }
+
+      const isTimeout =
+        didTimeout ||
+        err?.name === 'AbortError' ||
+        err?.name === 'TimeoutError' ||
+        /timed? ?out/i.test(err?.message || '');
+
+      const isTransient = isTimeout || isTransientNetworkError(err);
+
+      if (isTransient && attempt < maxRetries) {
+        const backoff = retryDelayMs * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, backoff));
+        continue;
+      }
+
+      const errorMsg = isTimeout
+        ? `Pinata ${options.actionName} request timed out after ${timeoutMs}ms (attempt ${attempt + 1}/${maxRetries + 1}).`
+        : `Pinata ${options.actionName} network failure: ${err?.message || 'unknown error'}`;
+
+      lastError = new Error(redactSensitiveData(errorMsg, secrets));
+      break;
+    }
+  }
+
+  throw (
+    lastError ||
+    new Error(
+      redactSensitiveData(
+        `Pinata ${options.actionName} failed after bounded retries.`,
+        secrets
+      )
+    )
+  );
+}
+
 export async function pinPetPassportToPinata(params: {
   pet: {
     petUid: string;
@@ -315,86 +504,148 @@ export async function pinPetPassportToPinata(params: {
     careCount: number;
     discoveredAt: Date;
     originalDiscovererWallet: string | null;
+    ipfsCid?: string | null;
   };
   recipientChecksum: string;
   apiKey: string;
   fetchFn?: typeof fetch;
+  timeoutMs?: number;
+  maxRetries?: number;
+  retryDelayMs?: number;
+  existingImageCid?: string;
 }): Promise<{
   imageCid: string;
   metadataCid: string;
   metadataUri: string;
 }> {
-  const doFetch = params.fetchFn ?? fetch;
-  const { buffer, mimeType, ext } = await readPetPortraitBytes(params.pet.photoUrl);
-
-  const formData = new FormData();
-  const blob = new Blob([new Uint8Array(buffer)], { type: mimeType });
-  formData.append('file', blob, `paws-passport-${params.pet.petUid}.${ext}`);
-  formData.append(
-    'pinataMetadata',
-    JSON.stringify({ name: `paws-passport-image-${params.pet.petUid}` })
-  );
-
-  const imgRes = await doFetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${params.apiKey}`,
-    },
-    body: formData,
-  });
-
-  if (!imgRes.ok) {
-    const body = await imgRes.text().catch(() => '');
-    throw new Error(`Pinata image upload failed (${imgRes.status}): ${body}`);
+  const apiKey = (params.apiKey || '').trim();
+  if (!apiKey) {
+    throw new Error('Pinata API key is required and cannot be empty.');
   }
 
-  const imgJson = (await imgRes.json()) as { IpfsHash?: string };
-  if (!imgJson.IpfsHash) {
-    throw new Error('Pinata image upload did not return an IpfsHash.');
+  const secrets = [apiKey];
+
+  try {
+    let imageCid: string;
+    const candidateImageCid = params.existingImageCid || params.pet.ipfsCid;
+
+    if (candidateImageCid && isValidIpfsCid(candidateImageCid)) {
+      // Avoid duplicate upload: reuse verified existing image CID
+      imageCid = candidateImageCid;
+    } else {
+      const { buffer, mimeType, ext } = await readPetPortraitBytes(params.pet.photoUrl);
+
+      const formData = new FormData();
+      const blob = new Blob([new Uint8Array(buffer)], { type: mimeType });
+      formData.append('file', blob, `paws-passport-${params.pet.petUid}.${ext}`);
+      formData.append(
+        'pinataMetadata',
+        JSON.stringify({ name: `paws-passport-image-${params.pet.petUid}` })
+      );
+
+      const imgRes = await executePinataRequest(
+        'https://api.pinata.cloud/pinning/pinFileToIPFS',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: formData,
+        },
+        {
+          fetchFn: params.fetchFn,
+          timeoutMs: params.timeoutMs,
+          maxRetries: params.maxRetries,
+          retryDelayMs: params.retryDelayMs,
+          apiKey,
+          actionName: 'image upload',
+        }
+      );
+
+      let imgJson: { IpfsHash?: unknown } = {};
+      try {
+        imgJson = (await imgRes.json()) as { IpfsHash?: unknown };
+      } catch (parseErr) {
+        throw new Error(
+          `Pinata image upload returned invalid JSON response: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`
+        );
+      }
+
+      if (!isValidIpfsCid(imgJson.IpfsHash)) {
+        throw new Error(
+          `Pinata image upload returned an invalid IPFS CID: ${JSON.stringify(imgJson.IpfsHash ?? null)}`
+        );
+      }
+
+      imageCid = imgJson.IpfsHash;
+    }
+
+    const metadataJson = buildPublicPetMetadata({
+      petUid: params.pet.petUid,
+      name: params.pet.name,
+      species: params.pet.species,
+      pose: params.pet.pose,
+      discoveryScore: params.pet.discoveryScore,
+      bondXp: params.pet.bondXp,
+      careCount: params.pet.careCount,
+      discoveredAt: params.pet.discoveredAt,
+      originalDiscovererWallet:
+        params.pet.originalDiscovererWallet || params.recipientChecksum,
+      publicImageUrl: `ipfs://${imageCid}`,
+    });
+
+    const metaRes = await executePinataRequest(
+      'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          pinataMetadata: { name: `paws-passport-${params.pet.petUid}` },
+          pinataContent: metadataJson,
+        }),
+      },
+      {
+        fetchFn: params.fetchFn,
+        timeoutMs: params.timeoutMs,
+        maxRetries: params.maxRetries,
+        retryDelayMs: params.retryDelayMs,
+        apiKey,
+        actionName: 'metadata upload',
+      }
+    );
+
+    let metaJson: { IpfsHash?: unknown } = {};
+    try {
+      metaJson = (await metaRes.json()) as { IpfsHash?: unknown };
+    } catch (parseErr) {
+      throw new Error(
+        `Pinata metadata upload returned invalid JSON response: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`
+      );
+    }
+
+    if (!isValidIpfsCid(metaJson.IpfsHash)) {
+      throw new Error(
+        `Pinata metadata upload returned an invalid IPFS CID: ${JSON.stringify(metaJson.IpfsHash ?? null)}`
+      );
+    }
+
+    return {
+      imageCid,
+      metadataCid: metaJson.IpfsHash,
+      metadataUri: `ipfs://${metaJson.IpfsHash}`,
+    };
+  } catch (err: any) {
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    const sanitizedMsg = redactSensitiveData(rawMsg, secrets);
+    if (err instanceof Error) {
+      err.message = sanitizedMsg;
+      throw err;
+    }
+    throw new Error(sanitizedMsg);
   }
-
-  const imageCid = imgJson.IpfsHash;
-  const metadataJson = buildPublicPetMetadata({
-    petUid: params.pet.petUid,
-    name: params.pet.name,
-    species: params.pet.species,
-    pose: params.pet.pose,
-    discoveryScore: params.pet.discoveryScore,
-    bondXp: params.pet.bondXp,
-    careCount: params.pet.careCount,
-    discoveredAt: params.pet.discoveredAt,
-    originalDiscovererWallet:
-      params.pet.originalDiscovererWallet || params.recipientChecksum,
-    publicImageUrl: `ipfs://${imageCid}`,
-  });
-
-  const metaRes = await doFetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${params.apiKey}`,
-    },
-    body: JSON.stringify({
-      pinataMetadata: { name: `paws-passport-${params.pet.petUid}` },
-      pinataContent: metadataJson,
-    }),
-  });
-
-  if (!metaRes.ok) {
-    const body = await metaRes.text().catch(() => '');
-    throw new Error(`Pinata metadata upload failed (${metaRes.status}): ${body}`);
-  }
-
-  const metaJson = (await metaRes.json()) as { IpfsHash?: string };
-  if (!metaJson.IpfsHash) {
-    throw new Error('Pinata metadata upload did not return an IpfsHash.');
-  }
-
-  return {
-    imageCid,
-    metadataCid: metaJson.IpfsHash,
-    metadataUri: `ipfs://${metaJson.IpfsHash}`,
-  };
 }
 
 export async function issueSignedMintClaim(params: {
@@ -468,6 +719,8 @@ export async function issueSignedMintClaim(params: {
       pet,
       recipientChecksum,
       apiKey,
+      existingImageCid:
+        pet.ipfsCid && isValidIpfsCid(pet.ipfsCid) ? pet.ipfsCid : undefined,
     });
     ipfsCid = pinned.metadataCid;
     metadataUri = pinned.metadataUri;
