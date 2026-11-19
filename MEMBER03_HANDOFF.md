@@ -49,12 +49,13 @@
 - `src/server/app.ts`: Passed `user.uid` to `unlinkWallet` for clean Firestore wallet deletion.
 
 ### Created Deliverable Documents & Test Suites
-- `MEMBER03_AUDIT.md`: Pre-execution audit report.
-- `MEMBER03_P1_REPORT.md`: P1 implementation and verification report.
+- `MEMBER03_E2E_MINT_REPORT.md`: End-to-end acceptance report for the live Avalanche Fuji mint.
+- `MEMBER03_POST_MINT_AUDIT.md`: Post-mint technical audit, contract mutability analysis, and 97-test verification.
+- `MEMBER03_OFFCHAIN_RECONCILIATION_REPORT.md`: Blockchain and Cloud Firestore reconciliation report.
+- `MEMBER03_WEB3_SECURITY_REPORT.md`: Web3 threat model and voucher security verification report.
 - `FUJI_DEPLOYMENT.md`: Avalanche Fuji live contract deployment record.
 - `METADATA_STORAGE_REPORT.md`: Canonical metadata schema and IPFS specification.
 - `MEMBER03_FRONTEND_HANDOFF.md`: Integration guide for Member 01.
-- `WEB3_TEST_REPORT.md`: Comprehensive 88-test regression matrix report.
 - `MEMBER03_HANDOFF.md`: This master specification document.
 - `test/web3-reconciliation.test.ts`: 10 targeted Firestore reconciliation tests.
 - `test/web3-e2e-matrix.test.ts`: 6 end-to-end lifecycle matrix tests.
@@ -185,7 +186,7 @@ All steps of Milestone I have been successfully executed and verified on Avalanc
 5. **Reconciliation Complete:** Firestore database reflects `mintStatus: "minted"`, `tokenId: "1"`, and milestone memory.
 6. **Detailed Reports:**
    - [`MEMBER03_E2E_MINT_REPORT.md`](file:///Users/apple/HACKATHON/MEMBER03_E2E_MINT_REPORT.md)
+   - [`MEMBER03_POST_MINT_AUDIT.md`](file:///Users/apple/HACKATHON/MEMBER03_POST_MINT_AUDIT.md)
    - [`MEMBER03_OFFCHAIN_RECONCILIATION_REPORT.md`](file:///Users/apple/HACKATHON/MEMBER03_OFFCHAIN_RECONCILIATION_REPORT.md)
    - [`MEMBER03_WEB3_SECURITY_REPORT.md`](file:///Users/apple/HACKATHON/MEMBER03_WEB3_SECURITY_REPORT.md)
-   - [`MEMBER03_E2E_PREFLIGHT.md`](file:///Users/apple/HACKATHON/MEMBER03_E2E_PREFLIGHT.md)
-   - [`MEMBER03_VOUCHER_SECURITY_REPORT.md`](file:///Users/apple/HACKATHON/MEMBER03_VOUCHER_SECURITY_REPORT.md)
+   - [`MEMBER03_FRONTEND_HANDOFF.md`](file:///Users/apple/HACKATHON/MEMBER03_FRONTEND_HANDOFF.md)
