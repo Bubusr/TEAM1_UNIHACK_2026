@@ -6,6 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+*service-account*.json
+*credentials*.json
 
 # Old prototype untracked folders
 contracts/node_modules/

@@ -31,6 +31,17 @@ if (rawCreds) {
       console.warn('Failed to write credentials to tmpdir:', err);
     }
   }
+} else {
+  const localSaPath = path.resolve(__dirname, '../../firebase-service-account.json');
+  if (fs.existsSync(localSaPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(localSaPath, 'utf8'));
+      appCredential = cert(parsed);
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = localSaPath;
+    } catch (err) {
+      console.warn('Failed to load local firebase-service-account.json:', err);
+    }
+  }
 }
 
 if (!getApps().length) {
