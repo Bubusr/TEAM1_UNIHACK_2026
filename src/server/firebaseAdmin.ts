@@ -31,10 +31,28 @@ if (!getApps().length) {
 
 export const adminAuth = getAuth();
 
-const hasGcpCredentials = Boolean(
+let hasGcpCredentials = Boolean(
   process.env.GOOGLE_APPLICATION_CREDENTIALS &&
     fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)
 );
+
+if (hasGcpCredentials) {
+  try {
+    const creds = JSON.parse(
+      fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS!, 'utf8')
+    );
+    // If it's a dummy or local development mock credential, use InMemoryFirestore
+    if (
+      creds.project_id === 'paws-local' ||
+      creds.client_email?.includes('paws-local') ||
+      creds.private_key?.includes('jwt-placeholder')
+    ) {
+      hasGcpCredentials = false;
+    }
+  } catch {
+    hasGcpCredentials = false;
+  }
+}
 
 // Lightweight In-Memory Firestore implementation for local development without Google Cloud ADC
 class InMemoryDocRef {
