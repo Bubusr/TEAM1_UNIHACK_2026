@@ -9,6 +9,7 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export interface PetMemoryRecord {
   id: string;
@@ -247,5 +248,36 @@ export const adoptionOffers = pgTable(
   (table) => [
     index('adoption_offers_pet_idx').on(table.petUid),
     index('adoption_offers_to_wallet_idx').on(table.toWallet),
+  ]
+);
+
+export const ipfsConsents = pgTable(
+  'ipfs_consents',
+  {
+    id: serial('id').primaryKey(),
+    consentUid: text('consent_uid').notNull().unique(),
+    petUid: text('pet_uid').notNull(),
+    userId: integer('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    userUid: text('user_uid'),
+    walletAddress: text('wallet_address').notNull(),
+    consentVersion: text('consent_version').notNull(),
+    disclosureReference: text('disclosure_reference').notNull(),
+    disclosures: jsonb('disclosures').$type<string[]>().notNull(),
+    consentedAt: timestamp('consented_at').notNull(),
+    status: text('status').notNull().default('granted'),
+    revokedAt: timestamp('revoked_at'),
+    revokedByUserId: integer('revoked_by_user_id'),
+    revocationReason: text('revocation_reason'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('ipfs_consents_active_pet_version_unique')
+      .on(table.petUid, table.consentVersion)
+      .where(sql`${table.status} IN ('granted', 'minted')`),
+    index('ipfs_consents_pet_idx').on(table.petUid),
+    index('ipfs_consents_user_idx').on(table.userId),
+    index('ipfs_consents_wallet_idx').on(table.walletAddress),
   ]
 );

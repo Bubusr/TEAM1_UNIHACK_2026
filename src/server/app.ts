@@ -745,18 +745,33 @@ export function createApp() {
           req.user!.email || '',
           req.user!.name
         );
+        const publicConsent =
+          req.body.publicConsent ??
+          (req.body.consentToPublicIpfs !== undefined
+            ? {
+                accepted: Boolean(req.body.consentToPublicIpfs),
+                consentVersion: req.body.consentVersion,
+              }
+            : undefined);
+
         const claimData = await issueSignedMintClaim({
           userId: user.id,
           uid: user.uid,
           petUid,
           publicBaseUrl: getCanonicalOrigin(),
+          publicConsent,
         });
         return res.json(claimData);
-      } catch (error) {
+      } catch (error: any) {
         const code = getStatusCode(error, 400);
         const msg =
           error instanceof Error ? error.message : 'Failed to issue mint claim.';
-        return res.status(code).json({ error: msg });
+        const responseBody: Record<string, unknown> = { error: msg };
+        if (error?.code) responseBody.code = error.code;
+        if (error?.supportedVersions) {
+          responseBody.supportedVersions = error.supportedVersions;
+        }
+        return res.status(code).json(responseBody);
       }
     }
   );

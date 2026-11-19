@@ -656,3 +656,18 @@ export async function removeBoundWallet(params: {
 
   await db.delete(wallets).where(eq(wallets.userId, params.userId));
 }
+
+export {
+  AUTHORITATIVE_IPFS_DISCLOSURES,
+  DEFAULT_DISCLOSURE_REFERENCE,
+  DEFAULT_DISCLOSURE_VERSION,
+  ensurePostgresIpfsConsentsTable,
+  getIpfsConsentForPet,
+  hasValidIpfsConsent,
+  markIpfsConsentMinted,
+  recordIpfsConsent,
+  revokeIpfsConsent,
+  type CreateIpfsConsentParams,
+  type IpfsConsentRecord,
+  type VerifyIpfsConsentParams,
+} from './ipfsConsentRepository.ts';

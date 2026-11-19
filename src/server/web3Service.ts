@@ -4,6 +4,7 @@ import path from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { ethers } from 'ethers';
 import { db } from '../db/index.ts';
+import { adminDb } from '../lib/firebase-admin.ts';
 import {
   adoptionOffers,
   mintClaims,
@@ -12,11 +13,19 @@ import {
   wallets,
 } from '../db/schema.ts';
 import {
+  AUTHORITATIVE_IPFS_DISCLOSURES,
+  DEFAULT_DISCLOSURE_REFERENCE,
+  DEFAULT_DISCLOSURE_VERSION,
+  getIpfsConsentForPet,
   getLinkedWallet,
   getPetForWeb3,
   getWalletByAddress,
+  hasValidIpfsConsent,
+  markIpfsConsentMinted,
   recordConfirmedMint,
+  recordIpfsConsent,
   recordIssuedMintClaim,
+  revokeIpfsConsent,
   updatePetOnChainOwnership,
 } from '../db/web3Repository.ts';
 import { MINT_ELIGIBILITY_RULES } from '../shared/gameMeta.ts';
@@ -492,6 +501,12 @@ export async function executePinataRequest(
   );
 }
 
+export const petImageCidMap = new Map<string, string>();
+
+export function _resetPetImageCidMap() {
+  petImageCidMap.clear();
+}
+
 export async function pinPetPassportToPinata(params: {
   pet: {
     petUid: string;
@@ -505,6 +520,7 @@ export async function pinPetPassportToPinata(params: {
     discoveredAt: Date;
     originalDiscovererWallet: string | null;
     ipfsCid?: string | null;
+    ipfsImageCid?: string | null;
   };
   recipientChecksum: string;
   apiKey: string;
@@ -527,12 +543,26 @@ export async function pinPetPassportToPinata(params: {
 
   try {
     let imageCid: string;
-    const candidateImageCid = params.existingImageCid || params.pet.ipfsCid;
+    const candidateImageCid =
+      params.existingImageCid ||
+      (params.pet as any).ipfsImageCid;
 
     if (candidateImageCid && isValidIpfsCid(candidateImageCid)) {
       // Avoid duplicate upload: reuse verified existing image CID
       imageCid = candidateImageCid;
+    } else if (params.pet.photoUrl && params.pet.photoUrl.startsWith('ipfs://')) {
+      const urlCid = params.pet.photoUrl.replace('ipfs://', '').split('/')[0];
+      if (isValidIpfsCid(urlCid)) {
+        imageCid = urlCid;
+        petImageCidMap.set(params.pet.petUid, imageCid);
+      } else {
+        imageCid = '';
+      }
     } else {
+      imageCid = '';
+    }
+
+    if (!imageCid) {
       const { buffer, mimeType, ext } = await readPetPortraitBytes(params.pet.photoUrl);
 
       const formData = new FormData();
@@ -578,6 +608,17 @@ export async function pinPetPassportToPinata(params: {
       }
 
       imageCid = imgJson.IpfsHash;
+      petImageCidMap.set(params.pet.petUid, imageCid);
+      if (!process.env.DATABASE_URL) {
+        try {
+          await adminDb.collection('pets').doc(params.pet.petUid).set(
+            { ipfsImageCid: imageCid },
+            { merge: true }
+          );
+        } catch {
+          // Non-fatal caching error
+        }
+      }
     }
 
     const metadataJson = buildPublicPetMetadata({
@@ -648,12 +689,49 @@ export async function pinPetPassportToPinata(params: {
   }
 }
 
-export async function issueSignedMintClaim(params: {
+export interface IssueSignedMintClaimParams {
   userId: number;
   uid?: string;
   petUid: string;
   publicBaseUrl?: string | null;
-}) {
+  publicConsent?: {
+    accepted?: boolean;
+    consentVersion?: string;
+    [key: string]: unknown;
+  } | null;
+  fetchFn?: typeof fetch;
+  timeoutMs?: number;
+  maxRetries?: number;
+  retryDelayMs?: number;
+}
+
+export const inFlightClaimLocks = new Map<string, Promise<any>>();
+
+export function _resetInFlightClaimLocks() {
+  inFlightClaimLocks.clear();
+}
+
+export async function issueSignedMintClaim(params: IssueSignedMintClaimParams) {
+  const cleanPetUid = (params.petUid || '').trim();
+  const lockKey = `${cleanPetUid}:${params.userId}`;
+
+  if (inFlightClaimLocks.has(lockKey)) {
+    return await inFlightClaimLocks.get(lockKey)!;
+  }
+
+  const claimPromise = (async () => {
+    return await _executeIssueSignedMintClaim({ ...params, petUid: cleanPetUid });
+  })();
+
+  inFlightClaimLocks.set(lockKey, claimPromise);
+  try {
+    return await claimPromise;
+  } finally {
+    inFlightClaimLocks.delete(lockKey);
+  }
+}
+
+async function _executeIssueSignedMintClaim(params: IssueSignedMintClaimParams) {
   const status = getWeb3Status();
   if (!status.readyForMint || !status.contractAddress) {
     const err = new Error(
@@ -666,6 +744,7 @@ export async function issueSignedMintClaim(params: {
   const rawSignerKey = process.env.TRUSTED_SIGNER_PRIVATE_KEY!.trim();
   const signerWallet = new ethers.Wallet(rawSignerKey);
 
+  // Authoritative linked wallet resolved from authenticated session and database
   const linkedWallet = await getLinkedWallet({
     userId: params.userId,
     uid: params.uid,
@@ -678,28 +757,42 @@ export async function issueSignedMintClaim(params: {
   const pet = await getPetForWeb3(params.petUid);
 
   if (!pet) {
-    throw new Error('Pet passport not found.');
+    const err = new Error('Pet passport not found.');
+    (err as Error & { statusCode?: number }).statusCode = 404;
+    throw err;
   }
+
   const isOwner =
     pet.currentOwnerId === params.userId ||
     (params.uid && pet.currentOwnerUid === params.uid);
   if (!isOwner) {
-    throw new Error('Only the current pet owner can request a mint claim.');
+    const err = new Error('Only the current pet owner can request a mint claim.');
+    (err as Error & { statusCode?: number }).statusCode = 400;
+    throw err;
   }
 
   const eligibility = computeMintEligibility(pet);
   if (pet.mintStatus === 'minted') {
-    throw new Error('This pet has already been minted on-chain.');
+    const err = new Error('This pet has already been minted on-chain.');
+    (err as Error & { statusCode?: number }).statusCode = 400;
+    (err as any).code = 'ALREADY_MINTED';
+    throw err;
   }
   if (!eligibility.scoreMet) {
-    throw new Error(
+    const err = new Error(
       `Pet needs an AI score of ${eligibility.minScore}+ to mint (current: ${pet.discoveryScore}).`
     );
+    (err as Error & { statusCode?: number }).statusCode = 400;
+    (err as any).code = 'INELIGIBLE';
+    throw err;
   }
   if (!eligibility.bondMet) {
-    throw new Error(
+    const err = new Error(
       `Build ${eligibility.minBondXp} Bond XP through care, feeding, and play first (current: ${pet.bondXp}/${eligibility.minBondXp}).`
     );
+    (err as Error & { statusCode?: number }).statusCode = 400;
+    (err as any).code = 'INELIGIBLE';
+    throw err;
   }
 
   const recipientChecksum = ethers.getAddress(linkedWallet.address);
@@ -709,19 +802,115 @@ export async function issueSignedMintClaim(params: {
   let metadataUri: string;
 
   if (storage.provider === 'pinata') {
+    // 1. Consent verification before any Pinata upload
+    const consent = params.publicConsent;
+    if (!consent || consent.accepted !== true) {
+      const err = new Error(
+        'Explicit user consent is required before publishing pet assets to public IPFS.'
+      );
+      (err as any).statusCode = 400;
+      (err as any).code = 'CONSENT_REQUIRED';
+      (err as any).supportedVersions = Object.keys(AUTHORITATIVE_IPFS_DISCLOSURES);
+      throw err;
+    }
+
+    const consentVersion = String(
+      consent.consentVersion || DEFAULT_DISCLOSURE_VERSION
+    ).trim();
+    const authoritativeDisclosures = AUTHORITATIVE_IPFS_DISCLOSURES[consentVersion];
+    if (!authoritativeDisclosures) {
+      const err = new Error(
+        'Unsupported consent version. Please refresh to load updated disclosures.'
+      );
+      (err as any).statusCode = 400;
+      (err as any).code = 'UNSUPPORTED_CONSENT_VERSION';
+      (err as any).supportedVersions = Object.keys(AUTHORITATIVE_IPFS_DISCLOSURES);
+      throw err;
+    }
+
+    // 2. Persist consent using Member 02's recordIpfsConsent
+    try {
+      await recordIpfsConsent({
+        petUid: pet.petUid,
+        userId: params.userId,
+        userUid: params.uid,
+        walletAddress: recipientChecksum,
+        consentVersion,
+      });
+    } catch (persistErr: any) {
+      const err = new Error(
+        `Failed to persist consent audit record. Mint claim aborted before IPFS upload: ${persistErr?.message || persistErr}`
+      );
+      (err as any).statusCode = 500;
+      (err as any).code = 'CONSENT_PERSISTENCE_FAILED';
+      throw err;
+    }
+
+    // 3. Verify consent using hasValidIpfsConsent
+    const isValidConsent = await hasValidIpfsConsent({
+      petUid: pet.petUid,
+      userId: params.userId,
+      userUid: params.uid,
+      walletAddress: recipientChecksum,
+      consentVersion,
+    });
+
+    if (!isValidConsent) {
+      const err = new Error(
+        'Consent verification failed. Public IPFS upload aborted.'
+      );
+      (err as any).statusCode = 403;
+      (err as any).code = 'CONSENT_VERIFICATION_FAILED';
+      throw err;
+    }
+
+    // 4. Pinata Upload
     const apiKey = process.env.METADATA_STORAGE_API_KEY?.trim();
     if (!apiKey) {
       throw new Error(
         'METADATA_STORAGE_API_KEY is required when METADATA_STORAGE_PROVIDER=pinata.'
       );
     }
-    const pinned = await pinPetPassportToPinata({
-      pet,
-      recipientChecksum,
-      apiKey,
-      existingImageCid:
-        pet.ipfsCid && isValidIpfsCid(pet.ipfsCid) ? pet.ipfsCid : undefined,
-    });
+
+    let pinned: { imageCid: string; metadataCid: string; metadataUri: string };
+
+    if (
+      pet.metadataUri?.startsWith('ipfs://') &&
+      pet.ipfsCid &&
+      isValidIpfsCid(pet.ipfsCid)
+    ) {
+      pinned = {
+        imageCid: (pet as any).ipfsImageCid || petImageCidMap.get(pet.petUid) || '',
+        metadataCid: pet.ipfsCid,
+        metadataUri: pet.metadataUri,
+      };
+    } else {
+      pinned = await pinPetPassportToPinata({
+        pet,
+        recipientChecksum,
+        apiKey,
+        existingImageCid:
+          (pet as any).ipfsImageCid ||
+          petImageCidMap.get(pet.petUid) ||
+          undefined,
+        fetchFn: params.fetchFn,
+        timeoutMs: params.timeoutMs,
+        maxRetries: params.maxRetries,
+        retryDelayMs: params.retryDelayMs,
+      });
+    }
+
+    if (!isValidIpfsCid(pinned.metadataCid)) {
+      throw new Error(
+        `Invalid metadata CID returned: ${JSON.stringify(pinned.metadataCid)}`
+      );
+    }
+    if (!pinned.metadataUri || !pinned.metadataUri.startsWith('ipfs://')) {
+      throw new Error(
+        `Invalid metadataUri constructed: ${JSON.stringify(pinned.metadataUri)}`
+      );
+    }
+
     ipfsCid = pinned.metadataCid;
     metadataUri = pinned.metadataUri;
   } else {
@@ -925,6 +1114,14 @@ export async function confirmFujiMintTransaction(params: {
     onChainOwner,
     contractAddress: status.contractAddress,
   });
+
+  try {
+    await markIpfsConsentMinted({
+      petUid: pet.petUid,
+    });
+  } catch {
+    // Non-fatal if no consent record existed (e.g. server mode)
+  }
 
   return {
     tokenId: matchedLog.tokenId,
