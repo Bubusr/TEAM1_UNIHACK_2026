@@ -6,3 +6,21 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Next.js build cache
+.next/
+
+# Solidity & Foundry artifacts / cache
+contracts/artifacts_hh/
+contracts/cache_hh/
+contracts/cache/
+contracts/out/
+
+# Database local
+prisma/*.db
+prisma/*.db-journal
+
+# Exclude internal / planning documents
+*.docx
+Ke_hoach_chi_tiet_Member_03_Blockchain_Paws_and_Picket.docx
+
