@@ -30,6 +30,7 @@ import { JudgeCardScreen } from './components/JudgeCardScreen';
 import { CreamSheets } from './components/CreamSheets';
 import { DiscoverCameraModal } from './components/camera/DiscoverCameraModal';
 import { IpfsConsentModal } from './components/IpfsConsentModal';
+import { processedCache } from './components/CroppedPetCutout';
 import {
   signInWithGooglePopup,
   signOutKeeper,
@@ -1341,12 +1342,16 @@ export default function App() {
       setFenceHours(24);
       setEnergy((e) => Math.max(0, e - 5));
 
+      const cachedCutout =
+        processedCache.get(`auto:${activeReport.photoUrl}`) ||
+        processedCache.get(`studio:${activeReport.photoUrl}`);
+
       const newPet: SanctuaryPet = {
         id: `cropped-${activeReport.id}`,
         name: activeReport.petName,
         species: mapSpecies(activeReport.species),
-        photoUrl: activeReport.photoUrl,
-        cutoutMode: 'auto',
+        photoUrl: cachedCutout || activeReport.photoUrl,
+        cutoutMode: cachedCutout ? 'studio' : 'auto',
         x: 48,
         y: 52,
         score: activeReport.overallScore,
