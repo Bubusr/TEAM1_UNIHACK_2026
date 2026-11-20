@@ -389,6 +389,21 @@ export async function getBrowserWalletState(): Promise<{
   const { provider, providerName, isCoreWallet } =
     resolvePreferredWalletProvider();
   if (!provider) {
+    if (typeof window !== 'undefined') {
+      const demoPk = localStorage.getItem(DEMO_WALLET_STORAGE_KEY);
+      if (demoPk && demoPk.startsWith('0x')) {
+        try {
+          const w = new ethers.Wallet(demoPk);
+          return {
+            available: true,
+            address: w.address,
+            chainId: FUJI_CHAIN_ID,
+            providerName: 'Demo Wallet',
+            isCoreWallet: false,
+          };
+        } catch {}
+      }
+    }
     return {
       available: false,
       address: null,
@@ -420,18 +435,57 @@ export async function getBrowserWalletState(): Promise<{
   }
 }
 
-export async function connectInjectedWallet(): Promise<{
+const DEMO_WALLET_STORAGE_KEY = 'paws_fuji_demo_wallet_pk';
+
+export function getOrCreateDemoWallet(): ethers.Wallet {
+  if (typeof window !== 'undefined') {
+    let pk = localStorage.getItem(DEMO_WALLET_STORAGE_KEY);
+    if (!pk || !pk.startsWith('0x') || pk.length !== 66) {
+      const rand = ethers.Wallet.createRandom();
+      pk = rand.privateKey;
+      localStorage.setItem(DEMO_WALLET_STORAGE_KEY, pk);
+      return new ethers.Wallet(pk);
+    }
+    try {
+      return new ethers.Wallet(pk);
+    } catch {
+      const rand = ethers.Wallet.createRandom();
+      localStorage.setItem(DEMO_WALLET_STORAGE_KEY, rand.privateKey);
+      return new ethers.Wallet(rand.privateKey);
+    }
+  }
+  const rand = ethers.Wallet.createRandom();
+  return new ethers.Wallet(rand.privateKey);
+}
+
+export function clearDemoWallet(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(DEMO_WALLET_STORAGE_KEY);
+  }
+}
+
+export async function connectInjectedWallet(useDemoFallback = false): Promise<{
   address: string;
   chainId: number;
   providerName: string;
   isCoreWallet: boolean;
 }> {
+  if (useDemoFallback) {
+    const demo = getOrCreateDemoWallet();
+    return {
+      address: demo.address,
+      chainId: FUJI_CHAIN_ID,
+      providerName: 'Demo Wallet',
+      isCoreWallet: false,
+    };
+  }
+
   const { provider, providerName, isCoreWallet } =
     resolvePreferredWalletProvider();
   if (!provider) {
     throw new WalletRpcError(
       'eth_requestAccounts',
-      'No desktop browser wallet detected. Install Core Extension (recommended) or an injected EVM wallet.'
+      'No desktop browser wallet detected. Install Core Extension (recommended) or use Demo Wallet.'
     );
   }
 
@@ -466,10 +520,7 @@ export async function connectInjectedWallet(): Promise<{
 export async function ensureFujiNetwork(): Promise<number> {
   const { provider } = resolvePreferredWalletProvider();
   if (!provider) {
-    throw new WalletRpcError(
-      'wallet_switchEthereumChain',
-      'No desktop EVM wallet extension detected.'
-    );
+    return FUJI_CHAIN_ID;
   }
   const currentHex = await callProviderRpc<string>(provider, 'eth_chainId');
   const currentId = Number.parseInt(currentHex, 16);
@@ -515,10 +566,14 @@ export async function signChallengeMessage(
 ): Promise<string> {
   const { provider } = resolvePreferredWalletProvider();
   if (!provider) {
-    throw new WalletRpcError(
-      'personal_sign',
-      'No desktop EVM wallet extension detected.'
-    );
+    const demo = getOrCreateDemoWallet();
+    if (expectedAddress && demo.address.toLowerCase() !== expectedAddress.toLowerCase()) {
+      throw new WalletRpcError(
+        'personal_sign',
+        `Demo wallet address (${demo.address}) does not match expected address (${expectedAddress})`
+      );
+    }
+    return await demo.signMessage(message);
   }
 
   let signerAddress: string;

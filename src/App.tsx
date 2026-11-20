@@ -77,6 +77,7 @@ import {
   setStoredGuestToken,
 } from './lib/api';
 import {
+  clearDemoWallet,
   connectInjectedWallet,
   ensureFujiNetwork,
   executeFujiMintTx,
@@ -766,6 +767,7 @@ export default function App() {
             firebaseUser.displayName ||
             firebaseUser.email?.split('@')[0] ||
             'Keeper',
+          photoURL: firebaseUser.photoURL || undefined,
         });
         try {
           const state = getStoredGuestToken()
@@ -2188,13 +2190,13 @@ export default function App() {
     }
   };
 
-  const handleConnectAndVerifyWallet = async () => {
+  const handleConnectAndVerifyWallet = async (useDemoFallback: boolean = false) => {
     setProfileBusy('wallet');
     setProfileFeedback(null);
     try {
       // Step 1: Connect selected account via eth_requestAccounts without forcing a Fuji chain switch
       const { address, chainId, providerName, isCoreWallet } =
-        await connectInjectedWallet();
+        await connectInjectedWallet(useDemoFallback);
       setBrowserWallet({
         available: true,
         address,
@@ -2262,8 +2264,16 @@ export default function App() {
     setProfileFeedback(null);
     try {
       await apiUnlinkWallet();
+      clearDemoWallet();
       setLinkedWallet(null);
-      setProfileFeedback({ type: 'ok', text: 'Wallet unlinked from Keeper Profile.' });
+      setBrowserWallet({
+        available: false,
+        address: null,
+        chainId: null,
+        providerName: 'No Wallet Detected',
+        isCoreWallet: false,
+      });
+      setProfileFeedback({ type: 'ok', text: 'Wallet unlinked and disconnected ✓' });
     } catch (err) {
       setProfileFeedback({
         type: 'err',
@@ -2423,6 +2433,12 @@ export default function App() {
     { id: 'gallery', label: `Passports (${passports.length})` },
   ];
 
+  const isLinkedMatch = Boolean(
+    linkedWallet?.address &&
+      (!browserWallet.address ||
+        linkedWallet.address.toLowerCase() === browserWallet.address.toLowerCase())
+  );
+
   const walletState: {
     connected: boolean;
     address: string | null;
@@ -2438,9 +2454,9 @@ export default function App() {
     chainId: browserWallet.chainId,
     isAvalancheFuji: browserWallet.chainId === 43113,
     providerLabel: browserWallet.isCoreWallet ? 'Core Wallet' : 'Demo Wallet',
-    authVerified: Boolean(linkedWallet),
+    authVerified: isLinkedMatch,
     connecting: Boolean(profileBusy === 'wallet'),
-    error: null,
+    error: profileFeedback?.type === 'err' ? profileFeedback.text : null,
   };
 
   return (
@@ -2974,9 +2990,9 @@ export default function App() {
         open={walletModalOpen}
         wallet={walletState}
         onClose={() => setWalletModalOpen(false)}
-        onConnectCore={handleConnectAndVerifyWallet}
+        onConnectCore={(useDemo) => handleConnectAndVerifyWallet(useDemo)}
         onSwitchFuji={handleSwitchToFuji}
-        onVerifyAuth={handleConnectAndVerifyWallet}
+        onVerifyAuth={() => handleConnectAndVerifyWallet(false)}
         onDisconnect={handleUnlinkWallet}
       />
     </div>

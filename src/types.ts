@@ -261,6 +261,7 @@ export interface KeeperAuthUser {
   uid: string;
   email: string;
   displayName: string;
+  photoURL?: string;
 }
 
 export interface FirstBondQuestStatus {
