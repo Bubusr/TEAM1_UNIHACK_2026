@@ -2988,12 +2988,17 @@ export default function App() {
 
       <WalletConnectModal
         open={walletModalOpen}
-        wallet={walletState}
         onClose={() => setWalletModalOpen(false)}
-        onConnectCore={(useDemo) => handleConnectAndVerifyWallet(useDemo)}
-        onSwitchFuji={handleSwitchToFuji}
-        onVerifyAuth={() => handleConnectAndVerifyWallet(false)}
-        onDisconnect={handleUnlinkWallet}
+        authUser={authUser}
+        linkedWallet={linkedWallet}
+        browserWallet={browserWallet}
+        web3Status={web3Status}
+        profileBusy={profileBusy}
+        profileFeedback={profileFeedback}
+        onSignInGoogle={handleSignInGoogle}
+        onConnectAndVerifyWallet={handleConnectAndVerifyWallet}
+        onSwitchToFuji={handleSwitchToFuji}
+        onUnlinkWallet={handleUnlinkWallet}
       />
     </div>
     </UiLabelsProvider>
