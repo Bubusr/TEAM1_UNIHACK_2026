@@ -2383,6 +2383,12 @@ export default function App() {
           setMintModalOpen(true);
         }}
         onOpenGallery={openGalleryScreen}
+        onOpenWallet={() => setWalletModalOpen(true)}
+        onOpenQuest={() => setQuestModalOpen(true)}
+        walletLabel={
+          walletState.connected ? shortenAddress(walletState.address) : 'Connect Core'
+        }
+        keeperName={authUser?.displayName || 'Keeper'}
         onCarePet={(petId) => {
           handleCarePet(petId);
         }}
