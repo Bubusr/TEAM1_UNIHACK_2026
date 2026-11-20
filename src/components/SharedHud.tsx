@@ -1,20 +1,26 @@
 import React, { createContext, useContext } from 'react';
 import {
   BookOpen,
+  CalendarDays,
+  ClipboardCheck,
   Home,
   Plus,
   Settings,
   ShoppingBag,
   Sprout,
-  Sun,
-  Sunset,
   Users,
 } from 'lucide-react';
 import { LightningEnergyIcon, PawCoinIcon } from './HandDrawnAssets';
 import { PET_IMAGES } from '../assets/petImages';
+import {
+  TIME_OF_DAY_PALETTES,
+  TimeOfDayPalette,
+  TimeOfDayTheme,
+  getTimeOfDayTheme,
+} from '../utils/timeOfDay';
 
 export type ScreenTab = 'sanctuary' | 'farm' | 'visit' | 'judge' | 'gallery';
-export type SkyTheme = 'morning' | 'sunset';
+export type SkyTheme = TimeOfDayTheme;
 
 const UiLabelsContext = createContext<boolean>(false);
 
@@ -24,21 +30,29 @@ export function useShowTextLabels(): boolean {
   return useContext(UiLabelsContext);
 }
 
-interface SkyThemeContextValue {
-  skyTheme: SkyTheme;
-  toggleSkyTheme: () => void;
-}
-
-const SkyThemeContext = createContext<SkyThemeContextValue>({
-  skyTheme: 'morning',
-  toggleSkyTheme: () => {},
-});
+const SkyThemeContext = createContext<TimeOfDayTheme>(getTimeOfDayTheme());
 
 export const SkyThemeProvider = SkyThemeContext.Provider;
 
-export function useSkyTheme(): SkyThemeContextValue {
-  return useContext(SkyThemeContext);
+export function useSkyTheme(): {
+  skyTheme: TimeOfDayTheme;
+  palette: TimeOfDayPalette;
+} {
+  const skyTheme = useContext(SkyThemeContext);
+  return {
+    skyTheme,
+    palette: TIME_OF_DAY_PALETTES[skyTheme],
+  };
 }
+
+interface DailyMissionsHudValue {
+  onOpenMissions?: () => void;
+  hasMissionsBadge?: boolean;
+}
+
+const DailyMissionsHudContext = createContext<DailyMissionsHudValue>({});
+
+export const DailyMissionsHudProvider = DailyMissionsHudContext.Provider;
 
 interface TopHudProps {
   level: number;
@@ -51,6 +65,8 @@ interface TopHudProps {
   onOpenProfile: () => void;
   onQuickCoins: () => void;
   onQuickEnergy: () => void;
+  onOpenCalendar?: () => void;
+  hasCalendarBadge?: boolean;
   onOpenSettings?: () => void;
 }
 
@@ -65,9 +81,13 @@ export const SharedTopHud: React.FC<TopHudProps> = ({
   onOpenProfile,
   onQuickCoins,
   onQuickEnergy,
+  onOpenCalendar,
+  hasCalendarBadge,
   onOpenSettings,
 }) => {
-  const { skyTheme, toggleSkyTheme } = useSkyTheme();
+  const { onOpenMissions, hasMissionsBadge } = useContext(
+    DailyMissionsHudContext
+  );
 
   return (
     <header className="relative z-30 px-2.5 pt-2.5 flex flex-col gap-1.5 shrink-0">
@@ -135,31 +155,41 @@ export const SharedTopHud: React.FC<TopHudProps> = ({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={toggleSkyTheme}
-            aria-label={
-              skyTheme === 'morning'
-                ? 'Switch to Golden Hour Sunset sky'
-                : 'Switch to Sunny Morning sky'
-            }
-            title={
-              skyTheme === 'morning'
-                ? 'Sky: Morning (tap for Sunset)'
-                : 'Sky: Sunset (tap for Morning)'
-            }
-            className={`cream-pill rounded-full w-8.5 h-8.5 flex items-center justify-center active:scale-90 transition-transform cursor-pointer shrink-0 ${
-              skyTheme === 'sunset'
-                ? 'bg-[#FFE7D6] text-[#D96B52]'
-                : 'bg-[#FFF8D8] text-[#D99B26]'
-            }`}
-          >
-            {skyTheme === 'sunset' ? (
-              <Sunset className="w-4 h-4 stroke-[2.4]" />
-            ) : (
-              <Sun className="w-4 h-4 stroke-[2.4]" />
-            )}
-          </button>
+          {onOpenMissions && (
+            <button
+              type="button"
+              onClick={onOpenMissions}
+              aria-label="Open Daily Missions"
+              title="Daily Missions"
+              className="cream-pill relative rounded-full w-8.5 h-8.5 flex items-center justify-center bg-[#EAF9EE] text-[#3F7B52] active:scale-90 transition-transform cursor-pointer shrink-0"
+            >
+              <ClipboardCheck className="w-4 h-4 stroke-[2.4]" />
+              {hasMissionsBadge && (
+                <span
+                  aria-label="Mission reward ready"
+                  className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#FF85A1] border-[1.5px] border-[#FFFDF9]"
+                />
+              )}
+            </button>
+          )}
+
+          {onOpenCalendar && (
+            <button
+              type="button"
+              onClick={onOpenCalendar}
+              aria-label="Open Daily Login Streak Calendar"
+              title="Daily Streak Calendar"
+              className="cream-pill relative rounded-full w-8.5 h-8.5 flex items-center justify-center bg-[#FFF8E6] text-[#C9852B] active:scale-90 transition-transform cursor-pointer shrink-0"
+            >
+              <CalendarDays className="w-4 h-4 stroke-[2.4]" />
+              {hasCalendarBadge && (
+                <span
+                  aria-label="Reward ready"
+                  className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#FF85A1] border-[1.5px] border-[#FFFDF9]"
+                />
+              )}
+            </button>
+          )}
 
           {onOpenSettings && (
             <button

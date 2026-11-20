@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Home, Settings, Sun, Sunset, Wallet } from 'lucide-react';
+import { Home, Settings, Wallet } from 'lucide-react';
 import {
   CropPlot,
   CropType,
@@ -39,7 +39,32 @@ import {
 import { PassportMintModal } from './components/PassportMintModal';
 import { StartScreen } from './components/StartScreen';
 import { AppSettingsModal } from './components/AppSettingsModal';
-import { SkyTheme, SkyThemeProvider, UiLabelsProvider } from './components/SharedHud';
+import {
+  STREAK_MILESTONES,
+  StreakCalendarModal,
+  StreakMilestone,
+  getLocalDateKey,
+} from './components/StreakCalendarModal';
+import {
+  PetMemoryModal,
+  PetMemoryReward,
+} from './components/PetMemoryModal';
+import {
+  DailyMissionKind,
+  DailyMissionsModal,
+  DailyMissionsState,
+  rollDailyMissions,
+} from './components/DailyMissionsModal';
+import {
+  DailyMissionsHudProvider,
+  SkyThemeProvider,
+  UiLabelsProvider,
+} from './components/SharedHud';
+import {
+  TIME_OF_DAY_PALETTES,
+  TimeOfDayTheme,
+  getTimeOfDayTheme,
+} from './utils/timeOfDay';
 import {
   playCameraSound,
   playCoinSound,
@@ -472,11 +497,13 @@ interface SavedAppState {
   keeperName?: string;
   soundEnabled?: boolean;
   showTextLabels?: boolean;
-  skyTheme?: SkyTheme;
   coins?: number;
   energy?: number;
   level?: number;
   expPercent?: number;
+  streakDays?: number;
+  lastCheckInDate?: string | null;
+  claimedStreakMilestones?: number[];
   fenceHours?: number;
   pets?: SanctuaryPet[];
   shopItems?: ShopItem[];
@@ -494,6 +521,7 @@ interface SavedAppState {
   album?: JudgeReport[];
   passports?: MintedPassportRecord[];
   firstBondQuest?: FirstBondQuestState;
+  dailyMissions?: DailyMissionsState;
 }
 
 function loadSavedState(): SavedAppState | null {
@@ -525,16 +553,57 @@ export default function App() {
   const [showTextLabels, setShowTextLabels] = useState<boolean>(
     initialSave?.showTextLabels ?? false
   );
-  const [skyTheme, setSkyTheme] = useState<SkyTheme>(
-    initialSave?.skyTheme === 'sunset' ? 'sunset' : 'morning'
+  const [skyTheme, setSkyTheme] = useState<TimeOfDayTheme>(() =>
+    getTimeOfDayTheme()
   );
+
+  useEffect(() => {
+    const syncTimeOfDay = () => {
+      const next = getTimeOfDayTheme();
+      setSkyTheme((prev) => (prev === next ? prev : next));
+    };
+    const timer = window.setInterval(syncTimeOfDay, 60000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncTimeOfDay();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
 
   const [coins, setCoins] = useState(initialSave?.coins ?? 12560);
   const [energy, setEnergy] = useState(initialSave?.energy ?? 45);
   const maxEnergy = 50;
   const [level, setLevel] = useState(initialSave?.level ?? 12);
   const [expPercent, setExpPercent] = useState(initialSave?.expPercent ?? 64);
-  const [streakDays] = useState(7);
+  const [streakDays, setStreakDays] = useState(initialSave?.streakDays ?? 7);
+  const [lastCheckInDate, setLastCheckInDate] = useState<string | null>(
+    initialSave?.lastCheckInDate !== undefined
+      ? initialSave.lastCheckInDate
+      : getLocalDateKey()
+  );
+  const [claimedStreakMilestones, setClaimedStreakMilestones] = useState<
+    number[]
+  >(initialSave?.claimedStreakMilestones ?? [3]);
+  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
+  const [memoryModalOpen, setMemoryModalOpen] = useState(false);
+  const [missionsModalOpen, setMissionsModalOpen] = useState(false);
+  const [dailyMissions, setDailyMissions] = useState<DailyMissionsState>(() => {
+    const today = getLocalDateKey();
+    if (
+      initialSave?.dailyMissions &&
+      initialSave.dailyMissions.dateKey === today &&
+      Array.isArray(initialSave.dailyMissions.missions) &&
+      initialSave.dailyMissions.missions.length === 3
+    ) {
+      return initialSave.dailyMissions;
+    }
+    return rollDailyMissions(today);
+  });
   const [fenceHours, setFenceHours] = useState(initialSave?.fenceHours ?? 14);
   const [theme] = useState('Fluffy Tails');
 
@@ -690,6 +759,9 @@ export default function App() {
         energy,
         level,
         expPercent,
+        streakDays,
+        lastCheckInDate,
+        claimedStreakMilestones,
         fenceHours,
         pets,
         shopItems,
@@ -707,7 +779,7 @@ export default function App() {
         album,
         passports,
         firstBondQuest,
-        skyTheme,
+        dailyMissions,
       };
       window.localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(snapshot));
     } catch {
@@ -719,11 +791,13 @@ export default function App() {
     keeperName,
     soundEnabled,
     showTextLabels,
-    skyTheme,
     coins,
     energy,
     level,
     expPercent,
+    streakDays,
+    lastCheckInDate,
+    claimedStreakMilestones,
     fenceHours,
     pets,
     shopItems,
@@ -741,7 +815,167 @@ export default function App() {
     album,
     passports,
     firstBondQuest,
+    dailyMissions,
   ]);
+
+  const todayKey = getLocalDateKey();
+  const checkedInToday = lastCheckInDate === todayKey;
+  const hasUnclaimedStreakReward =
+    !checkedInToday ||
+    STREAK_MILESTONES.some(
+      (ms) =>
+        streakDays >= ms.day && !claimedStreakMilestones.includes(ms.day)
+    );
+
+  const handleDailyCheckIn = () => {
+    const key = getLocalDateKey();
+    if (lastCheckInDate === key) return;
+    playVictorySound();
+    setLastCheckInDate(key);
+    setStreakDays((d) => d + 1);
+    setCoins((c) => c + 50);
+    setFenceHours((h) => Math.min(48, h + 12));
+  };
+
+  const handleClaimStreakMilestone = (milestone: StreakMilestone) => {
+    if (
+      streakDays < milestone.day ||
+      claimedStreakMilestones.includes(milestone.day)
+    ) {
+      return;
+    }
+    playVictorySound();
+    setClaimedStreakMilestones((prev) => [...prev, milestone.day]);
+    setCoins((c) => c + milestone.coins);
+    if (milestone.energy) {
+      setEnergy((e) => Math.min(maxEnergy, e + milestone.energy!));
+    }
+    if (milestone.berrySeeds) {
+      setSeedInventory((inv) => ({
+        ...inv,
+        berry: inv.berry + milestone.berrySeeds!,
+      }));
+    }
+  };
+
+  const recordMissionProgress = (kind: DailyMissionKind, delta = 1) => {
+    const today = getLocalDateKey();
+    setDailyMissions((prev) => {
+      const base =
+        prev.dateKey === today ? prev : rollDailyMissions(today);
+      let changed = false;
+      const nextMissions = base.missions.map((m) => {
+        if (m.kind !== kind || m.progress >= m.target) return m;
+        changed = true;
+        return { ...m, progress: Math.min(m.target, m.progress + delta) };
+      });
+      if (!changed && base === prev) return prev;
+      return { ...base, missions: nextMissions };
+    });
+  };
+
+  const hasClaimableDailyMission =
+    dailyMissions.missions.some((m) => !m.claimed && m.progress >= m.target) ||
+    (!dailyMissions.bonusClaimed &&
+      dailyMissions.missions.every((m) => m.claimed));
+
+  const handleClaimDailyMission = (missionId: string) => {
+    const target = dailyMissions.missions.find((m) => m.id === missionId);
+    if (!target || target.claimed || target.progress < target.target) return;
+    playVictorySound();
+    setDailyMissions((prev) => ({
+      ...prev,
+      missions: prev.missions.map((m) =>
+        m.id === missionId ? { ...m, claimed: true } : m
+      ),
+    }));
+    setCoins((c) => c + target.coins);
+    setExpPercent((prev) => {
+      const next = prev + target.xp;
+      if (next >= 100) {
+        setLevel((lv) => lv + 1);
+        return next - 100;
+      }
+      return next;
+    });
+  };
+
+  const handleClaimDailyMissionBonus = () => {
+    if (
+      dailyMissions.bonusClaimed ||
+      !dailyMissions.missions.every((m) => m.claimed)
+    ) {
+      return;
+    }
+    playVictorySound();
+    setDailyMissions((prev) => ({ ...prev, bonusClaimed: true }));
+    setCoins((c) => c + 200);
+    setEnergy((e) => Math.min(maxEnergy, e + 10));
+  };
+
+  const handleRerollDailyMissions = () => {
+    playTapSound();
+    setDailyMissions(rollDailyMissions(getLocalDateKey()));
+  };
+
+  const handleJumpToMission = (kind: DailyMissionKind) => {
+    playTapSound();
+    setMissionsModalOpen(false);
+    if (kind === 'pet' || kind === 'feed' || kind === 'play') {
+      openSanctuaryScreen();
+      if (pets[0]) {
+        setProfileModalState({
+          open: true,
+          mode: 'profile',
+          petId: pets[0].id,
+        });
+      }
+      return;
+    }
+    if (kind === 'water' || kind === 'harvest') {
+      openFarmScreen();
+      return;
+    }
+    if (kind === 'visit') {
+      openNeighborGardenScreen();
+      return;
+    }
+    if (kind === 'memory') {
+      openSanctuaryScreen();
+      setMemoryModalOpen(true);
+    }
+  };
+
+  const handleClaimMemoryReward = (reward: PetMemoryReward) => {
+    playVictorySound();
+    recordMissionProgress('memory', 1);
+    setCoins((c) => c + reward.coins);
+    setExpPercent((prev) => {
+      const next = prev + 12;
+      if (next >= 100) {
+        setLevel((lv) => lv + 1);
+        return next - 100;
+      }
+      return next;
+    });
+    setPets((prev) =>
+      prev.map((pet) => {
+        const nextXp = pet.bondXp + reward.affectionXp;
+        const nextEligible = isPetPassportEligible(nextXp);
+        return {
+          ...pet,
+          bondXp: nextXp,
+          bondLevel: computeBondLevel(nextXp),
+          passportEligible: nextEligible,
+          discoveryStatus: pet.minted
+            ? 'Preserved On-Chain'
+            : nextEligible
+            ? 'Passport Ready'
+            : pet.discoveryStatus,
+        };
+      })
+    );
+  };
 
   const handleToggleSound = () => {
     setSoundEnabled((prev) => {
@@ -757,11 +991,6 @@ export default function App() {
     setShowTextLabels((prev) => !prev);
   };
 
-  const handleToggleSkyTheme = () => {
-    playTapSound();
-    setSkyTheme((prev) => (prev === 'morning' ? 'sunset' : 'morning'));
-  };
-
   const handleResetSave = () => {
     try {
       window.localStorage.removeItem(SAVE_STORAGE_KEY);
@@ -774,6 +1003,10 @@ export default function App() {
     setEnergy(45);
     setLevel(12);
     setExpPercent(64);
+    setStreakDays(7);
+    setLastCheckInDate(getLocalDateKey());
+    setClaimedStreakMilestones([3]);
+    setDailyMissions(rollDailyMissions(getLocalDateKey()));
     setFenceHours(14);
     setPets(INITIAL_PETS);
     setShopItems(INITIAL_SHOP);
@@ -902,6 +1135,7 @@ export default function App() {
   // Petting with daily coin cap + Bond XP
   const handleCarePet = (petId: string): string => {
     playHappySound();
+    recordMissionProgress('pet', 1);
     applyPetBondGain(petId, 10, 'happy');
     void syncCareAction(petId, 'pet', 10);
 
@@ -919,6 +1153,7 @@ export default function App() {
   const handleFeedPet = (food: FoodItemType, targetPetId?: string): string => {
     if (foodInventory[food] <= 0) return 'No food';
     playHappySound();
+    recordMissionProgress('feed', 1);
 
     const recipientPet =
       pets.find((p) => p.id === targetPetId) ?? pets[0];
@@ -952,6 +1187,7 @@ export default function App() {
 
   const handlePlayToy = (toy: GardenToy, targetPetId?: string): string => {
     playHappySound();
+    recordMissionProgress('play', 1);
     const recipientPet =
       pets.find((p) => p.id === targetPetId) ?? pets[0];
     if (recipientPet) {
@@ -988,6 +1224,7 @@ export default function App() {
         return handleFeedPet(firstFood, petId);
       }
       // Always allow gentle kibble care from Pet Profile so Quest/Bond test never deadlocks
+      recordMissionProgress('feed', 1);
       applyPetBondGain(petId, 15, 'eating');
       void syncCareAction(petId, 'feed', 15);
       setFirstBondQuest((q) => (q.feedDone ? q : { ...q, feedDone: true }));
@@ -1066,6 +1303,7 @@ export default function App() {
 
     if (elapsed >= effectiveMs) {
       const harvestedCrop = plot.crop;
+      recordMissionProgress('harvest', 1);
       setFoodInventory((prev) => ({
         ...prev,
         [harvestedCrop]: prev[harvestedCrop] + 1,
@@ -1083,6 +1321,7 @@ export default function App() {
 
     if (!plot.watered) {
       if (waterCharges <= 0) return 'Tap Well 💧';
+      recordMissionProgress('water', 1);
       setWaterCharges((w) => w - 1);
       setCropPlots((prev) =>
         prev.map((p) => (p.id === plotId ? { ...p, watered: true } : p))
@@ -1098,6 +1337,7 @@ export default function App() {
     if (!tree) return '';
 
     if (Date.now() >= tree.readyAt) {
+      recordMissionProgress('harvest', 1);
       setFoodInventory((prev) => ({
         ...prev,
         [tree.fruit]: prev[tree.fruit] + 2,
@@ -1114,6 +1354,7 @@ export default function App() {
     }
 
     if (!tree.watered && waterCharges > 0) {
+      recordMissionProgress('water', 1);
       setWaterCharges((w) => w - 1);
       setTrees((prev) =>
         prev.map((t) =>
@@ -1325,6 +1566,7 @@ export default function App() {
           : n
       )
     );
+    recordMissionProgress('water', 1);
     setCoins((c) => c + 15);
     awardExp(8);
     return '💧 +15 🪙';
@@ -1364,6 +1606,7 @@ export default function App() {
           : n
       )
     );
+    recordMissionProgress('water', 1);
     setCoins((c) => c + 15);
     awardExp(8);
     return '💧 +15 🪙';
@@ -1415,6 +1658,7 @@ export default function App() {
   };
 
   const handleVisitNeighbor = (neighborId: string) => {
+    recordMissionProgress('visit', 1);
     setVisitingId(neighborId);
     switchScreen('neighborGarden');
   };
@@ -1902,13 +2146,22 @@ export default function App() {
     setSettingsModal({ open: true, tab: 'settings' });
   };
 
+  const activeSkyPalette = TIME_OF_DAY_PALETTES[skyTheme];
+
   return (
-    <SkyThemeProvider value={{ skyTheme, toggleSkyTheme: handleToggleSkyTheme }}>
+    <SkyThemeProvider value={skyTheme}>
+    <DailyMissionsHudProvider
+      value={{
+        onOpenMissions: () => {
+          playTapSound();
+          setMissionsModalOpen(true);
+        },
+        hasMissionsBadge: hasClaimableDailyMission,
+      }}
+    >
     <UiLabelsProvider value={showTextLabels}>
     <div
-      className={`min-h-dvh w-full ${
-        skyTheme === 'sunset' ? 'pastel-studio-bg-sunset' : 'pastel-studio-bg'
-      } flex flex-col items-center justify-center sm:p-4 lg:p-5 transition-colors duration-500`}
+      className={`min-h-dvh w-full ${activeSkyPalette.studioBgClass} flex flex-col items-center justify-center sm:p-4 lg:p-5 transition-colors duration-700`}
     >
       {/* Desktop Studio Header Bar (Hidden on mobile so full-screen app has a single clean in-frame top bar) */}
       <header className="hidden sm:flex w-full max-w-[1160px] px-3 pb-3 items-center justify-between gap-4">
@@ -1994,29 +2247,6 @@ export default function App() {
             <span className="tabular-nums">
               {wallet.connected ? shortenAddress(wallet.address) : 'Core Wallet'}
             </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleToggleSkyTheme}
-            aria-label={
-              skyTheme === 'sunset'
-                ? 'Switch to Sunny Morning sky'
-                : 'Switch to Golden Hour Sunset sky'
-            }
-            className={`cream-pill rounded-full px-2.5 h-8.5 flex items-center gap-1 font-display text-[11.5px] font-extrabold cursor-pointer active:scale-95 transition-transform whitespace-nowrap ${
-              skyTheme === 'sunset'
-                ? 'bg-[#FFE7D6] text-[#C95E45]'
-                : 'bg-[#FFF8D8] text-[#C88A1E]'
-            }`}
-            title="Switch Meadow Sky Theme"
-          >
-            {skyTheme === 'sunset' ? (
-              <Sunset className="w-3.5 h-3.5 stroke-[2.4]" />
-            ) : (
-              <Sun className="w-3.5 h-3.5 stroke-[2.4]" />
-            )}
-            <span>{skyTheme === 'sunset' ? 'Sunset' : 'Morning'}</span>
           </button>
 
           <button
@@ -2113,6 +2343,15 @@ export default function App() {
                     onTapClover={handleTapClover}
                     onOpenFarm={openFarmScreen}
                     onOpenQuest={() => setQuestModalOpen(true)}
+                    onOpenMemoryGame={() => {
+                      playTapSound();
+                      setMemoryModalOpen(true);
+                    }}
+                    onOpenCalendar={() => {
+                      playTapSound();
+                      setCalendarModalOpen(true);
+                    }}
+                    hasCalendarBadge={hasUnclaimedStreakReward}
                     onOpenModal={(m) => openModalIn('sanctuary', m)}
                     onQuickCoins={() => openModalIn('sanctuary', 'shop')}
                     onQuickEnergy={() =>
@@ -2289,10 +2528,13 @@ export default function App() {
         </section>
       </div>
 
-      {/* GLOBAL MODALS (Settings/Guide, Welcome/Profile, Quest/Journey, Core Wallet, Passport Mint) */}
+      {/* GLOBAL MODALS (Settings/Guide, Daily Missions, Streak Calendar, Pet Memory, Welcome/Profile, Quest/Journey, Core Wallet, Passport Mint) */}
       {(walletModalOpen ||
         questModalOpen ||
         mintModalOpen ||
+        calendarModalOpen ||
+        memoryModalOpen ||
+        missionsModalOpen ||
         settingsModal.open ||
         profileModalState.open) && (
         <div className="fixed inset-0 z-50 pointer-events-auto">
@@ -2302,7 +2544,8 @@ export default function App() {
             keeperName={keeperName}
             soundEnabled={soundEnabled}
             showTextLabels={showTextLabels}
-            skyTheme={skyTheme}
+            streakDays={streakDays}
+            hasCalendarBadge={hasUnclaimedStreakReward}
             inGame={appPhase === 'playing'}
             walletLabel={
               wallet.connected
@@ -2313,13 +2556,41 @@ export default function App() {
             onChangeKeeperName={setKeeperName}
             onToggleSound={handleToggleSound}
             onToggleShowTextLabels={handleToggleShowTextLabels}
-            onToggleSkyTheme={handleToggleSkyTheme}
+            onOpenCalendar={() => setCalendarModalOpen(true)}
             onOpenWallet={() => setWalletModalOpen(true)}
             onReturnToTitle={() => {
               setActiveModal(null);
               setAppPhase('start');
             }}
             onResetSave={handleResetSave}
+          />
+
+          <DailyMissionsModal
+            open={missionsModalOpen}
+            state={dailyMissions}
+            onClose={() => setMissionsModalOpen(false)}
+            onClaimMission={handleClaimDailyMission}
+            onClaimDailyBonus={handleClaimDailyMissionBonus}
+            onRerollMissions={handleRerollDailyMissions}
+            onJumpToMission={handleJumpToMission}
+          />
+
+          <StreakCalendarModal
+            open={calendarModalOpen}
+            streakDays={streakDays}
+            fenceHours={fenceHours}
+            checkedInToday={checkedInToday}
+            claimedMilestones={claimedStreakMilestones}
+            onClose={() => setCalendarModalOpen(false)}
+            onDailyCheckIn={handleDailyCheckIn}
+            onClaimMilestone={handleClaimStreakMilestone}
+          />
+
+          <PetMemoryModal
+            open={memoryModalOpen}
+            pets={pets}
+            onClose={() => setMemoryModalOpen(false)}
+            onClaimReward={handleClaimMemoryReward}
           />
 
           <WalletConnectModal
@@ -2429,6 +2700,7 @@ export default function App() {
       )}
     </div>
     </UiLabelsProvider>
+    </DailyMissionsHudProvider>
     </SkyThemeProvider>
   );
 }

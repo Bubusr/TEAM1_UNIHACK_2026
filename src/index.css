@@ -107,6 +107,15 @@
     linear-gradient(180deg, #FFFDF9 0%, #F7F4FC 100%);
 }
 
+/* Warm Sunlit Afternoon Backdrop */
+.pastel-studio-bg-afternoon {
+  background:
+    radial-gradient(circle at 16% 14%, #FFF3C7 0%, transparent 44%),
+    radial-gradient(circle at 86% 18%, #DCF2FF 0%, transparent 45%),
+    radial-gradient(circle at 50% 90%, #EBFCE0 0%, transparent 52%),
+    linear-gradient(180deg, #FFFDF6 0%, #F5F8FD 100%);
+}
+
 /* Cozy Golden-Hour Peach & Lavender Sunset Backdrop */
 .pastel-studio-bg-sunset {
   background:
@@ -114,6 +123,15 @@
     radial-gradient(circle at 86% 18%, #EED4FF 0%, transparent 48%),
     radial-gradient(circle at 50% 88%, #FFF1C9 0%, transparent 52%),
     linear-gradient(180deg, #FFF3EE 0%, #F7E8FA 100%);
+}
+
+/* Dreamy Pastel Starry Night Backdrop */
+.pastel-studio-bg-night {
+  background:
+    radial-gradient(circle at 16% 14%, rgba(169, 152, 232, 0.42) 0%, transparent 46%),
+    radial-gradient(circle at 86% 20%, rgba(132, 165, 224, 0.35) 0%, transparent 48%),
+    radial-gradient(circle at 50% 88%, rgba(114, 166, 140, 0.32) 0%, transparent 52%),
+    linear-gradient(180deg, #3A3966 0%, #4E4A7D 58%, #486173 100%);
 }
 
 /* Gentle cozy animations */

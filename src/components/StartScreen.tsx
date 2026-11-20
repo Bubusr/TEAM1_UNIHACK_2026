@@ -6,8 +6,6 @@ import {
   PawPrint,
   Play,
   Settings,
-  Sun,
-  Sunset,
   Volume2,
   VolumeX,
   Wallet,
@@ -60,8 +58,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onOpenWallet,
 }) => {
   const showLabels = useShowTextLabels();
-  const { skyTheme, toggleSkyTheme } = useSkyTheme();
-  const isSunset = skyTheme === 'sunset';
+  const { palette } = useSkyTheme();
   const [petPopId, setPetPopId] = useState<string | null>(null);
   const hasPets = pets.length > 0;
   const petCount = pets.length;
@@ -89,80 +86,115 @@ export const StartScreen: React.FC<StartScreenProps> = ({
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden select-none flex flex-col justify-between transition-colors duration-500"
-      style={{ backgroundColor: isSunset ? '#C6DD8F' : '#C5EEAA' }}
+      className="relative w-full h-full overflow-hidden select-none flex flex-col justify-between transition-colors duration-700"
+      style={{ backgroundColor: palette.startBaseBg }}
     >
-      {/* SUNLIT / GOLDEN-HOUR STORYBOOK SKY & MEADOW BACKDROP */}
+      {/* TIME-OF-DAY STORYBOOK SKY & MEADOW BACKDROP */}
       <div className="absolute inset-0 pointer-events-none">
         <div
-          className="absolute inset-x-0 top-0 h-[44%] transition-all duration-500"
+          className="absolute inset-x-0 top-0 h-[44%] transition-all duration-700"
           style={{
-            background: isSunset
-              ? 'linear-gradient(180deg, #E2C1FF 0%, #FFD0CA 54%, #FFE7B5 100%)'
-              : 'linear-gradient(180deg, #C7ECFF 0%, #EAF8FF 62%, #DDF8C8 100%)',
+            background: palette.startSkyGradient,
           }}
         />
         <div
-          className="absolute inset-x-0 top-[36%] bottom-0 transition-all duration-500"
+          className="absolute inset-x-0 top-[36%] bottom-0 transition-all duration-700"
           style={{
-            background: isSunset
-              ? 'radial-gradient(circle at 50% 35%, #EAF0B6 0%, #C6DD8F 58%, #A4C777 100%)'
-              : 'radial-gradient(circle at 50% 35%, #DCF9BE 0%, #BBEBA0 58%, #A2DF7C 100%)',
+            background: palette.startMeadowGradient,
           }}
         />
 
-        {/* Smiling Pastel Sun & Drifting Fluffy Clouds */}
+        {/* Smiling Pastel Sun / Crescent Moon & Drifting Fluffy Clouds */}
         <svg
           viewBox="0 0 400 150"
           className="absolute top-4 left-0 w-full h-32 opacity-95"
           fill="none"
           aria-hidden="true"
         >
-          {/* Twinkling Dusk Stars in Sunset Mode */}
-          {isSunset && (
+          {/* Twinkling Stars for Sunset & Night */}
+          {palette.showStars && (
             <g className="animate-petal-twinkle">
-              <circle cx="96" cy="22" r="2.2" fill="#FFF8DC" />
-              <circle cx="144" cy="14" r="1.6" fill="#FFFDF9" />
-              <circle cx="268" cy="18" r="2.1" fill="#FFF8DC" />
-              <circle cx="322" cy="26" r="1.6" fill="#FFFDF9" />
+              <circle cx="88" cy="22" r="2.2" fill="#FFF8DC" />
+              <circle cx="142" cy="14" r="1.7" fill="#FFFDF9" />
+              <circle cx="264" cy="18" r="2.1" fill="#FFF8DC" />
+              <circle cx="322" cy="26" r="1.7" fill="#FFFDF9" />
+              {palette.isNight && (
+                <>
+                  <circle cx="52" cy="36" r="1.5" fill="#FFE794" />
+                  <circle cx="230" cy="12" r="1.6" fill="#FFFDF9" />
+                  <circle cx="356" cy="16" r="2" fill="#FFF8DC" />
+                  <circle cx="170" cy="30" r="1.4" fill="#FFE794" />
+                </>
+              )}
             </g>
           )}
-          {/* Warm Sun Glow + Smiling Sun */}
-          <g transform={isSunset ? 'translate(200, 56)' : 'translate(200, 44)'}>
+          {/* Smiling Sun (Morning/Afternoon/Sunset) or Smiling Pastel Moon (Night) */}
+          <g transform={`translate(200, ${palette.sunYStart})`}>
             <circle
               cx="0"
               cy="0"
-              r={isSunset ? 34 : 28}
-              fill={isSunset ? '#FFD7B5' : '#FFF5C2'}
-              opacity={isSunset ? '0.62' : '0.55'}
+              r={palette.isNight ? 28 : 30}
+              fill={palette.sunHaloFill}
+              opacity={palette.isNight ? '0.32' : '0.58'}
             />
-            <circle
-              cx="0"
-              cy="0"
-              r="18"
-              fill={isSunset ? '#FFBC91' : '#FFE794'}
-              stroke={isSunset ? '#E0866B' : '#E5B95C'}
-              strokeWidth="1.8"
-            />
-            <circle cx="-5.5" cy="-1.5" r="1.6" fill="#6E5448" />
-            <circle cx="5.5" cy="-1.5" r="1.6" fill="#6E5448" />
-            <ellipse cx="-8.5" cy="2" rx="2.4" ry="1.3" fill="#FF8DB4" opacity="0.85" />
-            <ellipse cx="8.5" cy="2" rx="2.4" ry="1.3" fill="#FF8DB4" opacity="0.85" />
-            <path d="M-2.8 2.5C-1.2 4.5 1.2 4.5 2.8 2.5" stroke="#6E5448" strokeWidth="1.5" strokeLinecap="round" />
+            {palette.isNight ? (
+              <>
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="17"
+                  fill={palette.sunFill}
+                  stroke={palette.sunStroke}
+                  strokeWidth="1.6"
+                />
+                <circle cx="7" cy="-5" r="13" fill="#5D5994" />
+                <circle cx="-5.5" cy="1" r="1.5" fill="#5A4A63" />
+                <ellipse cx="-8.2" cy="4" rx="2.1" ry="1.2" fill="#FFA6C9" opacity="0.85" />
+                <path
+                  d="M-3.5 5C-2 6.6 -0.2 6.4 1 5"
+                  stroke="#5A4A63"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </>
+            ) : (
+              <>
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="18"
+                  fill={palette.sunFill}
+                  stroke={palette.sunStroke}
+                  strokeWidth="1.8"
+                />
+                <circle cx="-5.5" cy="-1.5" r="1.6" fill="#6E5448" />
+                <circle cx="5.5" cy="-1.5" r="1.6" fill="#6E5448" />
+                <ellipse cx="-8.5" cy="2" rx="2.4" ry="1.3" fill="#FF8DB4" opacity="0.85" />
+                <ellipse cx="8.5" cy="2" rx="2.4" ry="1.3" fill="#FF8DB4" opacity="0.85" />
+                <path
+                  d="M-2.8 2.5C-1.2 4.5 1.2 4.5 2.8 2.5"
+                  stroke="#6E5448"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </>
+            )}
           </g>
           <g className="animate-cloud-drift">
             <path
               d="M34 66C26 66 20 60 20 52C20 45 25 39 32 38C36 28 47 23 58 26C65 20 78 22 83 31C91 31 98 38 98 46C98 57 89 66 78 66H34Z"
-              fill={isSunset ? '#FFF1E8' : '#FFFDF9'}
+              fill={palette.cloudFill}
+              opacity={palette.isNight ? '0.78' : '1'}
             />
             <path
               d="M286 56C279 56 274 51 274 45C274 39 278 34 284 33C288 24 299 21 308 25C315 19 327 21 332 30C339 31 345 37 345 44C345 51 339 56 332 56H286Z"
-              fill={isSunset ? '#FFF1E8' : '#FFFDF9'}
+              fill={palette.cloudFill}
+              opacity={palette.isNight ? '0.78' : '1'}
             />
           </g>
         </svg>
 
-        {/* Sunlit Meadow Path, 5-Petal Daisies & Grass Tufts */}
+        {/* Sunlit / Moonlit Meadow Path, 5-Petal Daisies & Grass Tufts */}
         <svg
           viewBox="0 0 390 660"
           className="absolute inset-0 w-full h-full"
@@ -175,8 +207,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({
             cy="365"
             rx="168"
             ry="128"
-            fill={isSunset ? '#FFF3CC' : '#F0FFDA'}
-            opacity="0.55"
+            fill={palette.meadowGlowFill}
+            opacity={palette.meadowGlowOpacity}
           />
           {[
             { x: 46, y: 344, c: '#FFFDF9' },
@@ -204,7 +236,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
             <path
               key={i}
               d={`M${g.x - 4} ${g.y}Q${g.x - 2} ${g.y - 7} ${g.x - 6} ${g.y - 8}M${g.x} ${g.y}V${g.y - 8}M${g.x + 4} ${g.y}Q${g.x + 2} ${g.y - 7} ${g.x + 6} ${g.y - 8}`}
-              stroke={isSunset ? '#86B463' : '#7EC667'}
+              stroke={palette.grassStroke}
               strokeWidth="1.8"
               strokeLinecap="round"
               opacity="0.7"
@@ -213,48 +245,21 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         </svg>
       </div>
 
-      {/* TOP UTILITY STRIP (Sound + Sky Theme on left, Wallet + Top-Right Settings on right) */}
+      {/* TOP UTILITY STRIP (Sound on left, Wallet + Top-Right Settings on right) */}
       <header className="relative z-20 px-4 pt-3.5 flex items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={onToggleSound}
-            aria-label={soundEnabled ? 'Mute sound effects' : 'Enable sound effects'}
-            className="cream-pill rounded-full w-10 h-10 flex items-center justify-center text-[#4B3C46] active:scale-95 transition-transform cursor-pointer"
-            title={soundEnabled ? 'Sound On' : 'Sound Muted'}
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-4.5 h-4.5 stroke-[2.3]" />
-            ) : (
-              <VolumeX className="w-4.5 h-4.5 stroke-[2.3] text-[#8A747E]" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={toggleSkyTheme}
-            aria-label={
-              isSunset
-                ? 'Switch to Sunny Morning sky'
-                : 'Switch to Golden Hour Sunset sky'
-            }
-            title={isSunset ? 'Golden Sunset (tap for Morning)' : 'Sunny Morning (tap for Sunset)'}
-            className={`cream-pill rounded-full ${
-              showLabels ? 'px-3' : 'w-10 justify-center'
-            } h-10 flex items-center gap-1.5 font-display text-[12px] font-extrabold active:scale-95 transition-transform cursor-pointer whitespace-nowrap ${
-              isSunset
-                ? 'bg-[#FFE7D6] text-[#C95E45]'
-                : 'bg-[#FFF8D8] text-[#C88A1E]'
-            }`}
-          >
-            {isSunset ? (
-              <Sunset className="w-4.5 h-4.5 stroke-[2.3]" />
-            ) : (
-              <Sun className="w-4.5 h-4.5 stroke-[2.3]" />
-            )}
-            {showLabels && <span>{isSunset ? 'Sunset' : 'Morning'}</span>}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onToggleSound}
+          aria-label={soundEnabled ? 'Mute sound effects' : 'Enable sound effects'}
+          className="cream-pill rounded-full w-10 h-10 flex items-center justify-center text-[#4B3C46] active:scale-95 transition-transform cursor-pointer"
+          title={soundEnabled ? 'Sound On' : 'Sound Muted'}
+        >
+          {soundEnabled ? (
+            <Volume2 className="w-4.5 h-4.5 stroke-[2.3]" />
+          ) : (
+            <VolumeX className="w-4.5 h-4.5 stroke-[2.3] text-[#8A747E]" />
+          )}
+        </button>
 
         <div className="flex items-center gap-1.5">
           <button
@@ -304,10 +309,14 @@ export const StartScreen: React.FC<StartScreenProps> = ({
               <circle cx="11" cy="11" r="2.6" fill="#FFE07D" />
             </svg>
             <h1
-              className="font-display text-[32px] sm:text-[35px] font-extrabold text-[#4B3C46] leading-tight tracking-tight"
+              className={`font-display text-[32px] sm:text-[35px] font-extrabold leading-tight tracking-tight ${
+                palette.isNight ? 'text-[#FFFDF9]' : 'text-[#4B3C46]'
+              }`}
               style={{
                 textWrap: 'balance',
-                textShadow: '0 2.5px 0 rgba(255, 253, 249, 0.96), 0 4px 12px rgba(255, 166, 201, 0.25)',
+                textShadow: palette.isNight
+                  ? '0 2.5px 0 rgba(71, 71, 126, 0.9), 0 4px 14px rgba(255, 240, 184, 0.35)'
+                  : '0 2.5px 0 rgba(255, 253, 249, 0.96), 0 4px 12px rgba(255, 166, 201, 0.25)',
               }}
             >
               Paws &amp; Picket

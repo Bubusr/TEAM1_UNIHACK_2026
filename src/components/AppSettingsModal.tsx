@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import {
+  CalendarDays,
   Camera,
   Check,
   Home,
   RotateCcw,
   ShieldCheck,
   Sprout,
-  Sun,
-  Sunset,
   Type,
   Volume2,
   VolumeX,
@@ -15,7 +14,6 @@ import {
   X,
 } from 'lucide-react';
 import { playTapSound } from '../utils/appAudio';
-import { SkyTheme } from './SharedHud';
 
 interface AppSettingsModalProps {
   open: boolean;
@@ -23,14 +21,15 @@ interface AppSettingsModalProps {
   keeperName: string;
   soundEnabled: boolean;
   showTextLabels: boolean;
-  skyTheme: SkyTheme;
+  streakDays: number;
+  hasCalendarBadge?: boolean;
   inGame: boolean;
   walletLabel: string;
   onClose: () => void;
   onChangeKeeperName: (name: string) => void;
   onToggleSound: () => void;
   onToggleShowTextLabels: () => void;
-  onToggleSkyTheme: () => void;
+  onOpenCalendar: () => void;
   onOpenWallet: () => void;
   onReturnToTitle: () => void;
   onResetSave: () => void;
@@ -42,14 +41,15 @@ export const AppSettingsModal: React.FC<AppSettingsModalProps> = ({
   keeperName,
   soundEnabled,
   showTextLabels,
-  skyTheme,
+  streakDays,
+  hasCalendarBadge,
   inGame,
   walletLabel,
   onClose,
   onChangeKeeperName,
   onToggleSound,
   onToggleShowTextLabels,
-  onToggleSkyTheme,
+  onOpenCalendar,
   onOpenWallet,
   onReturnToTitle,
   onResetSave,
@@ -254,37 +254,34 @@ export const AppSettingsModal: React.FC<AppSettingsModalProps> = ({
                 </button>
               </div>
 
-              {/* Sky Theme Toggle (Sunny Morning vs Golden Sunset) */}
-              <div className="bg-[#FFF5FA] border border-[#F3DCE6] rounded-2xl p-3 flex items-center justify-between gap-3">
+              {/* Daily Login Streak Calendar Shortcut */}
+              <button
+                type="button"
+                onClick={() => {
+                  playTapSound();
+                  onClose();
+                  onOpenCalendar();
+                }}
+                className="w-full bg-[#FFF8E6] border border-[#EED3A8] rounded-2xl p-3 min-h-[56px] flex items-center justify-between gap-2 text-left cursor-pointer active:scale-[0.99] transition-transform"
+              >
                 <div className="flex items-center gap-2.5">
-                  {skyTheme === 'sunset' ? (
-                    <Sunset className="w-4.5 h-4.5 text-[#D96B52]" />
-                  ) : (
-                    <Sun className="w-4.5 h-4.5 text-[#D99B26]" />
-                  )}
+                  <CalendarDays className="w-4.5 h-4.5 text-[#C9852B]" />
                   <div>
-                    <div className="font-display text-[13.5px] font-extrabold text-[#4B3C46]">
-                      Meadow Sky Theme
+                    <div className="font-display text-[13.5px] font-extrabold text-[#4B3C46] flex items-center gap-1.5">
+                      <span>Daily Streak Calendar</span>
+                      {hasCalendarBadge && (
+                        <span className="w-2 h-2 rounded-full bg-[#FF85A1]" />
+                      )}
                     </div>
-                    <div className="text-[11px] font-bold text-[#8A747E]">
-                      {skyTheme === 'sunset'
-                        ? 'Cozy peach golden-hour sunset'
-                        : 'Sunny pastel morning sky'}
+                    <div className="text-[11px] font-bold text-[#9C6C28] tabular-nums">
+                      {streakDays}-day streak &amp; reward milestones
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={onToggleSkyTheme}
-                  className={`rounded-full min-h-[40px] px-3.5 font-display text-[12px] font-extrabold cursor-pointer transition-colors whitespace-nowrap ${
-                    skyTheme === 'sunset'
-                      ? 'bg-[#FFD6BE] border border-[#DF9879] text-[#6B372B]'
-                      : 'bg-[#FFE07D] border border-[#C99D66] text-[#4B3C46]'
-                  }`}
-                >
-                  {skyTheme === 'sunset' ? 'Sunset' : 'Morning'}
-                </button>
-              </div>
+                <span className="text-[11.5px] font-extrabold text-[#C9852B]">
+                  View
+                </span>
+              </button>
 
               {/* Wallet Connection Shortcut */}
               <button

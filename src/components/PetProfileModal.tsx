@@ -12,7 +12,6 @@ import {
   Plus,
   RotateCcw,
   RotateCw,
-  Sparkles,
   Utensils,
   X,
 } from 'lucide-react';
@@ -31,7 +30,7 @@ import {
   HAT_STICKER_MAP,
 } from './CroppedPetCutout';
 import { CrystalMintIcon } from './HandDrawnAssets';
-import { CropFoodIcon, HatStickerIcon } from './GameIcons';
+import { CropFoodIcon, HatStickerIcon, ToyStickerIcon } from './GameIcons';
 import { FOOD_META } from './FarmScreen';
 import { useShowTextLabels, useSkyTheme } from './SharedHud';
 import { PASSPORT_BOND_XP_THRESHOLD } from '../services/pawsApi';
@@ -94,7 +93,7 @@ export const PetProfileModal: React.FC<PetProfileModalProps> = ({
   onOpenFarm,
 }) => {
   const showLabels = useShowTextLabels();
-  const { skyTheme } = useSkyTheme();
+  const { palette } = useSkyTheme();
   const [nameInput, setNameInput] = useState('');
   const [localAnim, setLocalAnim] = useState<PetAnimState>('idle');
   const [reactionIcon, setReactionIcon] = useState<string>('💖');
@@ -335,11 +334,7 @@ export const PetProfileModal: React.FC<PetProfileModalProps> = ({
         <div className="p-3 overflow-y-auto space-y-2.5 bg-[#FFFDF9]">
           {/* Clean Portrait Stage (Direct Hat Dragging) */}
           <div
-            className={`relative rounded-2xl border py-2.5 px-3 flex flex-col items-center ${
-              skyTheme === 'sunset'
-                ? 'bg-gradient-to-b from-[#FFE2D6] to-[#E5EEB5] border-[#ECCFB9]'
-                : 'bg-gradient-to-b from-[#E7F7FF] to-[#D4F5BE] border-[#CFEBD5]'
-            }`}
+            className={`relative rounded-2xl border py-2.5 px-3 flex flex-col items-center transition-colors duration-500 ${palette.portraitStageClass}`}
           >
             <div className="my-1 relative flex items-center justify-center">
               <div className={portraitAnimClass}>
@@ -468,10 +463,10 @@ export const PetProfileModal: React.FC<PetProfileModalProps> = ({
               type="button"
               onClick={() => triggerCare('play')}
               aria-label="Play"
-              title="Play"
+              title="Play with toy"
               className="cream-btn rounded-2xl min-h-[48px] py-1.5 px-1.5 flex flex-col items-center justify-center gap-0.5 cursor-pointer bg-[#EFF8FF]"
             >
-              <Sparkles className="w-5 h-5 text-[#4F7EA6]" />
+              <ToyStickerIcon toyId="toy-tennis" className="w-5.5 h-5.5" />
               {showLabels && (
                 <span className="font-display text-[11px] font-extrabold text-[#4B3C46] leading-tight">
                   Play

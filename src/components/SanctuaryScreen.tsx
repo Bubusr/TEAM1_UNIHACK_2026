@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Camera,
   Droplets,
+  Gamepad2,
   Heart,
   PawPrint,
   ShoppingBag,
@@ -69,6 +70,9 @@ interface SanctuaryScreenProps {
   onTapClover: () => string;
   onOpenFarm: () => void;
   onOpenQuest?: () => void;
+  onOpenMemoryGame?: () => void;
+  onOpenCalendar?: () => void;
+  hasCalendarBadge?: boolean;
   onOpenSettings?: () => void;
   onOpenModal: (modal: SanctuaryModalType) => void;
   onQuickCoins: () => void;
@@ -99,14 +103,16 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
   onTapClover,
   onOpenFarm,
   onOpenQuest,
+  onOpenMemoryGame,
+  onOpenCalendar,
+  hasCalendarBadge,
   onOpenSettings,
   onOpenModal,
   onQuickCoins,
   onQuickEnergy,
 }) => {
   const showLabels = useShowTextLabels();
-  const { skyTheme } = useSkyTheme();
-  const isSunset = skyTheme === 'sunset';
+  const { palette } = useSkyTheme();
   const activeToys = toys.filter((t) => t.owned);
 
   const [petPositions, setPetPositions] = useState<
@@ -234,17 +240,15 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden select-none flex flex-col justify-between transition-colors duration-500"
-      style={{ backgroundColor: isSunset ? '#C3DB8E' : '#AEE88D' }}
+      className="relative w-full h-full overflow-hidden select-none flex flex-col justify-between transition-colors duration-700"
+      style={{ backgroundColor: palette.sanctuaryBaseBg }}
     >
-      {/* PASTEL SKY + SUNLIT / GOLDEN-HOUR MEADOW BACKDROP */}
+      {/* TIME-OF-DAY PASTEL SKY + MEADOW BACKDROP */}
       <div className="absolute inset-0 pointer-events-none">
         <div
-          className="absolute inset-x-0 top-0 h-[24%] transition-all duration-500"
+          className="absolute inset-x-0 top-0 h-[24%] transition-all duration-700"
           style={{
-            background: isSunset
-              ? 'linear-gradient(180deg, #E2C1FF 0%, #FFD0CA 60%, #FFE6B3 100%)'
-              : 'linear-gradient(180deg, #C7EEFF 0%, #EAF8FF 72%, #CCF5B8 100%)',
+            background: palette.sanctuarySkyGradient,
           }}
         />
         <svg
@@ -253,54 +257,84 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
           fill="none"
           aria-hidden="true"
         >
-          {isSunset && (
+          {palette.showStars && (
             <g className="animate-petal-twinkle">
               <circle cx="110" cy="18" r="1.9" fill="#FFF8DC" />
               <circle cx="288" cy="15" r="1.8" fill="#FFFDF9" />
               <circle cx="348" cy="24" r="1.5" fill="#FFF8DC" />
+              {palette.isNight && (
+                <>
+                  <circle cx="62" cy="22" r="1.4" fill="#FFE794" />
+                  <circle cx="242" cy="12" r="1.6" fill="#FFFDF9" />
+                </>
+              )}
             </g>
           )}
-          {/* Smiling Pastel Sun */}
-          <g transform={isSunset ? 'translate(200, 42)' : 'translate(200, 34)'}>
+          {/* Smiling Pastel Sun or Crescent Moon */}
+          <g transform={`translate(200, ${palette.sunYSanctuary})`}>
             <circle
               cx="0"
               cy="0"
-              r={isSunset ? 26 : 22}
-              fill={isSunset ? '#FFD7B5' : '#FFF5C2'}
-              opacity={isSunset ? '0.62' : '0.55'}
+              r={palette.isNight ? 22 : 24}
+              fill={palette.sunHaloFill}
+              opacity={palette.isNight ? '0.32' : '0.58'}
             />
-            <circle
-              cx="0"
-              cy="0"
-              r="14"
-              fill={isSunset ? '#FFBC91' : '#FFE794'}
-              stroke={isSunset ? '#E0866B' : '#E5B95C'}
-              strokeWidth="1.6"
-            />
-            <circle cx="-4.2" cy="-1" r="1.3" fill="#6E5448" />
-            <circle cx="4.2" cy="-1" r="1.3" fill="#6E5448" />
-            <ellipse cx="-6.8" cy="1.6" rx="1.9" ry="1.1" fill="#FF8DB4" opacity="0.85" />
-            <ellipse cx="6.8" cy="1.6" rx="1.9" ry="1.1" fill="#FF8DB4" opacity="0.85" />
-            <path d="M-2.2 2C-1 3.6 1 3.6 2.2 2" stroke="#6E5448" strokeWidth="1.3" strokeLinecap="round" />
+            {palette.isNight ? (
+              <>
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="13.5"
+                  fill={palette.sunFill}
+                  stroke={palette.sunStroke}
+                  strokeWidth="1.4"
+                />
+                <circle cx="5.5" cy="-4" r="10.2" fill="#5D5994" />
+                <circle cx="-4.2" cy="0.8" r="1.2" fill="#5A4A63" />
+                <ellipse cx="-6.4" cy="3" rx="1.6" ry="0.9" fill="#FFA6C9" opacity="0.85" />
+                <path
+                  d="M-2.6 3.8C-1.4 5 -0.1 4.9 0.8 3.8"
+                  stroke="#5A4A63"
+                  strokeWidth="1.15"
+                  strokeLinecap="round"
+                />
+              </>
+            ) : (
+              <>
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="14"
+                  fill={palette.sunFill}
+                  stroke={palette.sunStroke}
+                  strokeWidth="1.6"
+                />
+                <circle cx="-4.2" cy="-1" r="1.3" fill="#6E5448" />
+                <circle cx="4.2" cy="-1" r="1.3" fill="#6E5448" />
+                <ellipse cx="-6.8" cy="1.6" rx="1.9" ry="1.1" fill="#FF8DB4" opacity="0.85" />
+                <ellipse cx="6.8" cy="1.6" rx="1.9" ry="1.1" fill="#FF8DB4" opacity="0.85" />
+                <path d="M-2.2 2C-1 3.6 1 3.6 2.2 2" stroke="#6E5448" strokeWidth="1.3" strokeLinecap="round" />
+              </>
+            )}
           </g>
           <g className="animate-cloud-drift">
             <path
               d="M38 58C30 58 24 52 24 44C24 37 29 31 36 30C40 20 51 15 62 18C69 12 82 14 87 23C95 23 102 30 102 38C102 49 93 58 82 58H38Z"
-              fill={isSunset ? '#FFF1E8' : '#FFFDF9'}
+              fill={palette.cloudFill}
+              opacity={palette.isNight ? '0.78' : '1'}
             />
             <path
               d="M278 48C271 48 266 43 266 37C266 31 270 26 276 25C280 16 291 13 300 17C307 11 319 13 324 22C331 23 337 29 337 36C337 43 331 48 324 48H278Z"
-              fill={isSunset ? '#FFF1E8' : '#FFFDF9'}
+              fill={palette.cloudFill}
+              opacity={palette.isNight ? '0.78' : '1'}
             />
           </g>
         </svg>
 
         <div
-          className="absolute inset-x-0 top-[17%] bottom-0 transition-all duration-500"
+          className="absolute inset-x-0 top-[17%] bottom-0 transition-all duration-700"
           style={{
-            background: isSunset
-              ? 'radial-gradient(circle at 50% 44%, #E3EEAE 0%, #C3DB8E 60%, #A4C575 100%)'
-              : 'radial-gradient(circle at 50% 44%, #CCF5AE 0%, #B4EA90 60%, #9CDF75 100%)',
+            background: palette.sanctuaryMeadowGradient,
           }}
         />
 
@@ -316,8 +350,8 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
             cy="360"
             rx="148"
             ry="158"
-            fill={isSunset ? '#FFF0C7' : '#EDFFD4'}
-            opacity="0.44"
+            fill={palette.meadowGlowFill}
+            opacity={palette.meadowGlowOpacity}
           />
           <ellipse cx="135" cy="272" rx="19" ry="10" fill="#FFF7EB" stroke="#CEB39E" strokeWidth="1.8" />
           <ellipse cx="164" cy="308" rx="20" ry="11" fill="#FFF2E0" stroke="#CEB39E" strokeWidth="1.8" />
@@ -355,7 +389,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
             <path
               key={i}
               d={`M${g.x - 4} ${g.y}Q${g.x - 2} ${g.y - 6} ${g.x - 6} ${g.y - 7}M${g.x} ${g.y}V${g.y - 7}M${g.x + 4} ${g.y}Q${g.x + 2} ${g.y - 6} ${g.x + 6} ${g.y - 7}`}
-              stroke={isSunset ? '#86B463' : '#7EC667'}
+              stroke={palette.grassStroke}
               strokeWidth="1.8"
               strokeLinecap="round"
               opacity="0.72"
@@ -368,8 +402,8 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
             cy="352"
             rx="25"
             ry="13.5"
-            fill={isSunset ? '#F5CBE8' : '#B5E8FF'}
-            stroke={isSunset ? '#CFA6C6' : '#9FC4DB'}
+            fill={palette.pondFill}
+            stroke={palette.pondStroke}
             strokeWidth="2.2"
           />
           <ellipse
@@ -377,7 +411,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
             cy="348"
             rx="11"
             ry="4.5"
-            fill={isSunset ? '#FFE7D6' : '#E3F7FF'}
+            fill={palette.pondHighlight}
             opacity="0.88"
           />
           <ellipse cx="310" cy="355" rx="6.5" ry="3.8" fill="#89D67B" stroke="#62AB57" strokeWidth="1.3" />
@@ -396,6 +430,8 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
         onOpenProfile={() => onOpenModal('profile')}
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}
+        onOpenCalendar={onOpenCalendar}
+        hasCalendarBadge={hasCalendarBadge}
         onOpenSettings={onOpenSettings}
         subRow={
           <div className="flex items-center justify-center gap-1.5">
@@ -424,6 +460,19 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                     ? questProgressLabel ?? 'Quest'
                     : (questProgressLabel ?? '').replace('Quest ', '')}
                 </span>
+              </button>
+            )}
+
+            {onOpenMemoryGame && (
+              <button
+                type="button"
+                onClick={onOpenMemoryGame}
+                aria-label="Play Pet Memory Minigame"
+                className="bg-[#F3ECFF] border-2 border-[#C8B4EC] rounded-full px-2.5 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] text-[11px] font-extrabold text-[#563F7A] active:scale-95 transition-transform cursor-pointer whitespace-nowrap inline-flex items-center gap-1"
+                title="Pet Memory"
+              >
+                <Gamepad2 className="w-3.5 h-3.5 text-[#7A5BA8] stroke-[2.4]" />
+                {showLabels && <span>Memory</span>}
               </button>
             )}
           </div>

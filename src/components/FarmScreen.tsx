@@ -94,8 +94,7 @@ export const FarmScreen: React.FC<FarmScreenProps> = ({
   onOpenSettings,
 }) => {
   const showLabels = useShowTextLabels();
-  const { skyTheme } = useSkyTheme();
-  const isSunset = skyTheme === 'sunset';
+  const { palette } = useSkyTheme();
   const [selectedSeed, setSelectedSeed] = useState<CropType>('carrot');
   const [marketOpen, setMarketOpen] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -172,25 +171,21 @@ export const FarmScreen: React.FC<FarmScreenProps> = ({
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden select-none flex flex-col justify-between transition-colors duration-500"
-      style={{ backgroundColor: isSunset ? '#C8DE92' : '#BCEB9E' }}
+      className="relative w-full h-full overflow-hidden select-none flex flex-col justify-between transition-colors duration-700"
+      style={{ backgroundColor: palette.farmBaseBg }}
     >
-      {/* SUNLIT / GOLDEN-HOUR PASTEL ORCHARD & WATER STREAM BACKDROP */}
+      {/* TIME-OF-DAY PASTEL ORCHARD & WATER STREAM BACKDROP */}
       <div className="absolute inset-0 pointer-events-none">
         <div
-          className="absolute inset-x-0 top-0 h-[22%] transition-all duration-500"
+          className="absolute inset-x-0 top-0 h-[22%] transition-all duration-700"
           style={{
-            background: isSunset
-              ? 'linear-gradient(180deg, #E2C1FF 0%, #FFD0CA 58%, #FFE6B3 100%)'
-              : 'linear-gradient(180deg, #CBEFFF 0%, #E7F7FF 72%, #CEF5B8 100%)',
+            background: palette.farmSkyGradient,
           }}
         />
         <div
-          className="absolute inset-x-0 top-[16%] bottom-0 transition-all duration-500"
+          className="absolute inset-x-0 top-[16%] bottom-0 transition-all duration-700"
           style={{
-            background: isSunset
-              ? 'radial-gradient(circle at 50% 48%, #E6EFB0 0%, #C6DD8F 65%, #A6C677 100%)'
-              : 'radial-gradient(circle at 50% 48%, #D3F5B2 0%, #BBE897 65%, #A5DC7F 100%)',
+            background: palette.farmMeadowGradient,
           }}
         />
 
@@ -204,13 +199,13 @@ export const FarmScreen: React.FC<FarmScreenProps> = ({
         >
           <path
             d="M345 110 C315 170 365 245 335 320 C310 385 365 445 350 530"
-            stroke={isSunset ? '#F0C5E6' : '#A5E2FF'}
+            stroke={palette.brookStroke}
             strokeWidth="34"
             strokeLinecap="round"
           />
           <path
             d="M345 110 C315 170 365 245 335 320 C310 385 365 445 350 530"
-            stroke={isSunset ? '#FFE6D4' : '#D6F3FF'}
+            stroke={palette.brookHighlight}
             strokeWidth="12"
             strokeLinecap="round"
             opacity="0.72"
