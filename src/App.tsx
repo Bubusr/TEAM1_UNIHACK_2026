@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Home } from 'lucide-react';
+import { Home, Settings } from 'lucide-react';
 import {
   CropPlot,
   CropType,
