@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import {
   AlertTriangle,
   Camera,
+  Check,
   CheckCircle2,
   ExternalLink,
   Heart,
   Link2,
+  Lock,
   LogIn,
   LogOut,
+  Move,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -38,9 +41,12 @@ import {
   getWalletSecurityContext,
 } from '../lib/walletClient';
 import { CrystalMintIcon, PawCoinIcon } from './HandDrawnAssets';
-import { CroppedPetCutout } from './CroppedPetCutout';
+import { CroppedPetCutout, HAT_STICKER_MAP } from './CroppedPetCutout';
+import { BaitStickerIcon, HatStickerIcon } from './GameIcons';
+import { PET_IMAGES, resolveAssetUrl } from '../assets/petImages';
 import { FOOD_META } from './FarmScreen';
 import { SanctuaryModalType } from './SanctuaryScreen';
+import { useShowTextLabels } from './SharedHud';
 
 interface CreamSheetsProps {
   modal: SanctuaryModalType;
@@ -104,6 +110,7 @@ interface CreamSheetsProps {
   onBuyAndEquipHat?: (petId: string, item: ShopItem) => boolean;
   onOpenPetProfile?: (petId: string) => void;
   onOpenMintPassport?: (petId: string) => void;
+  onOpenGallery?: () => void;
 }
 
 function shortAddr(addr: string | null | undefined): string {
@@ -162,9 +169,15 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
   onRescueStray,
   onPlaceBait,
   onOpenAlbumItem,
+  onBuyAndEquipHat,
+  onOpenPetProfile,
+  onOpenMintPassport,
+  onOpenGallery,
 }) => {
+  const showLabels = useShowTextLabels();
   const [shopTab, setShopTab] = useState<'toys' | 'hats'>('toys');
-  const [bagTab, setBagTab] = useState<'food' | 'bait'>('food');
+  const [bagTab, setBagTab] = useState<'bait' | 'rescue'>('bait');
+  const [hatPickerPetId, setHatPickerPetId] = useState<string | null>(null);
   const [profileTab, setProfileTab] = useState<'keeper' | 'wallet' | 'passports'>(
     'keeper'
   );
@@ -174,6 +187,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
 
   if (!modal) return null;
 
+  const allHats = shopItems.filter((item) => item.kind === 'accessory');
   const ownedAccessories = shopItems.filter(
     (item) => item.kind === 'accessory' && item.owned
   );
@@ -215,7 +229,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
             {modal === 'visit' && '🏘️ Neighbors'}
             {modal === 'neighborMarket' &&
               `🏪 ${visitingNeighbor?.ownerName ?? 'Neighbor'}’s Market`}
-            {modal === 'bag' && '🎒 Pantry & Bait'}
+            {modal === 'bag' && '🐟 Bait & Rescue'}
             {modal === 'snap' && '📷 Snap'}
             {modal === 'rescue' && '🐾 Rescue'}
             {modal === 'album' && '📖 Album'}
@@ -232,7 +246,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
         </div>
 
         <div className="p-3.5 overflow-y-auto flex-1 space-y-2.5 bg-[#FFFDF9]">
-          {/* FARMHOUSE PETS + DAILY CAPS */}
+          {/* FARMHOUSE PETS + PER-PET HAT WARDROBE */}
           {modal === 'farmhouse' && (
             <div className="space-y-2.5">
               <div className="grid grid-cols-3 gap-1.5 text-center text-[11px] font-extrabold text-[#4B3C46]">
@@ -248,84 +262,187 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
               </div>
 
               <div className="space-y-2">
-                {pets.map((pet) => (
-                  <div
-                    key={pet.id}
-                    className="bg-[#FFF9F2] border border-[#EFE0D4] rounded-2xl p-2 flex items-center justify-between gap-2"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-12 h-12 rounded-xl bg-[#E8F8EC] border border-[#CFEBD5] flex items-center justify-center shrink-0 overflow-hidden">
-                        <CroppedPetCutout
-                          photoUrl={pet.photoUrl}
-                          alt={pet.name}
-                          species={pet.species}
-                          mode={pet.cutoutMode ?? 'auto'}
-                          accessory={pet.accessory}
-                          className="w-11 h-11"
-                          bbox={pet.box_2d}
-                        />
-                      </div>
-                      <div>
-                        <div className="font-display text-[14px] font-extrabold text-[#4B3C46] flex items-center gap-1">
-                          <span>{pet.name}</span>
-                          {pet.minted && <CrystalMintIcon className="w-3.5 h-3.5" />}
-                        </div>
-                        <div className="text-[11px] font-bold text-[#8A747E] capitalize tabular-nums">
-                          {pet.species}
-                          {typeof pet.bondXp === 'number'
-                            ? ` · ${pet.bondXp} Bond`
-                            : ''}
-                        </div>
-                      </div>
-                    </div>
+                {pets.map((pet) => {
+                  const isHatOpen = hatPickerPetId === pet.id;
+                  const currentHatIcon = pet.accessory
+                    ? HAT_STICKER_MAP[pet.accessory]?.icon ?? '👒'
+                    : '👒';
+                  return (
+                    <div
+                      key={pet.id}
+                      className="bg-[#FFF9F2] border border-[#EFE0D4] rounded-2xl p-2 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onOpenPetProfile?.(pet.id)}
+                          className="flex items-center gap-2.5 text-left min-w-0 flex-1 cursor-pointer"
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-[#E8F8EC] border border-[#CFEBD5] flex items-center justify-center shrink-0 overflow-hidden">
+                            <CroppedPetCutout
+                              photoUrl={pet.photoUrl}
+                              alt={pet.name}
+                              species={pet.species}
+                              mode={pet.cutoutMode ?? 'auto'}
+                              accessory={pet.accessory}
+                              hatTransform={pet.hatTransform}
+                              hatSize="sm"
+                              className="w-11 h-11"
+                              bbox={pet.box_2d}
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-display text-[14px] font-extrabold text-[#4B3C46] flex items-center gap-1">
+                              <span className="truncate">{pet.name}</span>
+                              {pet.minted && (
+                                <CrystalMintIcon className="w-3.5 h-3.5 shrink-0" />
+                              )}
+                            </div>
+                            <div className="text-[10.5px] font-bold text-[#8A747E] tabular-nums truncate">
+                              Lv.{pet.bondLevel} · {pet.bondXp} XP
+                            </div>
+                          </div>
+                        </button>
 
-                    <div className="flex items-center gap-1.5">
-                      {onSelectPet && (
-                        <button
-                          type="button"
-                          onClick={() => onSelectPet(pet.id)}
-                          className={`rounded-full px-2 py-1 text-[10.5px] font-extrabold cursor-pointer border ${
-                            activeSanctuaryPet?.id === pet.id
-                              ? 'bg-[#FFE07D] border-[#C99D66] text-[#4B3C46]'
-                              : 'bg-[#FFFDF9] border-[#E5D7CE] text-[#8A747E]'
-                          }`}
-                        >
-                          {activeSanctuaryPet?.id === pet.id ? 'Active ✓' : 'Select'}
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setHatPickerPetId((cur) =>
+                                cur === pet.id ? null : pet.id
+                              )
+                            }
+                            aria-label={`Change hat for ${pet.name}`}
+                            title={`Change ${pet.name}'s hat`}
+                            className={`rounded-full w-10 h-10 flex items-center justify-center text-[17px] border-2 active:scale-90 transition-transform cursor-pointer ${
+                              isHatOpen
+                                ? 'bg-[#FFF3BF] border-[#D9AA4C]'
+                                : 'bg-[#FFF5F8] border-[#E8D7CE]'
+                            }`}
+                          >
+                            {currentHatIcon}
+                          </button>
+
+                          {onOpenMintPassport && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenMintPassport(pet.id)}
+                              className="cream-btn rounded-full px-2.5 min-h-[40px] text-[11px] font-extrabold text-[#4F7EA6] bg-[#EFF8FF] flex items-center justify-center gap-1 cursor-pointer"
+                              title="Pet Passport"
+                            >
+                              <CrystalMintIcon className="w-3.5 h-3.5" />
+                              {showLabels && (
+                                <span>{pet.minted ? 'NFT ✓' : 'Mint'}</span>
+                              )}
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectPet?.(pet.id);
+                              onCarePet(pet.id);
+                            }}
+                            aria-label={`Pet ${pet.name}`}
+                            className="buttercup-cta rounded-full min-w-[40px] px-2.5 min-h-[40px] text-[11.5px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Heart className="w-4 h-4 fill-[#FF85A1] text-[#FF85A1]" />
+                            {showLabels && <span>Pet</span>}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expandable Per-Pet Hat Picker Tray */}
+                      {isHatOpen && (
+                        <div className="pt-2 border-t border-[#F0E2D6] space-y-1.5">
+                          <div className="flex items-center justify-between gap-2 text-[10.5px] font-extrabold text-[#8A747E]">
+                            <span>
+                              {pet.accessory
+                                ? HAT_STICKER_MAP[pet.accessory]?.icon ?? '👒'
+                                : '✕'}
+                              {showLabels && (
+                                <span className="ml-1">
+                                  {pet.accessory
+                                    ? HAT_STICKER_MAP[pet.accessory]?.label ?? ''
+                                    : 'None'}
+                                </span>
+                              )}
+                            </span>
+                            {pet.accessory && onOpenPetProfile && (
+                              <button
+                                type="button"
+                                onClick={() => onOpenPetProfile(pet.id)}
+                                aria-label={`Move hat on ${pet.name}`}
+                                className="rounded-full px-2.5 py-0.5 bg-[#FFF3BF] border border-[#D9AA4C] text-[#4B3C46] text-[10.5px] font-extrabold cursor-pointer active:scale-95 transition-transform inline-flex items-center gap-1"
+                              >
+                                <Move className="w-3 h-3 shrink-0" />
+                                {showLabels && <span>Move</span>}
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                            <button
+                              type="button"
+                              onClick={() => onEquipAccessory(pet.id, null)}
+                              aria-label={`Remove hat from ${pet.name}`}
+                              title="No Hat"
+                              className={`relative w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border-2 cursor-pointer active:scale-90 transition-transform ${
+                                !pet.accessory
+                                  ? 'bg-[#FFF3BF] border-[#D9AA4C]'
+                                  : 'bg-[#FFFDF9] border-[#E8D7CE] text-[#8A747E]'
+                              }`}
+                            >
+                              <X className="w-4 h-4 stroke-[2.5]" />
+                            </button>
+
+                            {allHats.map((hat) => {
+                              const isEquipped = pet.accessory === hat.id;
+                              const isLocked = !hat.owned;
+                              const canAfford = coins >= hat.cost;
+                              return (
+                                <button
+                                  key={hat.id}
+                                  type="button"
+                                  disabled={isLocked && !canAfford}
+                                  onClick={() => {
+                                    if (hat.owned) {
+                                      onEquipAccessory(pet.id, hat.id);
+                                    } else if (onBuyAndEquipHat) {
+                                      onBuyAndEquipHat(pet.id, hat);
+                                    }
+                                  }}
+                                  title={
+                                    isLocked
+                                      ? `Buy ${hat.name} (${hat.cost} Coins)`
+                                      : hat.name
+                                  }
+                                  className={`relative w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border-2 cursor-pointer active:scale-90 transition-transform disabled:opacity-45 ${
+                                    isEquipped
+                                      ? 'bg-[#FFF3BF] border-[#D9AA4C]'
+                                      : 'bg-[#FFFDF9] border-[#E8D7CE]'
+                                  }`}
+                                >
+                                  <HatStickerIcon hatId={hat.id} className="w-6 h-6" />
+                                  {isEquipped && (
+                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#FFE07D] border border-[#B88B61] flex items-center justify-center">
+                                      <Check className="w-2 h-2 text-[#4B3C46] stroke-[3]" />
+                                    </span>
+                                  )}
+                                  {isLocked && (
+                                    <span className="absolute -bottom-1 inset-x-0 rounded-full bg-[#4B3C46] text-[#FFFDF9] text-[8px] font-extrabold leading-tight py-0.5 flex items-center justify-center gap-0.5 tabular-nums">
+                                      <Lock className="w-2 h-2 shrink-0" />
+                                      {hat.cost}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       )}
-                      {ownedAccessories.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextIdx =
-                              ownedAccessories.findIndex(
-                                (a) => a.id === pet.accessory
-                              ) + 1;
-                            const nextAcc =
-                              nextIdx >= ownedAccessories.length
-                                ? null
-                                : ownedAccessories[nextIdx].id;
-                            onEquipAccessory(pet.id, nextAcc);
-                          }}
-                          className="cream-btn rounded-full px-2.5 py-1 text-[11px] font-extrabold text-[#4B3C46] cursor-pointer"
-                        >
-                          {pet.accessory ? 'Swap' : 'Hat'}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSelectPet?.(pet.id);
-                          onCarePet(pet.id);
-                        }}
-                        className="buttercup-cta rounded-full px-2.5 py-1 text-[11px] font-extrabold text-[#4B3C46] flex items-center gap-1 cursor-pointer"
-                      >
-                        <Heart className="w-3 h-3 fill-[#FF85A1] text-[#FF85A1]" />
-                        <span>Pet</span>
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -527,25 +644,14 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
             </div>
           )}
 
-          {/* BAG: HARVESTED FOOD + PATE BAIT */}
+          {/* BAIT & RESCUE */}
           {modal === 'bag' && (
             <div className="space-y-2.5">
               <div className="grid grid-cols-2 gap-1 bg-[#F7F1EB] rounded-full p-1">
                 <button
                   type="button"
-                  onClick={() => setBagTab('food')}
-                  className={`rounded-full py-1 text-[12px] font-extrabold cursor-pointer ${
-                    bagTab === 'food'
-                      ? 'bg-[#FFFDF9] text-[#4B3C46] shadow-xs'
-                      : 'text-[#8A747E]'
-                  }`}
-                >
-                  🧺 Food ({totalFood})
-                </button>
-                <button
-                  type="button"
                   onClick={() => setBagTab('bait')}
-                  className={`rounded-full py-1 text-[12px] font-extrabold cursor-pointer ${
+                  className={`rounded-full min-h-[40px] text-[12px] font-extrabold cursor-pointer whitespace-nowrap ${
                     bagTab === 'bait'
                       ? 'bg-[#FFFDF9] text-[#4B3C46] shadow-xs'
                       : 'text-[#8A747E]'
@@ -553,65 +659,78 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                 >
                   🐟 Bait
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setBagTab('rescue')}
+                  className={`rounded-full min-h-[40px] text-[12px] font-extrabold cursor-pointer whitespace-nowrap ${
+                    bagTab === 'rescue'
+                      ? 'bg-[#FFFDF9] text-[#4B3C46] shadow-xs'
+                      : 'text-[#8A747E]'
+                  }`}
+                >
+                  🐾 Rescue{!luredRescued ? ' !' : ''}
+                </button>
               </div>
 
-              {bagTab === 'food' && (
+              {bagTab === 'bait' && (
                 <div className="space-y-2">
-                  {pets.length > 0 && (
-                    <div className="bg-[#FFF9F2] border border-[#EFE0D4] rounded-2xl p-2 space-y-1.5">
-                      <div className="text-[11px] font-extrabold text-[#5E4C56]">
-                        Feeding Companion: {activeSanctuaryPet?.name ?? 'Pet'}
-                      </div>
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                        {pets.map((pet) => {
-                          const isSelected = activeSanctuaryPet?.id === pet.id;
-                          return (
-                            <button
-                              key={pet.id}
-                              type="button"
-                              onClick={() => onSelectPet?.(pet.id)}
-                              className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold cursor-pointer whitespace-nowrap border ${
-                                isSelected
-                                  ? 'bg-[#FFE07D] border-[#D8B44B] text-[#4B3C46]'
-                                  : 'bg-[#FFFDF9] border-[#E5D7CE] text-[#8A747E]'
-                              }`}
-                            >
-                              {pet.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {(Object.keys(FOOD_META) as FoodItemType[]).map((foodKey) => {
-                    const meta = FOOD_META[foodKey];
-                    const count = foodInventory[foodKey];
+                  {[
+                    {
+                      name: 'Salmon Pate',
+                      icon: '🐟',
+                      hint: 'Lures cozy cats',
+                      bowlBg: 'bg-[#FFEAF2] border-[#F4C4D8]',
+                    },
+                    {
+                      name: 'Honey Biscuit',
+                      icon: '🦴',
+                      hint: 'Lures playful pups',
+                      bowlBg: 'bg-[#FFF5D6] border-[#F0D994]',
+                    },
+                    {
+                      name: 'Clover Salad',
+                      icon: '🥕',
+                      hint: 'Lures fluffy bunnies',
+                      bowlBg: 'bg-[#E8F8EC] border-[#BFE6C9]',
+                    },
+                  ].map((b) => {
+                    const isActive = activeBait === b.name;
                     return (
                       <div
-                        key={foodKey}
-                        className="bg-[#FFF9F2] border border-[#EFE0D4] rounded-2xl p-2.5 flex items-center justify-between"
+                        key={b.name}
+                        className={`rounded-2xl p-2.5 border flex items-center justify-between gap-2 ${
+                          isActive
+                            ? 'bg-[#FFF8DC] border-[#E5C97B]'
+                            : 'bg-[#FFF9F2] border-[#EFE0D4]'
+                        }`}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-2xl">{meta.icon}</span>
-                          <div>
-                            <div className="font-display text-[14px] font-extrabold text-[#4B3C46]">
-                              {meta.name}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`w-11 h-11 rounded-xl border flex flex-col items-center justify-center shrink-0 relative ${b.bowlBg}`}
+                          >
+                            <BaitStickerIcon baitName={b.name} className="w-6 h-6" />
+                            <span className="w-6 h-1.5 rounded-full bg-[#C99D66]/45 mt-0.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-display text-[14px] font-extrabold text-[#4B3C46] truncate">
+                              {b.name}
                             </div>
-                            <div className="text-[11px] font-bold text-[#8A747E] tabular-nums">
-                              Basket: {count}
+                            <div className="text-[11px] font-bold text-[#8A747E] truncate">
+                              {isActive ? 'Placed in yard ✓' : b.hint}
                             </div>
                           </div>
                         </div>
+
                         <button
                           type="button"
-                          disabled={count === 0}
-                          onClick={() =>
-                            onFeedPet(foodKey, activeSanctuaryPet?.id)
-                          }
-                          className="buttercup-cta rounded-full px-3.5 py-1 text-[12px] font-extrabold text-[#4B3C46] disabled:opacity-45 cursor-pointer"
+                          onClick={() => onPlaceBait(b.name)}
+                          className={`rounded-full px-4 min-h-[42px] text-[12px] font-extrabold cursor-pointer whitespace-nowrap shrink-0 transition-transform active:scale-95 ${
+                            isActive
+                              ? 'bg-[#E8F8EC] border-2 border-[#9AD6A9] text-[#3B7A4A]'
+                              : 'buttercup-cta text-[#4B3C46]'
+                          }`}
                         >
-                          Feed {activeSanctuaryPet?.name ?? ''}
+                          {isActive ? 'Placed ✓' : 'Set'}
                         </button>
                       </div>
                     );
@@ -619,37 +738,37 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                 </div>
               )}
 
-              {bagTab === 'bait' && (
-                <div className="space-y-2">
-                  {[
-                    { name: 'Salmon Pate', icon: '🐟' },
-                    { name: 'Honey Biscuit', icon: '🦴' },
-                    { name: 'Clover Salad', icon: '🥕' },
-                  ].map((b) => {
-                    const isActive = activeBait === b.name;
-                    return (
+              {bagTab === 'rescue' && (
+                <div>
+                  {!luredRescued ? (
+                    <div className="bg-[#FFF9F2] border border-[#EFE0D4] rounded-2xl p-3 flex flex-col items-center text-center gap-2.5">
+                      <div className="w-28 h-28 rounded-2xl border-2 border-[#E2CBBF] overflow-hidden bg-[#FFFDF9] -rotate-1">
+                        <img
+                          src={PET_IMAGES.luredStrayCorgi}
+                          alt="Lured Corgi"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="font-display text-[15px] font-extrabold text-[#4B3C46]">
+                        Biscuit
+                      </div>
                       <button
-                        key={b.name}
                         type="button"
-                        onClick={() => onPlaceBait(b.name)}
-                        className={`w-full rounded-2xl p-2.5 border flex items-center justify-between cursor-pointer ${
-                          isActive
-                            ? 'bg-[#FFF3BF] border-[#E0BE63]'
-                            : 'bg-[#FFF7FA] border-[#F0D8E2]'
-                        }`}
+                        onClick={onRescueStray}
+                        className="buttercup-cta w-full rounded-full py-2.5 px-4 font-display text-[14px] font-extrabold text-[#4B3C46] cursor-pointer"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-xl">{b.icon}</span>
-                          <span className="font-display text-[14px] font-extrabold text-[#4B3C46]">
-                            {b.name}
-                          </span>
-                        </div>
-                        <span className="font-display text-[12px] font-extrabold text-[#8A747E]">
-                          {isActive ? 'Placed ✓' : 'Set'}
-                        </span>
+                        🐾 Adopt
                       </button>
-                    );
-                  })}
+                    </div>
+                  ) : (
+                    <div className="bg-[#F0FAF2] border border-[#CFEBD5] rounded-2xl p-4 text-center space-y-1">
+                      <Sparkles className="w-6 h-6 text-[#F5C34B] mx-auto" />
+                      <div className="font-display text-[14px] font-extrabold text-[#4B3C46]">
+                        All Rescued ✓
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -734,7 +853,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                 <div className="bg-[#FFF9F2] border border-[#EFE0D4] rounded-2xl p-3 flex flex-col items-center text-center gap-2.5">
                   <div className="w-28 h-28 rounded-2xl border-2 border-[#E2CBBF] overflow-hidden bg-[#FFFDF9] -rotate-1">
                     <img
-                      src="/src/assets/images/lured_stray_corgi_1794627550798.jpg"
+                      src={PET_IMAGES.luredStrayCorgi}
                       alt="Lured Corgi"
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover"
@@ -763,32 +882,48 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
           )}
 
           {modal === 'album' && (
-            <div className="grid grid-cols-2 gap-2.5">
-              {album.map((entry) => (
+            <div className="space-y-2.5">
+              {onOpenGallery && (
                 <button
-                  key={entry.id}
                   type="button"
-                  onClick={() => onOpenAlbumItem(entry)}
-                  className="bg-[#FFF9F5] border border-[#EFE0D4] rounded-2xl p-2 text-left active:scale-95 transition-transform cursor-pointer"
+                  onClick={() => {
+                    onClose();
+                    onOpenGallery();
+                  }}
+                  className="buttercup-cta w-full rounded-full min-h-[46px] px-4 font-display text-[13.5px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-transform"
                 >
-                  <div className="aspect-square rounded-xl overflow-hidden bg-[#FFFDF9]">
-                    <img
-                      src={entry.photoUrl}
-                      alt={entry.petName}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <span className="font-display text-[12.5px] font-extrabold text-[#4B3C46] truncate">
-                      {entry.petName}
-                    </span>
-                    <span className="text-[11px] font-extrabold text-[#8A747E] tabular-nums">
-                      {entry.overallScore}
-                    </span>
-                  </div>
+                  <CrystalMintIcon className="w-4 h-4" />
+                  <span>Open Public Passport Gallery</span>
                 </button>
-              ))}
+              )}
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {album.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => onOpenAlbumItem(entry)}
+                    className="bg-[#FFF9F5] border border-[#EFE0D4] rounded-2xl p-2 text-left active:scale-95 transition-transform cursor-pointer"
+                  >
+                    <div className="aspect-square rounded-xl overflow-hidden bg-[#FFFDF9]">
+                      <img
+                        src={resolveAssetUrl(entry.photoUrl)}
+                        alt={entry.petName}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <span className="font-display text-[12.5px] font-extrabold text-[#4B3C46] truncate">
+                        {entry.petName}
+                      </span>
+                      <span className="text-[11px] font-extrabold text-[#8A747E] tabular-nums">
+                        {entry.overallScore}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

@@ -482,7 +482,7 @@ async function prepareImageForJudge(file: File): Promise<{
 }
 
 export default function App() {
-  const [desktopMode, setDesktopMode] = useState<'both' | ScreenView>('sanctuary');
+  const [desktopMode, setDesktopMode] = useState<ScreenView>('sanctuary');
   const [mobileScreen, setMobileScreen] = useState<ScreenView>('sanctuary');
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
 
@@ -1704,34 +1704,26 @@ export default function App() {
   const openFarmScreen = () => {
     setActiveModal(null);
     setMobileScreen('farm');
-    if (desktopMode !== 'both') {
-      setDesktopMode('farm');
-    }
+    setDesktopMode('farm');
   };
 
   const openSanctuaryScreen = () => {
     setActiveModal(null);
     setMobileScreen('sanctuary');
-    if (desktopMode !== 'both') {
-      setDesktopMode('sanctuary');
-    }
+    setDesktopMode('sanctuary');
   };
 
   const openNeighborGardenScreen = () => {
     setActiveModal(null);
     setMobileScreen('neighborGarden');
-    if (desktopMode !== 'both') {
-      setDesktopMode('neighborGarden');
-    }
+    setDesktopMode('neighborGarden');
   };
 
   const openNeighborFarmScreen = () => {
     if (!visitingNeighbor) return;
     setActiveModal(null);
     setMobileScreen('neighborFarm');
-    if (desktopMode !== 'both') {
-      setDesktopMode('neighborFarm');
-    }
+    setDesktopMode('neighborFarm');
   };
 
   const handleVisitNeighbor = (neighborId: string) => {
@@ -1739,9 +1731,7 @@ export default function App() {
     setVisitingId(neighborId);
     setActiveModal(null);
     setMobileScreen('neighborGarden');
-    if (desktopMode !== 'both') {
-      setDesktopMode('neighborGarden');
-    }
+    setDesktopMode('neighborGarden');
   };
 
   const handleLeaveNeighbor = () => {
@@ -1760,9 +1750,7 @@ export default function App() {
     setMintNotice(null);
     setActiveModal(null);
     setMobileScreen('judge');
-    if (desktopMode !== 'both') {
-      setDesktopMode('judge');
-    }
+    setDesktopMode('judge');
   };
 
   const handleUseSampleSnap = () => {
@@ -1771,9 +1759,7 @@ export default function App() {
     setMintNotice(null);
     setActiveModal(null);
     setMobileScreen('judge');
-    if (desktopMode !== 'both') {
-      setDesktopMode('judge');
-    }
+    setDesktopMode('judge');
   };
 
   const handleCropIntoSanctuary = async () => {
@@ -1992,9 +1978,7 @@ export default function App() {
     setIsJudging(true);
     setActiveModal(null);
     setMobileScreen('judge');
-    if (desktopMode !== 'both') {
-      setDesktopMode('judge');
-    }
+    setDesktopMode('judge');
 
     try {
       const { dataUrl, base64, mimeType } = await prepareImageForJudge(file);
@@ -2324,24 +2308,16 @@ export default function App() {
     setEnergy((e) => Math.min(maxEnergy, e + 5));
   };
 
-  const showSanctuaryOnDesktop =
-    desktopMode === 'both' || desktopMode === 'sanctuary';
-  const showFarmOnDesktop =
-    desktopMode === 'both' || desktopMode === 'farm';
-  const showNeighborGardenOnDesktop =
-    desktopMode === 'both' || desktopMode === 'neighborGarden';
+  const showSanctuaryOnDesktop = desktopMode === 'sanctuary';
+  const showFarmOnDesktop = desktopMode === 'farm';
+  const showNeighborGardenOnDesktop = desktopMode === 'neighborGarden';
   const showNeighborFarmOnDesktop =
-    Boolean(visitingNeighbor) &&
-    (desktopMode === 'both' || desktopMode === 'neighborFarm');
-  const showJudgeOnDesktop =
-    desktopMode === 'both' || desktopMode === 'judge';
-  const showGalleryOnDesktop =
-    desktopMode === 'both' || desktopMode === 'gallery';
+    Boolean(visitingNeighbor) && desktopMode === 'neighborFarm';
+  const showJudgeOnDesktop = desktopMode === 'judge';
+  const showGalleryOnDesktop = desktopMode === 'gallery';
 
   const frameSizeClass =
-    desktopMode === 'both'
-      ? 'w-full max-w-[392px] h-[min(86dvh,710px)] lg:w-[310px] lg:h-[552px] aspect-[9/16]'
-      : 'w-full max-w-[392px] h-[min(86dvh,710px)] lg:max-w-[460px] lg:h-[730px] aspect-[9/16]';
+    'w-full max-w-[392px] h-[min(86dvh,710px)] lg:max-w-[460px] lg:h-[730px] aspect-[9/16]';
 
   const renderCreamSheets = (target: ScreenView) => {
     if (modalTarget !== target) return null;
@@ -2397,11 +2373,16 @@ export default function App() {
         onBuyFromNeighborMarket={handleBuyFromNeighborMarket}
         onEquipAccessory={handleEquipAccessory}
         onBuyAndEquipHat={handleBuyAndEquipHat}
-        onOpenPetProfile={(petId) => setProfileModalState({ open: true, mode: 'profile', petId })}
+        onOpenPetProfile={(petId) => {
+          setActiveModal(null);
+          setProfileModalState({ open: true, mode: 'profile', petId });
+        }}
         onOpenMintPassport={(petId) => {
+          setActiveModal(null);
           setMintModalPetId(petId);
           setMintModalOpen(true);
         }}
+        onOpenGallery={openGalleryScreen}
         onCarePet={(petId) => {
           handleCarePet(petId);
         }}
@@ -2420,21 +2401,20 @@ export default function App() {
     );
   };
 
-  const desktopTabs: { id: 'both' | ScreenView; label: string }[] = [
-    { id: 'sanctuary', label: '🏡 Sanctuary' },
-    { id: 'farm', label: '🌾 Farm' },
-    { id: 'neighborGarden', label: '🏘️ Visit' },
+  const navTabs: { id: ScreenView; label: string }[] = [
+    { id: 'sanctuary', label: 'Sanctuary' },
+    { id: 'farm', label: 'Crop Farm' },
+    { id: 'neighborGarden', label: 'Visit' },
     ...(visitingNeighbor
       ? [
           {
             id: 'neighborFarm' as const,
-            label: `🚜 ${visitingNeighbor.ownerName}’s Farm`,
+            label: `${visitingNeighbor.ownerName}’s Farm`,
           },
         ]
       : []),
-    { id: 'judge', label: '📸 AI Judge' },
-    { id: 'gallery', label: `🏛️ Passports (${passports.length})` },
-    { id: 'both', label: `🪟 View All (${visitingNeighbor ? 6 : 5})` },
+    { id: 'judge', label: 'AI Judge' },
+    { id: 'gallery', label: `Passports (${passports.length})` },
   ];
 
   const walletState: {
@@ -2470,8 +2450,9 @@ export default function App() {
     >
     <UiLabelsProvider value={showTextLabels}>
     <div className={`min-h-dvh w-full ${TIME_OF_DAY_PALETTES[skyTheme]?.studioBgClass || 'pastel-studio-bg'} flex flex-col items-center justify-center sm:p-4 lg:p-5 transition-colors duration-1000`}>
-      {/* Minimal Pastel Top Bar */}
-      <div className="w-full max-w-[1440px] px-3 pt-2.5 pb-2 sm:pt-0 sm:pb-3 flex items-center justify-between gap-2 flex-wrap">
+      {/* Desktop Studio Header Bar (Hidden on mobile so full-screen app has a single clean in-frame top bar) */}
+      <header className="hidden sm:flex w-full max-w-[1160px] px-3 pb-3 items-center justify-between gap-4">
+        {/* Zone 1: Wordmark / Return to Title */}
         <button
           type="button"
           onClick={() => {
@@ -2490,10 +2471,13 @@ export default function App() {
           </span>
         </button>
 
-        {/* Desktop Switcher */}
+        {/* Zone 2: In-Game Screen Navigation (Desktop) */}
         {appPhase === 'playing' && (
-          <div className="hidden lg:flex items-center gap-1 cream-pill rounded-full p-1">
-            {desktopTabs.map((tab) => {
+          <nav
+            aria-label="Screens"
+            className="hidden lg:flex items-center gap-1 cream-pill rounded-full p-1"
+          >
+            {navTabs.map((tab) => {
               const active = desktopMode === tab.id;
               return (
                 <button
@@ -2502,11 +2486,9 @@ export default function App() {
                   onClick={() => {
                     setActiveModal(null);
                     setDesktopMode(tab.id);
-                    if (tab.id !== 'both') {
-                      setMobileScreen(tab.id);
-                    }
+                    setMobileScreen(tab.id);
                   }}
-                  className={`rounded-full px-3 py-1 font-display text-[12.5px] font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
+                  className={`rounded-full px-3 py-1 font-display text-[12px] font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
                     active
                       ? 'bg-[#FFE07D] text-[#4B3C46]'
                       : 'text-[#8A747E] hover:text-[#4B3C46]'
@@ -2516,91 +2498,29 @@ export default function App() {
                 </button>
               );
             })}
-          </div>
+          </nav>
         )}
 
-        {/* Mobile / Tablet Switcher */}
-        {appPhase === 'playing' && (
-          <div className="flex lg:hidden items-center gap-1 cream-pill rounded-full p-1">
+        {/* Zone 3: Primary Actions (Wallet + Settings Menu) */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {appPhase === 'playing' && (
             <button
               type="button"
-              onClick={openSanctuaryScreen}
-              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-                mobileScreen === 'sanctuary'
-                  ? 'bg-[#FFE07D] text-[#4B3C46]'
-                  : 'text-[#8A747E]'
-              }`}
-            >
-              🏡 Yard
-            </button>
-            <button
-              type="button"
-              onClick={openFarmScreen}
-              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-                mobileScreen === 'farm'
-                  ? 'bg-[#FFE07D] text-[#4B3C46]'
-                  : 'text-[#8A747E]'
-              }`}
-            >
-              🌾 Farm
-            </button>
-            <button
-              type="button"
-              onClick={openNeighborGardenScreen}
-              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-                mobileScreen === 'neighborGarden'
-                  ? 'bg-[#FFE07D] text-[#4B3C46]'
-                  : 'text-[#8A747E]'
-              }`}
-            >
-              🏘️ Visit
-            </button>
-            {visitingNeighbor && (
-              <button
-                type="button"
-                onClick={openNeighborFarmScreen}
-                className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-                  mobileScreen === 'neighborFarm'
-                    ? 'bg-[#FFE07D] text-[#4B3C46]'
-                    : 'text-[#8A747E]'
-                }`}
-              >
-                🚜 {visitingNeighbor.ownerName}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveModal(null);
-                setMobileScreen('judge');
-                if (desktopMode !== 'both') {
-                  setDesktopMode('judge');
-                }
-              }}
-              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-                mobileScreen === 'judge'
-                  ? 'bg-[#FFE07D] text-[#4B3C46]'
-                  : 'text-[#8A747E]'
-              }`}
-            >
-              📸 Judge
-            </button>
-            <button
-              type="button"
-              onClick={openGalleryScreen}
-              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
+              onClick={() =>
+                mobileScreen === 'gallery'
+                  ? openSanctuaryScreen()
+                  : openGalleryScreen()
+              }
+              className={`lg:hidden cream-pill rounded-full px-2.5 py-1 font-display text-[11.5px] font-extrabold cursor-pointer whitespace-nowrap active:scale-95 transition-transform ${
                 mobileScreen === 'gallery'
                   ? 'bg-[#FFE07D] text-[#4B3C46]'
-                  : 'text-[#8A747E]'
+                  : 'bg-[#FFFDF9] text-[#4B3C46]'
               }`}
             >
-              🏛️ Passports
+              {mobileScreen === 'gallery' ? '🏡 Yard' : `🏛️ ${passports.length}`}
             </button>
-          </div>
-        )}
+          )}
 
-        {/* Top Right: Wallet + Settings */}
-        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -2624,11 +2544,12 @@ export default function App() {
             }}
             aria-label="Settings"
             className="cream-pill rounded-full w-8 h-8 flex items-center justify-center text-[#4B3C46] cursor-pointer active:scale-95 transition-transform"
+            title="Settings & Guide"
           >
-            ⚙️
+            <Settings className="w-4 h-4 text-[#8A747E]" />
           </button>
         </div>
-      </div>
+      </header>
 
       {/* 9:16 MOBILE PORTRAIT FRAMES OR START SCREEN */}
       {appPhase === 'start' ? (
