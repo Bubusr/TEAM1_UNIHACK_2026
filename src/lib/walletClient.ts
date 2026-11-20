@@ -389,7 +389,7 @@ export async function getBrowserWalletState(): Promise<{
   const { provider, providerName, isCoreWallet } =
     resolvePreferredWalletProvider();
   if (!provider) {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
       const demoPk = localStorage.getItem(DEMO_WALLET_STORAGE_KEY);
       if (demoPk && demoPk.startsWith('0x')) {
         try {

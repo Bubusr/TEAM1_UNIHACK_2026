@@ -111,6 +111,7 @@ class InMemoryQuery {
       id,
       data: () => JSON.parse(JSON.stringify(data)),
       exists: true,
+      ref: this.coll.doc(id),
     }));
     for (const f of this.filters) {
       docs = docs.filter((d) => {
