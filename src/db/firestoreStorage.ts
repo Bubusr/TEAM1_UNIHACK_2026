@@ -1352,7 +1352,11 @@ export async function firestoreMergeGuestIntoKeeper(params: {
       new Set([...(keeper?.ownedShopItems || []), ...(guest.ownedShopItems || [])])
     );
 
-    transaction.update(keeperUserRef, {
+    // Migrate or clean up guest wallet if present
+    const guestWallet = guest?.wallet as { address?: string; chainId?: number; verifiedAt?: string } | undefined;
+    const keeperWallet = keeper?.wallet as { address?: string; chainId?: number; verifiedAt?: string } | undefined;
+
+    const keeperUpdates: Record<string, unknown> = {
       coins: nextCoins,
       level: nextLevel,
       expPercent: nextExpPercent,
@@ -1362,7 +1366,26 @@ export async function firestoreMergeGuestIntoKeeper(params: {
       firstBondQuestClaimedAt: mergedQuestClaimed,
       firstBondQuestPetUid: mergedQuestPetUid,
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    if (guestWallet?.address && !keeperWallet?.address) {
+      keeperUpdates.wallet = guestWallet;
+      const guestWalletRef = adminDb.collection('wallets').doc(params.guestUid);
+      const keeperWalletRef = adminDb.collection('wallets').doc(params.keeperUid);
+      transaction.set(keeperWalletRef, {
+        uid: params.keeperUid,
+        userId: keeper?.id || hashUidToId(params.keeperUid),
+        address: guestWallet.address.toLowerCase(),
+        chainId: guestWallet.chainId || 43113,
+        verifiedAt: guestWallet.verifiedAt || new Date().toISOString(),
+      });
+      transaction.delete(guestWalletRef);
+    } else if (guestWallet?.address) {
+      const guestWalletRef = adminDb.collection('wallets').doc(params.guestUid);
+      transaction.delete(guestWalletRef);
+    }
+
+    transaction.update(keeperUserRef, keeperUpdates);
 
     transaction.update(guestUserRef, {
       isMerged: true,

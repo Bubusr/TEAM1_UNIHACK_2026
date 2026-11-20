@@ -1242,6 +1242,29 @@ export async function mergeGuestIntoKeeper(params: {
       resultPayload: { migratedPetCount, migratedSubmissions },
     });
 
+    const [guestWallet] = await tx
+      .select()
+      .from(wallets)
+      .where(eq(wallets.userId, guestUser.id))
+      .limit(1);
+
+    if (guestWallet) {
+      const [keeperWallet] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, keeper.id))
+        .limit(1);
+
+      if (!keeperWallet) {
+        await tx
+          .update(wallets)
+          .set({ userId: keeper.id })
+          .where(eq(wallets.id, guestWallet.id));
+      } else {
+        await tx.delete(wallets).where(eq(wallets.id, guestWallet.id));
+      }
+    }
+
     await tx
       .delete(pets)
       .where(eq(pets.originalDiscovererId, guestUser.id));

@@ -151,6 +151,61 @@ describe('Web3 End-to-End Test Matrix (Phase H)', () => {
     const retrieved = await getLinkedWallet({ userId: freshId, uid: freshUid });
     assert.ok(retrieved);
     assert.strictEqual(retrieved.address, freshWallet.address.toLowerCase());
+
+    // Sub-test: Anonymous Guest -> Authenticated Keeper wallet reclamation & Cross-Keeper protection
+    const sharedWallet = ethers.Wallet.createRandom();
+    const guestUid = `guest:session-${runId}`;
+    const guestChallenge = await issueWalletNonce({
+      userId: 9001,
+      uid: guestUid,
+      rawAddress: sharedWallet.address,
+    });
+    const guestSig = await sharedWallet.signMessage(guestChallenge.message);
+    await verifyAndBindWallet({
+      userId: 9001,
+      uid: guestUid,
+      rawAddress: sharedWallet.address,
+      nonce: guestChallenge.nonce,
+      signature: guestSig,
+    });
+
+    // Authenticated keeper signs with same wallet -> successfully reclaims from guest!
+    const keeperUid = `keeper-claimed-${runId}`;
+    const keeperChallenge = await issueWalletNonce({
+      userId: 9002,
+      uid: keeperUid,
+      rawAddress: sharedWallet.address,
+    });
+    const keeperSig = await sharedWallet.signMessage(keeperChallenge.message);
+    const reclaimed = await verifyAndBindWallet({
+      userId: 9002,
+      uid: keeperUid,
+      rawAddress: sharedWallet.address,
+      nonce: keeperChallenge.nonce,
+      signature: keeperSig,
+    });
+    assert.strictEqual(reclaimed.address, sharedWallet.address.toLowerCase());
+
+    // Another distinct authenticated keeper tries to bind the same wallet -> blocked!
+    const intruderUid = `keeper-intruder-${runId}`;
+    const intruderChallenge = await issueWalletNonce({
+      userId: 9003,
+      uid: intruderUid,
+      rawAddress: sharedWallet.address,
+    });
+    const intruderSig = await sharedWallet.signMessage(intruderChallenge.message);
+    await assert.rejects(
+      async () => {
+        await verifyAndBindWallet({
+          userId: 9003,
+          uid: intruderUid,
+          rawAddress: sharedWallet.address,
+          nonce: intruderChallenge.nonce,
+          signature: intruderSig,
+        });
+      },
+      /This wallet address is already linked to another Keeper account/
+    );
   });
 
   it('Test 4 — Claim Security & Cryptographic Integrity', async () => {

@@ -1,7 +1,7 @@
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { db } from './index.ts';
 import { adminDb } from '../lib/firebase-admin.ts';
-import { authNonces, mintClaims, pets, wallets } from './schema.ts';
+import { authNonces, mintClaims, pets, users, wallets } from './schema.ts';
 
 export interface Web3PetRecord {
   id: number | string;
@@ -546,7 +546,32 @@ export async function consumeNonceAndBindWallet(params: {
     if (!existing.empty) {
       const exData = existing.docs[0].data();
       if (exData.uid && exData.uid !== params.uid) {
-        throw new Error('This wallet address is already linked to another Keeper account.');
+        // Check if the previous owner was an anonymous guest session or a merged guest account
+        const isGuestPrev =
+          typeof exData.uid === 'string' &&
+          (exData.uid.startsWith('guest:') || exData.uid.startsWith('guest_'));
+
+        let isMergedGuest = false;
+        if (!isGuestPrev) {
+          const prevUserDoc = await adminDb.collection('users').doc(exData.uid).get();
+          const prevData = prevUserDoc.data();
+          if (prevData?.isMerged && prevData?.mergedIntoUid === params.uid) {
+            isMergedGuest = true;
+          }
+        }
+
+        if (isGuestPrev || isMergedGuest) {
+          // Safely reclaim wallet from temporary or merged guest session
+          await existing.docs[0].ref.delete();
+          if (exData.uid) {
+            await adminDb.collection('users').doc(exData.uid).set(
+              { wallet: null },
+              { merge: true }
+            );
+          }
+        } else {
+          throw new Error('This wallet address is already linked to another Keeper account.');
+        }
       }
     }
 
@@ -605,9 +630,19 @@ export async function consumeNonceAndBindWallet(params: {
       .limit(1);
 
     if (existingOwner.length > 0 && existingOwner[0].userId !== params.userId) {
-      throw new Error(
-        'This wallet address is already linked to another Keeper account.'
-      );
+      const [prevUser] = await tx
+        .select()
+        .from(users)
+        .where(eq(users.id, existingOwner[0].userId))
+        .limit(1);
+
+      if (prevUser && prevUser.isGuest) {
+        await tx.delete(wallets).where(eq(wallets.id, existingOwner[0].id));
+      } else {
+        throw new Error(
+          'This wallet address is already linked to another Keeper account.'
+        );
+      }
     }
 
     const [bound] = await tx
@@ -643,18 +678,16 @@ export async function removeBoundWallet(params: {
   userId: number;
   uid?: string;
 }): Promise<void> {
-  if (!process.env.DATABASE_URL) {
-    if (params.uid) {
-      await adminDb.collection('wallets').doc(params.uid).delete();
-      await adminDb.collection('users').doc(params.uid).set(
-        { wallet: null },
-        { merge: true }
-      );
-    }
-    return;
+  if (params.uid) {
+    await adminDb.collection('wallets').doc(params.uid).delete();
+    await adminDb.collection('users').doc(params.uid).set(
+      { wallet: null },
+      { merge: true }
+    );
   }
-
-  await db.delete(wallets).where(eq(wallets.userId, params.userId));
+  if (process.env.DATABASE_URL) {
+    await db.delete(wallets).where(eq(wallets.userId, params.userId));
+  }
 }
 
 export {
