@@ -45,6 +45,7 @@ interface PassportMintModalProps {
   onClose: () => void;
   onOpenWallet: () => void;
   onOpenQuest: () => void;
+  onRealMint?: (petUid: string) => Promise<boolean>;
   onPassportMinted: (record: MintedPassportRecord) => void;
   onOpenGallery: () => void;
 }
@@ -59,6 +60,7 @@ export const PassportMintModal: React.FC<PassportMintModalProps> = ({
   onClose,
   onOpenWallet,
   onOpenQuest,
+  onRealMint,
   onPassportMinted,
   onOpenGallery,
 }) => {
@@ -109,6 +111,16 @@ export const PassportMintModal: React.FC<PassportMintModalProps> = ({
     if (!pet || !wallet.address) return;
     setErrorMsg(null);
     try {
+      if (onRealMint) {
+        setStage('submitting_tx');
+        const ok = await onRealMint(pet.id);
+        if (!ok) {
+          throw new Error('Minting transaction was cancelled or rejected by wallet.');
+        }
+        setStage('confirmed');
+        return;
+      }
+
       setStage('uploading_ipfs');
       const meta = await uploadPassportIpfsMetadata(pet);
       setIpfsMeta(meta);

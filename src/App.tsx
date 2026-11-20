@@ -2979,6 +2979,7 @@ export default function App() {
           setMintModalOpen(false);
           setQuestModalOpen(true);
         }}
+        onRealMint={mintPassportByPetUid}
         onPassportMinted={handlePassportMinted}
         onOpenGallery={() => {
           setMintModalOpen(false);
