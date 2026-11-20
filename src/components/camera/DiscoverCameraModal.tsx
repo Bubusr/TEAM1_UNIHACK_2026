@@ -473,7 +473,7 @@ export const DiscoverCameraModal: React.FC<DiscoverCameraModalProps> = ({
                     <div className="w-5 h-5 border-t-2 border-r-2 border-[#FFE07D] rounded-tr-md shadow-sm" />
                   </div>
                   <div className="self-center bg-[#4B3C46]/70 backdrop-blur-xs text-[#FFFDF9] px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-sm">
-                    <span>🐾 Khung căn chỉnh thú cưng</span>
+                    <span>🐾 Pet Alignment Frame</span>
                   </div>
                   <div className="flex justify-between">
                     <div className="w-5 h-5 border-b-2 border-l-2 border-[#FFE07D] rounded-bl-md shadow-sm" />
@@ -554,7 +554,7 @@ export const DiscoverCameraModal: React.FC<DiscoverCameraModalProps> = ({
                     <div className="w-6 h-6 border-t-2 border-r-2 border-[#FFE07D] rounded-tr-md shadow-sm" />
                   </div>
                   <div className="self-center bg-[#4B3C46]/70 backdrop-blur-xs text-[#FFFDF9] px-2.5 py-0.5 rounded-full text-[10.5px] font-bold flex items-center gap-1 shadow-sm">
-                    <span>🐾 Căn thú cưng vào giữa khung</span>
+                    <span>🐾 Center pet inside frame</span>
                   </div>
                   <div className="flex justify-between">
                     <div className="w-6 h-6 border-b-2 border-l-2 border-[#FFE07D] rounded-bl-md shadow-sm" />

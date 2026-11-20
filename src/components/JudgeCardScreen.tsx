@@ -3,15 +3,20 @@ import {
   Camera,
   Check,
   ExternalLink,
+  Scissors,
+  Search,
   Share2,
   ShieldCheck,
   Sparkles,
+  Sun,
+  Target,
 } from 'lucide-react';
 import { JudgeReport, SanctuaryPet, Web3ConfigStatus } from '../types';
 import { MINT_ELIGIBILITY_RULES } from '../shared/gameMeta';
-import { CrystalMintIcon } from './HandDrawnAssets';
+import { CrystalMintIcon, PawCoinIcon } from './HandDrawnAssets';
+import { ShieldMiniIcon } from './GameIcons';
 import { SanctuaryModalType } from './SanctuaryScreen';
-import { SharedBottomDock, SharedTopHud } from './SharedHud';
+import { SharedBottomDock, SharedTopHud, useShowTextLabels } from './SharedHud';
 
 interface JudgeCardScreenProps {
   coins: number;
@@ -74,6 +79,7 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
   onOpenDiscoverCamera,
   onOpenSettings,
 }) => {
+  const showLabels = useShowTextLabels();
   const [sharedFeedback, setSharedFeedback] = useState(false);
 
   const handleShareClick = () => {
@@ -289,19 +295,26 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
               ? 'Configuration required for live AI evaluation — no score awarded'
               : 'Photo evaluation unjudged — please try another snap'}
           </div>
+        ) : showLabels ? (
+          <div className="text-center text-[12px] font-extrabold text-[#6E5B65] tabular-nums whitespace-nowrap">
+            {`Sharp ${report.sharp} · Light ${report.light} · ${report.species} · Theme ${report.themeScore}`}
+          </div>
         ) : (
           <div className="flex items-center justify-center gap-1.5 flex-wrap">
-            <span className="bg-[#FFFDF9] border border-[#E5D7CE] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap">
-              🔍 {report.sharp}
+            <span className="bg-[#FFFDF9] border border-[#E5D7CE] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap inline-flex items-center gap-1">
+              <Search className="w-3.5 h-3.5 text-[#7B6670]" />
+              {report.sharp}
             </span>
-            <span className="bg-[#FFF8DC] border border-[#EFE0A8] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap">
-              ☀️ {report.light}
+            <span className="bg-[#FFF8DC] border border-[#EFE0A8] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap inline-flex items-center gap-1">
+              <Sun className="w-3.5 h-3.5 text-[#D99B38]" />
+              {report.light}
             </span>
             <span className="bg-[#E8F8EC] border border-[#C3E8CD] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] whitespace-nowrap">
               🐾 {report.species}
             </span>
-            <span className="bg-[#E6F4FF] border border-[#C2E1F7] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap">
-              🎯 {report.themeScore}
+            <span className="bg-[#E6F4FF] border border-[#C2E1F7] rounded-full px-2.5 py-0.5 text-[11px] font-bold text-[#4B3C46] tabular-nums whitespace-nowrap inline-flex items-center gap-1">
+              <Target className="w-3.5 h-3.5 text-[#E06C97]" />
+              {report.themeScore}
             </span>
           </div>
         )}
@@ -309,40 +322,73 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
         {/* Rewards + Passport Eligibility + Mint / Share */}
         <div className="w-full max-w-[300px] flex flex-col gap-1.5">
           <div className="text-center text-[11px] font-extrabold text-[#7B6670] whitespace-nowrap">
-            {isUnjudged
-              ? geminiMissing
-                ? 'Configure GEMINI_API_KEY in Settings > Secrets to judge photos'
-                : 'Snap a clear pet photo to receive score & rewards'
-              : `+${report.coinsReward} 🪙 · +${report.expReward} EXP · 🛡️ 24h`}
-          </div>
-
-          <div className="bg-[#FFFDF9]/90 border border-[#E6D6CA] rounded-2xl px-2.5 py-1 flex items-center justify-between gap-1.5 text-[10.5px] font-extrabold text-[#5E4C56]">
-            <span className="flex items-center gap-1 whitespace-nowrap">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#5CA971] shrink-0" />
-              {isMinted
-                ? 'On-Chain Passport'
-                : `Mint Rule: ${scoreMet ? '✓' : ''}${scoreValue}/80 · Bond ${bondXp}/100`}
-            </span>
-            {linkedPet?.mintTxHash ? (
-              <a
-                href={`https://testnet.snowtrace.io/tx/${linkedPet.mintTxHash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[#4B7DA6] underline flex items-center gap-0.5 shrink-0"
-              >
-                <span>Fuji</span>
-                <ExternalLink className="w-2.5 h-2.5" />
-              </a>
+            {isUnjudged ? (
+              geminiMissing ? (
+                'Configure GEMINI_API_KEY in Settings to judge photos'
+              ) : (
+                'Snap a clear pet photo to receive score & rewards'
+              )
+            ) : showLabels ? (
+              `+${report.coinsReward} 🪙 · +${report.expReward} EXP · 🛡️ 24h`
             ) : (
-              <button
-                type="button"
-                onClick={() => onOpenModal('profile')}
-                className="text-[#8A747E] underline cursor-pointer shrink-0"
-              >
-                Passports
-              </button>
+              <span className="inline-flex items-center justify-center gap-1.5">
+                <span className="inline-flex items-center gap-0.5">
+                  <span>+{report.coinsReward}</span>
+                  <PawCoinIcon className="w-3.5 h-3.5" />
+                </span>
+                <span className="opacity-45">·</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <span>+{report.expReward}</span>
+                  <Sparkles className="w-3.5 h-3.5 text-[#D99B38]" />
+                </span>
+                <span className="opacity-45">·</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <ShieldMiniIcon className="w-3.5 h-3.5" />
+                  <span>24h</span>
+                </span>
+              </span>
             )}
           </div>
+
+          {!isUnjudged && (
+            showLabels ? (
+              <div className="bg-[#FFFDF9]/90 border border-[#E6D6CA] rounded-2xl px-2.5 py-1 flex items-center justify-between gap-1.5 text-[10.5px] font-extrabold text-[#5E4C56]">
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#5CA971] shrink-0" />
+                  {isMinted
+                    ? 'On-Chain Passport'
+                    : `Mint Rule: ${scoreMet ? '✓' : ''}${scoreValue}/80 · Bond ${bondXp}/100`}
+                </span>
+                {linkedPet?.mintTxHash ? (
+                  <a
+                    href={`https://testnet.snowtrace.io/tx/${linkedPet.mintTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#4B7DA6] underline flex items-center gap-0.5 shrink-0"
+                  >
+                    <span>Fuji</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onOpenModal('profile')}
+                    className="text-[#8A747E] underline cursor-pointer shrink-0"
+                  >
+                    Passports
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center text-[10px] font-bold text-[#8A747E] flex items-center justify-center gap-1.5 tabular-nums">
+                <ShieldCheck className="w-3 h-3 text-[#5CA971]" />
+                <span>{scoreValue}/80</span>
+                <span>·</span>
+                <span>{bondXp}/100</span>
+                {isMinted && <span className="text-[#356845] font-extrabold">✓ Minted</span>}
+              </div>
+            )
+          )}
 
           {mintNotice && (
             <div className="bg-[#FFF8DC] border border-[#E6D08A] rounded-xl px-2.5 py-1 text-[10.5px] font-bold text-[#5E4C56] text-center leading-snug">
@@ -355,7 +401,7 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
               type="button"
               disabled={isMinting || isMinted}
               onClick={onMintPet}
-              className={`cream-btn rounded-full py-1.5 px-3 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap disabled:opacity-75 ${
+              className={`cream-btn rounded-full min-h-[44px] px-2.5 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap disabled:opacity-75 ${
                 isMinted
                   ? 'bg-[#E8F8EC] border-[#B4DFBE]'
                   : canAttemptMint
@@ -363,17 +409,37 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
                   : 'bg-[#F0F8FF]'
               }`}
             >
-              <CrystalMintIcon className="w-3.5 h-3.5 shrink-0" />
-              <span>{mintButtonLabel}</span>
+              <CrystalMintIcon
+                className={`${showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'} shrink-0`}
+              />
+              {showLabels ? (
+                <span>{mintButtonLabel}</span>
+              ) : isMinted ? (
+                <span className="text-[12px]">✓</span>
+              ) : null}
             </button>
 
             <button
               type="button"
               onClick={handleShareClick}
-              className="cream-btn rounded-full py-1.5 px-3 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap bg-[#FFF3F8]"
+              className="cream-btn rounded-full min-h-[44px] px-2.5 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap bg-[#FFF3F8]"
             >
-              <Share2 className="w-3.5 h-3.5 text-[#8A747E] shrink-0" />
-              <span>{sharedFeedback ? 'Copied ✓' : 'Share'}</span>
+              {sharedFeedback ? (
+                <Check
+                  className={`${
+                    showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
+                  } text-[#3F7B52] shrink-0 stroke-[2.8]`}
+                />
+              ) : (
+                <Share2
+                  className={`${
+                    showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
+                  } text-[#8A747E] shrink-0`}
+                />
+              )}
+              {showLabels && (
+                <span>{sharedFeedback ? 'Copied ✓' : 'Share'}</span>
+              )}
             </button>
           </div>
         </div>
@@ -395,17 +461,42 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
             type="button"
             onClick={onCropIntoSanctuary}
             disabled={isJudging || isUnjudged}
-            className="buttercup-cta rounded-full px-6 h-[44px] font-display text-[14px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap active:scale-95 transition-transform"
+            aria-label={
+              report.cropped ? 'In Sanctuary' : 'Welcome to Garden'
+            }
+            title={report.cropped ? 'In Sanctuary' : 'Welcome to Garden'}
+            className={`buttercup-cta rounded-full font-display font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap active:scale-95 transition-transform ${
+              showLabels ? 'px-6 min-h-[48px] text-[14.5px]' : 'w-16 h-16'
+            }`}
           >
             {report.cropped ? (
               <>
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Đã vào Sanctuary ✓</span>
+                <Check
+                  className={
+                    showLabels
+                      ? 'w-4.5 h-4.5 stroke-[3]'
+                      : 'w-7 h-7 stroke-[3]'
+                  }
+                />
+                {showLabels && <span>In Sanctuary ✓</span>}
               </>
             ) : isUnjudged ? (
-              <span>🔒 Cần Chấm Ảnh</span>
+              showLabels ? (
+                <span>🔒 Score Photo First</span>
+              ) : (
+                <span className="text-[24px]">🔒</span>
+              )
             ) : (
-              <span>✂️ Thêm vào Sanctuary</span>
+              <>
+                <Scissors
+                  className={
+                    showLabels
+                      ? 'w-4.5 h-4.5 stroke-[2.3]'
+                      : 'w-7 h-7 stroke-[2.3]'
+                  }
+                />
+                {showLabels && <span>Welcome to Garden</span>}
+              </>
             )}
           </button>
         }

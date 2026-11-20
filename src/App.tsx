@@ -2483,7 +2483,7 @@ export default function App() {
             setAppPhase('start');
           }}
           className="cream-pill rounded-full px-3.5 py-1 flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform"
-          title={appPhase === 'playing' ? 'Về Màn Hình Chính' : 'Paws & Picket'}
+          title={appPhase === 'playing' ? 'Return to Title' : 'Paws & Picket'}
         >
           {appPhase === 'playing' && (
             <Home className="w-3.5 h-3.5 text-[#8A747E]" />
