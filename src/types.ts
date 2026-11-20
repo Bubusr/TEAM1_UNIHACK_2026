@@ -2,6 +2,48 @@ export type PetSpecies = 'cat' | 'dog' | 'bunny' | 'corgi' | 'shiba' | 'samoyed'
 
 export type CutoutMode = 'studio' | 'silhouette' | 'auto';
 
+export type PetAnimState = 'idle' | 'eating' | 'playing' | 'happy';
+
+export type JourneyPhase =
+  | 'discover'
+  | 'welcome'
+  | 'care'
+  | 'grow'
+  | 'preserve'
+  | 'connect';
+
+export type DiscoveryStatus =
+  | 'Discovered'
+  | 'Welcomed'
+  | 'Passport Ready'
+  | 'Preserved On-Chain';
+
+export interface HatTransform {
+  x: number;
+  y: number;
+  scale?: number;
+  rotate?: number;
+}
+
+export interface PetProfile {
+  id: string;
+  name: string;
+  species: string;
+  imageUrl: string;
+  bondXp: number;
+  bondLevel: number;
+  discoveryStatus: DiscoveryStatus | string;
+  passportEligible: boolean;
+  passportTokenId?: string;
+  discoveryDate: string;
+  pose?: string;
+  aiScore?: number;
+  ipfsCid?: string;
+  ipfsUri?: string;
+  txHash?: string;
+  ownerAddress?: string;
+}
+
 export type CropType = 'carrot' | 'berry' | 'catnip' | 'wheat';
 export type FruitType = 'apple' | 'peach';
 export type FoodItemType = CropType | FruitType;
@@ -72,13 +114,17 @@ export interface SanctuaryPet {
   flip?: boolean;
   needsCare?: 'heart' | 'water' | 'food' | null;
   accessory?: string | null;
+  hatTransform?: HatTransform;
   score?: number;
   bondXp?: number;
+  bondLevel?: number;
   careCount?: number;
   memories?: PetMemoryEntry[];
   originalDiscovererUid?: string;
   originalDiscovererWallet?: string | null;
   discoveredAt?: string;
+  discoveryDate?: string;
+  discoveryStatus?: DiscoveryStatus | string;
   minted?: boolean;
   mintStatus?: string;
   tokenId?: string | null;
@@ -86,11 +132,17 @@ export interface SanctuaryPet {
   mintTxHash?: string | null;
   metadataUri?: string | null;
   ipfsCid?: string | null;
+  ipfsUri?: string | null;
+  txHash?: string | null;
   onChainOwner?: string | null;
+  ownerAddress?: string | null;
   eligibility?: MintEligibilityInfo;
+  passportEligible?: boolean;
+  passportTokenId?: string | null;
   questPetDone?: boolean;
   questFeedDone?: boolean;
   questPlayDone?: boolean;
+  animState?: PetAnimState;
   box_2d?: [number, number, number, number];
 }
 
@@ -260,4 +312,65 @@ export interface KeeperServerState {
   pets: SanctuaryPet[];
   album: JudgeReport[];
   adoptionOffers: AdoptionOfferInfo[];
+}
+
+export interface FirstBondQuestState {
+  welcomeDone: boolean;
+  feedDone: boolean;
+  playDone: boolean;
+  claimed: boolean;
+  rewardXp: number;
+  targetPetId?: string;
+  claimedAt?: string;
+}
+
+export interface WalletState {
+  connected: boolean;
+  address: string | null;
+  chainId: number | null;
+  isAvalancheFuji: boolean;
+  providerLabel: 'Core Wallet' | 'Demo Wallet' | null;
+  authVerified: boolean;
+  connecting: boolean;
+  error: string | null;
+}
+
+export interface IpfsPassportMetadata {
+  name: string;
+  description: string;
+  image: string;
+  external_url: string;
+  attributes: Array<{ trait_type: string; value: string | number }>;
+  cid: string;
+  tokenUri: string;
+}
+
+export interface Eip712MintAuthorization {
+  petId: string;
+  recipient: string;
+  tokenUri: string;
+  nonce: number;
+  deadline: number;
+  signature: string;
+  contractAddress: string;
+  chainId: number;
+}
+
+export interface MintedPassportRecord {
+  tokenId: string;
+  petId: string;
+  petName: string;
+  species: string;
+  imageUrl: string;
+  bondLevel: number;
+  bondXp: number;
+  discoveryDate: string;
+  ownerAddress: string;
+  ipfsCid: string;
+  ipfsUri: string;
+  txHash: string;
+  snowtraceUrl: string;
+  mintedAt: string;
+  aiScore?: number;
+  pose?: string;
 }

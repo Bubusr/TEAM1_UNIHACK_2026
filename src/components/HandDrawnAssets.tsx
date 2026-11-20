@@ -40,15 +40,22 @@ export const CrystalMintIcon: React.FC<{ className?: string }> = ({ className = 
 
 export const FarmhouseIllustration: React.FC<{ className?: string }> = ({ className = 'w-full h-full' }) => (
   <svg viewBox="0 0 140 120" className={className} fill="none" aria-hidden="true">
-    <ellipse cx="70" cy="108" rx="50" ry="9" fill="#89CC76" opacity="0.35" />
-    {/* Pastel Peach Chimney */}
-    <rect x="92" y="16" width="15" height="24" rx="4" fill="#FFC8C0" stroke="#A6826E" strokeWidth="2.6" />
-    <rect x="89" y="13" width="21" height="6.5" rx="3" fill="#FF9E94" stroke="#A6826E" strokeWidth="2.5" />
-    <circle cx="100" cy="6" r="3" fill="#FFFDF9" opacity="0.9" />
+    <ellipse cx="70" cy="109" rx="52" ry="9" fill="#89CC76" opacity="0.35" />
+    {/* Pastel Peach Chimney + Rising Heart Puff */}
+    <rect x="92" y="18" width="15" height="24" rx="4" fill="#FFC8C0" stroke="#A6826E" strokeWidth="2.6" />
+    <rect x="89" y="15" width="21" height="6.5" rx="3" fill="#FF9E94" stroke="#A6826E" strokeWidth="2.5" />
+    <g className="animate-chimney-puff">
+      <path
+        d="M99.5 11.5C98.2 9.4 95 9.6 95 11.8C95 13.7 99.5 15.8 99.5 15.8C99.5 15.8 104 13.7 104 11.8C104 9.6 100.8 9.4 99.5 11.5Z"
+        fill="#FFB3CC"
+        opacity="0.92"
+      />
+      <circle cx="105.5" cy="6.5" r="2.6" fill="#FFFDF9" opacity="0.9" />
+    </g>
     {/* Cream Cottage Body */}
-    <rect x="24" y="54" width="92" height="52" rx="12" fill="#FFFDF9" stroke="#A6826E" strokeWidth="2.6" />
-    <rect x="27" y="96" width="86" height="8" rx="4" fill="#FCEBF1" />
-    {/* Pastel Strawberry Coral Roof */}
+    <rect x="24" y="54" width="92" height="53" rx="13" fill="#FFFDF9" stroke="#A6826E" strokeWidth="2.6" />
+    <rect x="27" y="96" width="86" height="8.5" rx="4.2" fill="#FCEBF1" />
+    {/* Pastel Strawberry Coral Roof + Scallop Trim */}
     <path
       d="M12 58L70 17L128 58C131 60 129 66 125 66H15C11 66 9 60 12 58Z"
       fill="#FF9AA2"
@@ -57,28 +64,38 @@ export const FarmhouseIllustration: React.FC<{ className?: string }> = ({ classN
       strokeLinejoin="round"
     />
     <path d="M40 38L30 64M70 19V64M100 38L110 64" stroke="#F47C88" strokeWidth="2" strokeLinecap="round" />
-    {/* Pastel Sky Round Window */}
-    <circle cx="70" cy="43" r="9" fill="#BBE6FF" stroke="#A6826E" strokeWidth="2.4" />
+    {/* Cute Pastel Scalloped Eaves */}
+    {[24, 38, 52, 66, 80, 94, 108, 118].map((cx) => (
+      <circle key={cx} cx={cx} cy="65.5" r="4.2" fill="#FFFDF9" stroke="#A6826E" strokeWidth="1.7" />
+    ))}
+    {/* Pastel Sky Round Window with Highlight */}
+    <circle cx="70" cy="43" r="9.2" fill="#BBE6FF" stroke="#A6826E" strokeWidth="2.4" />
+    <path d="M65.5 39C66.5 37.5 68 37 69.5 37.2" stroke="#FFFDF9" strokeWidth="1.8" strokeLinecap="round" />
     <path d="M70 34V52M61 43H79" stroke="#A6826E" strokeWidth="2" />
-    {/* Soft Honey Door */}
+    {/* Soft Honey Door with Heart Cutout */}
     <path
-      d="M57 106V80C57 72 62.5 67 70 67C77.5 67 83 72 83 80V106H57Z"
+      d="M57 107V80C57 72 62.5 67 70 67C77.5 67 83 72 83 80V107H57Z"
       fill="#F7CF9C"
       stroke="#A6826E"
       strokeWidth="2.6"
     />
-    <circle cx="77" cy="89" r="2.2" fill="#FFE07D" stroke="#A6826E" strokeWidth="1.4" />
+    <path
+      d="M70 76.2C68.9 74.6 66.2 74.9 66.2 76.8C66.2 78.6 70 80.5 70 80.5C70 80.5 73.8 78.6 73.8 76.8C73.8 74.9 71.1 74.6 70 76.2Z"
+      fill="#FF9AA2"
+    />
+    <circle cx="77" cy="90" r="2.2" fill="#FFE07D" stroke="#A6826E" strokeWidth="1.4" />
     {/* Windows + Pastel Flower Boxes */}
-    <rect x="33" y="72" width="16" height="16" rx="5" fill="#BBE6FF" stroke="#A6826E" strokeWidth="2.3" />
-    <rect x="91" y="72" width="16" height="16" rx="5" fill="#BBE6FF" stroke="#A6826E" strokeWidth="2.3" />
+    <rect x="33" y="72" width="16" height="16" rx="5.5" fill="#BBE6FF" stroke="#A6826E" strokeWidth="2.3" />
+    <rect x="91" y="72" width="16" height="16" rx="5.5" fill="#BBE6FF" stroke="#A6826E" strokeWidth="2.3" />
+    <path d="M36 76.5H40M94 76.5H98" stroke="#FFFDF9" strokeWidth="1.7" strokeLinecap="round" />
     <rect x="30" y="88" width="22" height="6.5" rx="3" fill="#B8EBD0" stroke="#A6826E" strokeWidth="2" />
-    <circle cx="36" cy="86" r="2.8" fill="#FF9AA2" />
-    <circle cx="42" cy="85" r="2.8" fill="#FFE07D" />
-    <circle cx="47" cy="86" r="2.8" fill="#FFFDF9" />
+    <circle cx="36" cy="86" r="3" fill="#FF9AA2" />
+    <circle cx="42" cy="85" r="3" fill="#FFE07D" />
+    <circle cx="47" cy="86" r="3" fill="#FFFDF9" />
     <rect x="88" y="88" width="22" height="6.5" rx="3" fill="#B8EBD0" stroke="#A6826E" strokeWidth="2" />
-    <circle cx="94" cy="86" r="2.8" fill="#FFE07D" />
-    <circle cx="100" cy="85" r="2.8" fill="#FF9AA2" />
-    <circle cx="105" cy="86" r="2.8" fill="#FFFDF9" />
+    <circle cx="94" cy="86" r="3" fill="#FFE07D" />
+    <circle cx="100" cy="85" r="3" fill="#FF9AA2" />
+    <circle cx="105" cy="86" r="3" fill="#FFFDF9" />
   </svg>
 );
 
@@ -88,14 +105,24 @@ export const CosmeticStallIllustration: React.FC<{ className?: string }> = ({ cl
     {/* Pastel Cream Posts */}
     <rect x="22" y="42" width="9.5" height="54" rx="4" fill="#F9DEC4" stroke="#A6826E" strokeWidth="2.6" />
     <rect x="98" y="42" width="9.5" height="54" rx="4" fill="#F9DEC4" stroke="#A6826E" strokeWidth="2.6" />
-    {/* Pastel Mint Counter */}
+    {/* Pastel Mint Counter with Cozy Heart Emblem */}
     <rect x="16" y="68" width="98" height="30" rx="10" fill="#C9F2D9" stroke="#A6826E" strokeWidth="2.6" />
     <rect x="12" y="62" width="106" height="9" rx="4.5" fill="#FFFDF9" stroke="#A6826E" strokeWidth="2.6" />
+    <rect x="46" y="75" width="38" height="16" rx="8" fill="#FFFDF9" stroke="#9EC9AE" strokeWidth="1.8" />
+    <path
+      d="M65 81.5C63.8 79.8 61 80.1 61 82C61 83.9 65 86 65 86C65 86 69 83.9 69 82C69 80.1 66.2 79.8 65 81.5Z"
+      fill="#FF9AC2"
+    />
     {/* Display Props */}
     <circle cx="42" cy="54" r="8.5" fill="#FFE07D" stroke="#A6826E" strokeWidth="2.2" />
     <ellipse cx="42" cy="59" rx="13" ry="3.8" fill="#FFF0AE" stroke="#A6826E" strokeWidth="2.2" />
     <path d="M64 56C64 51 68 48 73 48C78 48 82 51 82 56V62H64V56Z" fill="#FFB3D1" stroke="#A6826E" strokeWidth="2.2" />
     <circle cx="94" cy="56" r="5.5" fill="#A6E1FF" stroke="#A6826E" strokeWidth="2.2" />
+    {/* Cute Tiny Pastel Bunting Flags */}
+    <path d="M31 50Q65 56 99 50" stroke="#C8A994" strokeWidth="1.4" />
+    <polygon points="44,52 50,53 47,58" fill="#FFE07D" />
+    <polygon points="62,53 68,53 65,59" fill="#FF9AC2" />
+    <polygon points="80,52 86,51 83,57" fill="#A6E1FF" />
     {/* Pastel Pink & Cream Striped Awning */}
     <path
       d="M12 42L24 16H106L118 42H12Z"
@@ -230,11 +257,37 @@ export const ChibiPetSprite: React.FC<{
             <path d="M31 18H49" stroke="#FF9AA2" strokeWidth="2.4" />
           </g>
         )}
+        {accessory === 'ribbon-bow' && (
+          <g transform="translate(0, -3)">
+            <path d="M40 19L29 13V23L40 19Z" fill="#FF9AC2" stroke="#9B755D" strokeWidth="1.9" strokeLinejoin="round" />
+            <path d="M40 19L51 13V23L40 19Z" fill="#FF9AC2" stroke="#9B755D" strokeWidth="1.9" strokeLinejoin="round" />
+            <circle cx="40" cy="19" r="3.2" fill="#FFD1E4" stroke="#9B755D" strokeWidth="1.8" />
+          </g>
+        )}
         {accessory === 'flower-crown' && (
           <g transform="translate(0, -2)">
             <circle cx="30" cy="20" r="4" fill="#FFA6C9" stroke="#9B755D" strokeWidth="1.8" />
             <circle cx="40" cy="18" r="4.5" fill="#FFE07D" stroke="#9B755D" strokeWidth="1.8" />
             <circle cx="50" cy="20" r="4" fill="#8ED8FF" stroke="#9B755D" strokeWidth="1.8" />
+          </g>
+        )}
+        {accessory === 'sunny-cap' && (
+          <g transform="translate(0, -3)">
+            <path d="M26 20C27 11 53 11 54 20Z" fill="#8ED8FF" stroke="#9B755D" strokeWidth="2.1" />
+            <path d="M44 20H60C59 23 52 24 44 22Z" fill="#6BBFE8" stroke="#9B755D" strokeWidth="2" />
+          </g>
+        )}
+        {accessory === 'top-hat' && (
+          <g transform="translate(0, -5)">
+            <ellipse cx="40" cy="21" rx="15" ry="3.6" fill="#5E4D58" stroke="#4B3C46" strokeWidth="2" />
+            <rect x="30" y="7" width="20" height="14" rx="3" fill="#6D5A66" stroke="#4B3C46" strokeWidth="2" />
+            <path d="M30 17H50" stroke="#FFE07D" strokeWidth="2.6" />
+          </g>
+        )}
+        {accessory === 'royal-crown' && (
+          <g transform="translate(0, -4)">
+            <path d="M27 21L29 10L36 16L40 8L44 16L51 10L53 21Z" fill="#FFE07D" stroke="#9B755D" strokeWidth="2.1" strokeLinejoin="round" />
+            <circle cx="40" cy="17" r="2.2" fill="#FF85A1" />
           </g>
         )}
       </g>

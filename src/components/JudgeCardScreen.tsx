@@ -41,6 +41,7 @@ interface JudgeCardScreenProps {
   onUploadPhoto: (file: File) => void;
   onResetSample: () => void;
   onOpenDiscoverCamera?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
@@ -71,6 +72,7 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
   onUploadPhoto,
   onResetSample,
   onOpenDiscoverCamera,
+  onOpenSettings,
 }) => {
   const [sharedFeedback, setSharedFeedback] = useState(false);
 
@@ -117,6 +119,7 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
         onOpenProfile={() => onOpenModal('profile')}
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}
+        onOpenSettings={onOpenSettings}
         subRow={
           <div className="flex items-center justify-center gap-1.5">
             <div className="bg-[#FFFDF9] border-2 border-[#DFCBBF] rounded-full px-3 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.08)] flex items-center gap-1 text-[11.5px] font-extrabold text-[#4B3C46] whitespace-nowrap">

@@ -101,6 +101,9 @@ interface CreamSheetsProps {
   onRescueStray: () => void;
   onPlaceBait: (baitName: string) => void;
   onOpenAlbumItem: (report: JudgeReport) => void;
+  onBuyAndEquipHat?: (petId: string, item: ShopItem) => boolean;
+  onOpenPetProfile?: (petId: string) => void;
+  onOpenMintPassport?: (petId: string) => void;
 }
 
 function shortAddr(addr: string | null | undefined): string {

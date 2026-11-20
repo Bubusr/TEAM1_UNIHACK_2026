@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, Heart, Droplets } from 'lucide-react';
+import {
+  Camera,
+  Droplets,
+  Gamepad2,
+  Heart,
+  PawPrint,
+  ShoppingBag,
+  Sparkles,
+} from 'lucide-react';
 import {
   DailyLimits,
   FoodItemType,
@@ -10,9 +18,21 @@ import {
   CosmeticStallIllustration,
   FarmhouseIllustration,
 } from './HandDrawnAssets';
+import {
+  BaitStickerIcon,
+  CropFoodIcon,
+  FlameMiniIcon,
+  ShieldMiniIcon,
+  ToyStickerIcon,
+  TrophyMiniIcon,
+} from './GameIcons';
 import { CroppedPetCutout } from './CroppedPetCutout';
-import { FOOD_META } from './FarmScreen';
-import { SharedBottomDock, SharedTopHud } from './SharedHud';
+import {
+  SharedBottomDock,
+  SharedTopHud,
+  useShowTextLabels,
+  useSkyTheme,
+} from './SharedHud';
 
 export type SanctuaryModalType =
   | null
@@ -43,12 +63,19 @@ interface SanctuaryScreenProps {
   luredCount: number;
   activeBait: string | null;
   readyFarmCount: number;
+  questProgressLabel?: string;
   onSelectPet?: (petId: string) => void;
   onCarePet: (petId: string) => string;
+  onOpenPetProfile?: (petId: string) => void;
   onFeedPet: (food: FoodItemType, petId?: string) => string;
   onPlayToy: (toy: GardenToy, petId?: string) => string;
   onTapClover: () => string;
   onOpenFarm: () => void;
+  onOpenQuest?: () => void;
+  onOpenMemoryGame?: () => void;
+  onOpenCalendar?: () => void;
+  hasCalendarBadge?: boolean;
+  onOpenSettings?: () => void;
   onOpenModal: (modal: SanctuaryModalType) => void;
   onQuickCoins: () => void;
   onQuickEnergy: () => void;
@@ -71,21 +98,26 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
   luredCount,
   activeBait,
   readyFarmCount,
+  questProgressLabel,
   onSelectPet,
   onCarePet,
+  onOpenPetProfile,
   onFeedPet,
   onPlayToy,
   onTapClover,
   onOpenFarm,
+  onOpenQuest,
+  onOpenMemoryGame,
+  onOpenCalendar,
+  hasCalendarBadge,
+  onOpenSettings,
   onOpenModal,
   onQuickCoins,
   onQuickEnergy,
 }) => {
+  const showLabels = useShowTextLabels();
+  const { palette } = useSkyTheme();
   const activeToys = toys.filter((t) => t.owned);
-  const selectedPet =
-    pets.find((p) => p.id === selectedPetId || p.petUid === selectedPetId) ??
-    pets[0] ??
-    null;
 
   const [petPositions, setPetPositions] = useState<
     Record<string, { x: number; y: number; flip: boolean }>
@@ -96,6 +128,34 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
     x: number;
     y: number;
   } | null>(null);
+  const [heartBursts, setHeartBursts] = useState<
+    Array<{ id: string; x: number; y: number }>
+  >([]);
+  const prevBaitRef = React.useRef<string | null>(activeBait);
+
+  useEffect(() => {
+    if (activeBait && activeBait !== prevBaitRef.current) {
+      const icon =
+        activeBait === 'Salmon Pate'
+          ? '🐟'
+          : activeBait === 'Honey Biscuit'
+          ? '🦴'
+          : '🥕';
+      const id = `bait-${Date.now()}`;
+      setFloatingFeedback({
+        id,
+        text: `${icon} ${activeBait} set!`,
+        x: 26,
+        y: 53,
+      });
+      const timer = window.setTimeout(() => {
+        setFloatingFeedback((cur) => (cur?.id === id ? null : cur));
+      }, 1500);
+      prevBaitRef.current = activeBait;
+      return () => window.clearTimeout(timer);
+    }
+    prevBaitRef.current = activeBait;
+  }, [activeBait]);
 
   useEffect(() => {
     setPetPositions((prev) => {
@@ -137,6 +197,14 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
     return () => window.clearInterval(timer);
   }, [pets]);
 
+  const spawnHeartBurst = (x: number, y: number) => {
+    const id = `${Date.now()}-${Math.random()}`;
+    setHeartBursts((prev) => [...prev.slice(-4), { id, x, y }]);
+    window.setTimeout(() => {
+      setHeartBursts((prev) => prev.filter((b) => b.id !== id));
+    }, 950);
+  };
+
   const showToastAt = (text: string, x = 50, y = 45) => {
     const id = `${Date.now()}-${Math.random()}`;
     setFloatingFeedback({ id, text, x, y });
@@ -146,71 +214,132 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
   };
 
   const handlePetTap = (pet: SanctuaryPet) => {
+    if (onSelectPet) onSelectPet(pet.id);
     const pos = petPositions[pet.id] ?? { x: pet.x, y: pet.y };
-    onSelectPet?.(pet.id);
+    if (!pet.needsCare && onOpenPetProfile) {
+      spawnHeartBurst(pos.x, Math.max(22, pos.y - 8));
+      onOpenPetProfile(pet.id);
+      return;
+    }
+    spawnHeartBurst(pos.x, Math.max(22, pos.y - 8));
     const msg = onCarePet(pet.id);
     showToastAt(msg, pos.x, Math.max(20, pos.y - 12));
   };
 
   const handleToyTap = (toy: GardenToy) => {
-    const targetPet = selectedPet;
-    if (targetPet) {
+    const firstPet = pets[0];
+    if (firstPet) {
       setPetPositions((prev) => ({
         ...prev,
-        [targetPet.id]: {
+        [firstPet.id]: {
           x: Math.max(24, toy.x - 6),
           y: Math.max(40, toy.y - 4),
-          flip: (prev[targetPet.id]?.x ?? targetPet.x) > toy.x,
+          flip: (prev[firstPet.id]?.x ?? 50) > toy.x,
         },
       }));
     }
-    const msg = onPlayToy(toy, targetPet?.id);
-    showToastAt(
-      targetPet ? `${targetPet.name}: ${msg}` : msg,
-      toy.x,
-      toy.y - 10
-    );
+    spawnHeartBurst(toy.x, Math.max(22, toy.y - 6));
+    const msg = onPlayToy(toy);
+    showToastAt(msg, toy.x, toy.y - 10);
   };
-
-  const availableSnacks = (Object.keys(FOOD_META) as FoodItemType[]).filter(
-    (k) => foodInventory[k] > 0
-  );
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden select-none flex flex-col justify-between"
-      style={{ backgroundColor: '#AEE88D' }}
+      className="relative w-full h-full overflow-hidden select-none flex flex-col justify-between transition-colors duration-700"
+      style={{ backgroundColor: palette.sanctuaryBaseBg }}
     >
-      {/* PASTEL SKY + SUNLIT MEADOW BACKDROP */}
+      {/* TIME-OF-DAY PASTEL SKY + MEADOW BACKDROP */}
       <div className="absolute inset-0 pointer-events-none">
         <div
-          className="absolute inset-x-0 top-0 h-[24%]"
+          className="absolute inset-x-0 top-0 h-[24%] transition-all duration-700"
           style={{
-            background:
-              'linear-gradient(180deg, #CBEFFF 0%, #E7F7FF 72%, #C9F4B5 100%)',
+            background: palette.sanctuarySkyGradient,
           }}
         />
         <svg
           viewBox="0 0 400 120"
-          className="absolute top-3 left-0 w-full h-24 opacity-95"
+          className="absolute top-2.5 left-0 w-full h-24 opacity-95"
           fill="none"
           aria-hidden="true"
         >
-          <path
-            d="M38 58C30 58 24 52 24 44C24 37 29 31 36 30C40 20 51 15 62 18C69 12 82 14 87 23C95 23 102 30 102 38C102 49 93 58 82 58H38Z"
-            fill="#FFFDF9"
-          />
-          <path
-            d="M278 48C271 48 266 43 266 37C266 31 270 26 276 25C280 16 291 13 300 17C307 11 319 13 324 22C331 23 337 29 337 36C337 43 331 48 324 48H278Z"
-            fill="#FFFDF9"
-          />
+          {palette.showStars && (
+            <g className="animate-petal-twinkle">
+              <circle cx="110" cy="18" r="1.9" fill="#FFF8DC" />
+              <circle cx="288" cy="15" r="1.8" fill="#FFFDF9" />
+              <circle cx="348" cy="24" r="1.5" fill="#FFF8DC" />
+              {palette.isNight && (
+                <>
+                  <circle cx="62" cy="22" r="1.4" fill="#FFE794" />
+                  <circle cx="242" cy="12" r="1.6" fill="#FFFDF9" />
+                </>
+              )}
+            </g>
+          )}
+          {/* Smiling Pastel Sun or Crescent Moon */}
+          <g transform={`translate(200, ${palette.sunYSanctuary})`}>
+            <circle
+              cx="0"
+              cy="0"
+              r={palette.isNight ? 22 : 24}
+              fill={palette.sunHaloFill}
+              opacity={palette.isNight ? '0.32' : '0.58'}
+            />
+            {palette.isNight ? (
+              <>
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="13.5"
+                  fill={palette.sunFill}
+                  stroke={palette.sunStroke}
+                  strokeWidth="1.4"
+                />
+                <circle cx="5.5" cy="-4" r="10.2" fill="#5D5994" />
+                <circle cx="-4.2" cy="0.8" r="1.2" fill="#5A4A63" />
+                <ellipse cx="-6.4" cy="3" rx="1.6" ry="0.9" fill="#FFA6C9" opacity="0.85" />
+                <path
+                  d="M-2.6 3.8C-1.4 5 -0.1 4.9 0.8 3.8"
+                  stroke="#5A4A63"
+                  strokeWidth="1.15"
+                  strokeLinecap="round"
+                />
+              </>
+            ) : (
+              <>
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="14"
+                  fill={palette.sunFill}
+                  stroke={palette.sunStroke}
+                  strokeWidth="1.6"
+                />
+                <circle cx="-4.2" cy="-1" r="1.3" fill="#6E5448" />
+                <circle cx="4.2" cy="-1" r="1.3" fill="#6E5448" />
+                <ellipse cx="-6.8" cy="1.6" rx="1.9" ry="1.1" fill="#FF8DB4" opacity="0.85" />
+                <ellipse cx="6.8" cy="1.6" rx="1.9" ry="1.1" fill="#FF8DB4" opacity="0.85" />
+                <path d="M-2.2 2C-1 3.6 1 3.6 2.2 2" stroke="#6E5448" strokeWidth="1.3" strokeLinecap="round" />
+              </>
+            )}
+          </g>
+          <g className="animate-cloud-drift">
+            <path
+              d="M38 58C30 58 24 52 24 44C24 37 29 31 36 30C40 20 51 15 62 18C69 12 82 14 87 23C95 23 102 30 102 38C102 49 93 58 82 58H38Z"
+              fill={palette.cloudFill}
+              opacity={palette.isNight ? '0.78' : '1'}
+            />
+            <path
+              d="M278 48C271 48 266 43 266 37C266 31 270 26 276 25C280 16 291 13 300 17C307 11 319 13 324 22C331 23 337 29 337 36C337 43 331 48 324 48H278Z"
+              fill={palette.cloudFill}
+              opacity={palette.isNight ? '0.78' : '1'}
+            />
+          </g>
         </svg>
 
         <div
-          className="absolute inset-x-0 top-[17%] bottom-0"
+          className="absolute inset-x-0 top-[17%] bottom-0 transition-all duration-700"
           style={{
-            background:
-              'radial-gradient(circle at 50% 44%, #C7F2A7 0%, #B0E78B 60%, #98DC71 100%)',
+            background: palette.sanctuaryMeadowGradient,
           }}
         />
 
@@ -221,30 +350,78 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
           fill="none"
           aria-hidden="true"
         >
-          <ellipse cx="195" cy="360" rx="145" ry="155" fill="#E9FCCE" opacity="0.4" />
+          <ellipse
+            cx="195"
+            cy="360"
+            rx="148"
+            ry="158"
+            fill={palette.meadowGlowFill}
+            opacity={palette.meadowGlowOpacity}
+          />
           <ellipse cx="135" cy="272" rx="19" ry="10" fill="#FFF7EB" stroke="#CEB39E" strokeWidth="1.8" />
           <ellipse cx="164" cy="308" rx="20" ry="11" fill="#FFF2E0" stroke="#CEB39E" strokeWidth="1.8" />
           <ellipse cx="190" cy="352" rx="19" ry="10" fill="#FFF7EB" stroke="#CEB39E" strokeWidth="1.8" />
           <ellipse cx="196" cy="402" rx="21" ry="11" fill="#FFF2E0" stroke="#CEB39E" strokeWidth="1.8" />
           <ellipse cx="195" cy="452" rx="20" ry="10" fill="#FFF7EB" stroke="#CEB39E" strokeWidth="1.8" />
 
+          {/* 5-Petal Storybook Meadow Daisies */}
           {[
             { x: 56, y: 315, c: '#FFFDF9' },
-            { x: 70, y: 328, c: '#FFA6C9' },
-            { x: 328, y: 310, c: '#FFE07D' },
+            { x: 72, y: 332, c: '#FFB3CF' },
+            { x: 328, y: 310, c: '#FFE48C' },
             { x: 315, y: 425, c: '#FFFDF9' },
-            { x: 332, y: 440, c: '#FFA6C9' },
-            { x: 64, y: 452, c: '#FFE07D' },
-            { x: 282, y: 492, c: '#FFE07D' },
+            { x: 332, y: 442, c: '#FFB3CF' },
+            { x: 64, y: 452, c: '#FFE48C' },
+            { x: 282, y: 492, c: '#C7E9FF' },
           ].map((f, idx) => (
-            <g key={idx}>
-              <circle cx={f.x} cy={f.y} r="5" fill={f.c} />
-              <circle cx={f.x} cy={f.y} r="1.9" fill="#F5C34B" />
+            <g key={idx} transform={`translate(${f.x}, ${f.y})`}>
+              <circle cx="0" cy="-4.2" r="3.1" fill={f.c} />
+              <circle cx="4" cy="-1.3" r="3.1" fill={f.c} />
+              <circle cx="2.5" cy="3.4" r="3.1" fill={f.c} />
+              <circle cx="-2.5" cy="3.4" r="3.1" fill={f.c} />
+              <circle cx="-4" cy="-1.3" r="3.1" fill={f.c} />
+              <circle cx="0" cy="0" r="2.2" fill="#FFD45E" />
             </g>
           ))}
 
-          <ellipse cx="300" cy="352" rx="24" ry="13" fill="#B5E8FF" stroke="#A6C8DC" strokeWidth="2.2" />
-          <ellipse cx="295" cy="348" rx="11" ry="5" fill="#E3F7FF" opacity="0.8" />
+          {/* Soft Grass Tufts */}
+          {[
+            { x: 95, y: 382 },
+            { x: 262, y: 294 },
+            { x: 112, y: 468 },
+            { x: 274, y: 446 },
+          ].map((g, i) => (
+            <path
+              key={i}
+              d={`M${g.x - 4} ${g.y}Q${g.x - 2} ${g.y - 6} ${g.x - 6} ${g.y - 7}M${g.x} ${g.y}V${g.y - 7}M${g.x + 4} ${g.y}Q${g.x + 2} ${g.y - 6} ${g.x + 6} ${g.y - 7}`}
+              stroke={palette.grassStroke}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              opacity="0.72"
+            />
+          ))}
+
+          {/* Cozy Pastel Pond with Lilypad & Pink Lotus */}
+          <ellipse
+            cx="300"
+            cy="352"
+            rx="25"
+            ry="13.5"
+            fill={palette.pondFill}
+            stroke={palette.pondStroke}
+            strokeWidth="2.2"
+          />
+          <ellipse
+            cx="294"
+            cy="348"
+            rx="11"
+            ry="4.5"
+            fill={palette.pondHighlight}
+            opacity="0.88"
+          />
+          <ellipse cx="310" cy="355" rx="6.5" ry="3.8" fill="#89D67B" stroke="#62AB57" strokeWidth="1.3" />
+          <circle cx="311" cy="353" r="2.8" fill="#FFA6C9" />
+          <circle cx="311" cy="353" r="1.1" fill="#FFE07D" />
         </svg>
       </div>
 
@@ -258,53 +435,50 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
         onOpenProfile={() => onOpenModal('profile')}
         onQuickCoins={onQuickCoins}
         onQuickEnergy={onQuickEnergy}
+        onOpenCalendar={onOpenCalendar}
+        hasCalendarBadge={hasCalendarBadge}
+        onOpenSettings={onOpenSettings}
         subRow={
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center justify-center gap-1.5">
+          <div className="flex items-center justify-center gap-1.5">
+            {showLabels && (
               <button
                 type="button"
                 onClick={() => onOpenModal('snap')}
-                className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-3 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] flex items-center gap-1.5 text-[11.5px] font-bold text-[#4B3C46] active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
+                className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-3 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] flex items-center gap-1 text-[11px] font-bold text-[#4B3C46] active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
               >
                 <Camera className="w-3.5 h-3.5 text-[#C99D66]" />
                 <span>{theme}</span>
               </button>
+            )}
 
+            {onOpenQuest && (
               <button
                 type="button"
-                onClick={() => onOpenModal('farmhouse')}
-                className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-2.5 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] text-[11.5px] font-extrabold text-[#4B3C46] tabular-nums active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
-                title="Daily petting coin limit"
+                onClick={onOpenQuest}
+                aria-label="First Bond Quest and Journey"
+                className="bg-[#FFF3BF] border-2 border-[#C99D66] rounded-full px-2.5 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] text-[11px] font-extrabold text-[#4B3C46] tabular-nums active:scale-95 transition-transform cursor-pointer whitespace-nowrap inline-flex items-center gap-1"
+                title="First Bond Quest & Journey"
               >
-                ❤️ {limits.petCoinsUsed}/{limits.petCoinsMax}
+                <TrophyMiniIcon className="w-3.5 h-3.5" />
+                <span>
+                  {showLabels
+                    ? questProgressLabel ?? 'Quest'
+                    : (questProgressLabel ?? '').replace('Quest ', '')}
+                </span>
               </button>
-            </div>
+            )}
 
-            {pets.length > 0 && (
-              <div
-                className="flex items-center justify-center gap-1 flex-wrap max-w-full"
-                aria-label="Active companion selector"
+            {onOpenMemoryGame && (
+              <button
+                type="button"
+                onClick={onOpenMemoryGame}
+                aria-label="Play Pet Memory Minigame"
+                className="bg-[#F3ECFF] border-2 border-[#C8B4EC] rounded-full px-2.5 py-0.5 shadow-[0_2px_8px_rgba(138,116,126,0.1)] text-[11px] font-extrabold text-[#563F7A] active:scale-95 transition-transform cursor-pointer whitespace-nowrap inline-flex items-center gap-1"
+                title="Pet Memory"
               >
-                {pets.map((pet) => {
-                  const isActive = selectedPet?.id === pet.id;
-                  return (
-                    <button
-                      key={pet.id}
-                      type="button"
-                      onClick={() => onSelectPet?.(pet.id)}
-                      aria-pressed={isActive}
-                      title={isActive ? `🐾 ${pet.name} (Đang chọn để chăm sóc/cho ăn/chơi bóng)` : `Chọn ${pet.name}`}
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold border transition-colors cursor-pointer whitespace-nowrap ${
-                        isActive
-                          ? 'bg-[#FFE07D] border-[#C99D66] text-[#4B3C46] shadow-xs'
-                          : 'bg-[#FFFDF9]/90 border-[#D9C3B4] text-[#8A747E] hover:text-[#4B3C46]'
-                      }`}
-                    >
-                      {isActive ? `🐾 ${pet.name}` : pet.name}
-                    </button>
-                  );
-                })}
-              </div>
+                <Gamepad2 className="w-3.5 h-3.5 text-[#7A5BA8] stroke-[2.4]" />
+                {showLabels && <span>Memory</span>}
+              </button>
             )}
           </div>
         }
@@ -371,8 +545,12 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                 className="absolute -bottom-2.5 bg-[#FFF3BF] border-2 border-[#C99D66] rounded-full px-3 py-0.5 shadow-[0_3px_8px_rgba(138,116,126,0.16)] flex items-center gap-1 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
                 title="Streak Fence Gate"
               >
-                <span className="font-display text-[11.5px] font-extrabold text-[#4B3C46] tabular-nums">
-                  🔥 {streakDays}d · 🛡️ {fenceHours}h
+                <span className="font-display text-[11.5px] font-extrabold text-[#4B3C46] tabular-nums inline-flex items-center gap-1">
+                  <FlameMiniIcon className="w-3.5 h-3.5" />
+                  <span>{streakDays}d</span>
+                  <span className="opacity-50">·</span>
+                  <ShieldMiniIcon className="w-3.5 h-3.5" />
+                  <span>{fenceHours}h</span>
                 </span>
               </button>
             </div>
@@ -408,15 +586,16 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
             <CosmeticStallIllustration className="w-full h-full" />
           </button>
 
-          {/* Lucky Butterfly */}
+          {/* Lucky Butterfly (Positioned in comfortable thumb reach with 44px hit area) */}
           <button
             type="button"
             onClick={() => {
+              spawnHeartBurst(78, 44);
               const msg = onTapClover();
-              showToastAt(msg, 74, 28);
+              showToastAt(msg, 74, 44);
             }}
             aria-label="Catch lucky butterfly"
-            className="absolute right-[23%] top-[28%] z-25 animate-butterfly cursor-pointer active:scale-125 transition-transform"
+            className="absolute right-[18%] top-[44%] z-25 w-11 h-11 flex items-center justify-center animate-butterfly cursor-pointer active:scale-125 transition-transform"
           >
             <svg viewBox="0 0 28 24" className="w-7 h-7" fill="none" aria-hidden="true">
               <path d="M14 12C9 4 2 6 4 13C5 16 10 15 14 12Z" fill="#FFE07D" stroke="#A6826E" strokeWidth="1.8" />
@@ -424,37 +603,6 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
               <line x1="14" y1="8" x2="14" y2="18" stroke="#4B3C46" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
-
-          {/* Quick-Feed Snack Pills (from Farm Harvest) */}
-          {availableSnacks.length > 0 && (
-            <div className="absolute left-4 top-[29%] z-25 flex flex-wrap gap-1 max-w-[165px]">
-              {availableSnacks.slice(0, 4).map((foodKey) => (
-                <button
-                  key={foodKey}
-                  type="button"
-                  onClick={() => {
-                    const msg = onFeedPet(foodKey, selectedPet?.id);
-                    const pos = selectedPet
-                      ? petPositions[selectedPet.id] ?? {
-                          x: selectedPet.x,
-                          y: selectedPet.y,
-                        }
-                      : { x: 46, y: 48 };
-                    showToastAt(
-                      selectedPet ? `${selectedPet.name}: ${msg}` : msg,
-                      pos.x,
-                      Math.max(20, pos.y - 10)
-                    );
-                  }}
-                  className="bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-2 py-0.5 text-[11.5px] font-extrabold text-[#4B3C46] shadow-xs flex items-center gap-0.5 active:scale-90 transition-transform cursor-pointer"
-                  title={`Feed ${FOOD_META[foodKey].name} to ${selectedPet?.name ?? 'pet'}`}
-                >
-                  <span>{FOOD_META[foodKey].icon}</span>
-                  <span className="tabular-nums">{foodInventory[foodKey]}</span>
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* INTERACTIVE GARDEN TOYS ON THE GRASS */}
           {activeToys.map((toy) => (
@@ -464,27 +612,142 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
               onClick={() => handleToyTap(toy)}
               style={{ left: `${toy.x}%`, top: `${toy.y}%` }}
               aria-label={`Play with ${toy.name}`}
-              className="absolute -translate-x-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#FFFDF9]/90 border-2 border-[#D9C3B4] shadow-xs flex items-center justify-center text-[20px] hover:scale-110 active:scale-90 transition-transform cursor-pointer"
+              className="absolute -translate-x-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#FFFDF9]/92 border-2 border-[#D9C3B4] shadow-xs flex items-center justify-center hover:scale-110 active:scale-90 transition-transform cursor-pointer"
               title={toy.name}
             >
-              {toy.icon}
+              <ToyStickerIcon toyId={toy.id} name={toy.name} className="w-6 h-6" />
             </button>
           ))}
 
-          {/* Placed Pate Bait */}
-          {activeBait && (
-            <button
-              type="button"
-              onClick={() => onOpenModal('bag')}
-              className="absolute left-[18%] top-[55%] z-15 cursor-pointer active:scale-95 transition-transform"
-              title={activeBait}
+          {/* Placed Bait Dish Visual */}
+          {activeBait && (() => {
+            const baitStyle =
+              activeBait === 'Salmon Pate'
+                ? {
+                    bowl: '#FFA6C9',
+                    rim: '#FFD2E4',
+                    fill: '#FF9A85',
+                    accent: '#FFD9C8',
+                  }
+                : activeBait === 'Honey Biscuit'
+                ? {
+                    bowl: '#FFE07D',
+                    rim: '#FFF2BD',
+                    fill: '#E8AD63',
+                    accent: '#FFE5B4',
+                  }
+                : {
+                    bowl: '#A6E6B8',
+                    rim: '#D6F8DF',
+                    fill: '#7FD17A',
+                    accent: '#FF9B54',
+                  };
+
+            return (
+              <button
+                type="button"
+                onClick={() => onOpenModal('bag')}
+                aria-label={`Active bait: ${activeBait}. Tap to change bait.`}
+                className="absolute left-[22%] top-[60%] -translate-x-1/2 -translate-y-1/2 z-20 cursor-pointer active:scale-90 transition-transform group flex flex-col items-center"
+                title={activeBait}
+              >
+                {/* Floating Scent & Food Bubble */}
+                <div className="mb-0.5 flex items-center gap-0.5 bg-[#FFFDF9]/95 border-2 border-[#D9C3B4] rounded-full px-1.5 py-0.5 shadow-xs animate-bubble-float">
+                  <BaitStickerIcon baitName={activeBait} className="w-4 h-4" />
+                  <Sparkles className="w-3 h-3 text-[#F5C34B] shrink-0" />
+                </div>
+
+                {/* Hand-Drawn Pastel Bait Bowl */}
+                <svg
+                  viewBox="0 0 64 46"
+                  className="w-14 h-10 drop-shadow-xs group-hover:scale-105 transition-transform"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  {/* Grass contact shadow */}
+                  <ellipse cx="32" cy="40" rx="23" ry="5.5" fill="#69B558" opacity="0.38" />
+                  {/* Aroma wisps */}
+                  <path
+                    d="M22 10C20 7 23 5 22 2"
+                    stroke="#FFFDF9"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    opacity="0.9"
+                  />
+                  <path
+                    d="M32 8C30 5 33 3 32 1"
+                    stroke="#FFFDF9"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    opacity="0.9"
+                  />
+                  <path
+                    d="M42 10C40 7 43 5 42 2"
+                    stroke="#FFFDF9"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    opacity="0.9"
+                  />
+                  {/* Bowl body */}
+                  <path
+                    d="M11 23H53L48 37C47 39.5 41 41 32 41C23 41 17 39.5 16 37L11 23Z"
+                    fill={baitStyle.bowl}
+                    stroke="#9B755D"
+                    strokeWidth="2.5"
+                    strokeLinejoin="round"
+                  />
+                  {/* Bowl rim */}
+                  <ellipse
+                    cx="32"
+                    cy="23"
+                    rx="21"
+                    ry="7.5"
+                    fill={baitStyle.rim}
+                    stroke="#9B755D"
+                    strokeWidth="2.4"
+                  />
+                  {/* Mound of bait food inside bowl */}
+                  <ellipse
+                    cx="32"
+                    cy="21.5"
+                    rx="15"
+                    ry="5.8"
+                    fill={baitStyle.fill}
+                    stroke="#9B755D"
+                    strokeWidth="2"
+                  />
+                  <circle cx="26" cy="20" r="3" fill={baitStyle.accent} />
+                  <circle cx="35" cy="19.5" r="3.4" fill={baitStyle.accent} />
+                  <circle cx="38" cy="22.5" r="2.2" fill="#FFFDF9" opacity="0.85" />
+                  {/* Tiny paw emblem on bowl front */}
+                  <circle cx="32" cy="34" r="2.3" fill="#FFFDF9" opacity="0.9" />
+                  <circle cx="28.8" cy="31.3" r="1.2" fill="#FFFDF9" opacity="0.9" />
+                  <circle cx="32" cy="30.2" r="1.2" fill="#FFFDF9" opacity="0.9" />
+                  <circle cx="35.2" cy="31.3" r="1.2" fill="#FFFDF9" opacity="0.9" />
+                </svg>
+
+                {showLabels && (
+                  <span className="mt-0.5 bg-[#FFFDF9]/95 border border-[#D9C3B4] rounded-full px-2 py-0.5 text-[9.5px] font-extrabold text-[#4B3C46] whitespace-nowrap shadow-xs">
+                    {activeBait}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
+
+          {/* Floating Heart & Sparkle Particle Bursts */}
+          {heartBursts.map((b) => (
+            <div
+              key={b.id}
+              style={{ left: `${b.x}%`, top: `${b.y}%` }}
+              className="absolute z-40 pointer-events-none animate-heart-float flex items-center gap-1"
+              aria-hidden="true"
             >
-              <svg viewBox="0 0 42 32" className="w-9 h-7" fill="none" aria-hidden="true">
-                <ellipse cx="21" cy="24" rx="16" ry="6" fill="#FFA6C9" stroke="#A6826E" strokeWidth="2.2" />
-                <ellipse cx="21" cy="18" rx="13" ry="5" fill="#FFCE9E" stroke="#A6826E" strokeWidth="1.8" />
-              </svg>
-            </button>
-          )}
+              <Heart className="w-3.5 h-3.5 fill-[#FFB3CF] text-[#FF85A1] -mt-2" />
+              <Heart className="w-4.5 h-4.5 fill-[#FF85A1] text-[#FF6B8E] drop-shadow-xs" />
+              <Sparkles className="w-3.5 h-3.5 text-[#F5C34B] -mt-2.5" />
+            </div>
+          ))}
 
           {floatingFeedback && (
             <div
@@ -505,7 +768,6 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
               y: pet.y,
               flip: Boolean(pet.flip),
             };
-            const isSelected = selectedPet?.id === pet.id;
 
             return (
               <button
@@ -526,7 +788,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                       {pet.needsCare === 'heart' ? (
                         <Heart className="w-4 h-4 fill-[#FF85A1] text-[#FF85A1]" />
                       ) : pet.needsCare === 'food' ? (
-                        <span className="text-[13px] leading-none">🥕</span>
+                        <CropFoodIcon item="carrot" className="w-4 h-4" />
                       ) : (
                         <Droplets className="w-4 h-4 fill-[#7CCBFF] text-[#7CCBFF]" />
                       )}
@@ -536,8 +798,14 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                 )}
 
                 <div
-                  className={`animate-pet-hop group-active:scale-110 transition-transform rounded-full ${
-                    isSelected ? 'ring-2 ring-[#FFE07D]/90 ring-offset-2 ring-offset-transparent' : ''
+                  className={`group-active:scale-110 transition-transform ${
+                    pet.animState === 'eating'
+                      ? 'animate-pet-eat'
+                      : pet.animState === 'playing'
+                      ? 'animate-pet-play'
+                      : pet.animState === 'happy'
+                      ? 'animate-pet-happy'
+                      : 'animate-pet-hop'
                   }`}
                   style={{ animationDelay: `${idx * 0.45}s` }}
                 >
@@ -547,16 +815,12 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
                     species={pet.species}
                     mode={pet.cutoutMode ?? 'auto'}
                     accessory={pet.accessory}
+                    hatTransform={pet.hatTransform}
+                    bbox={pet.box_2d}
                     flip={pos.flip}
                     className="w-[78px] h-[78px]"
-                    bbox={pet.box_2d}
                   />
                 </div>
-                {isSelected && (
-                  <span className="mt-0.5 inline-block bg-[#FFF3BF]/95 border border-[#C99D66] rounded-full px-1.5 py-0 text-[9px] font-extrabold text-[#4B3C46] shadow-xs">
-                    {pet.name}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -571,17 +835,40 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
         onSelectYard={() => {}}
         onSelectFarm={onOpenFarm}
         onSelectVisit={() => onOpenModal('visit')}
-        onSelectRescue={() => onOpenModal('rescue')}
         onSelectBag={() => onOpenModal('bag')}
         onSelectAlbum={() => onOpenModal('album')}
         primaryCta={
-          <button
-            type="button"
-            onClick={() => onOpenModal('snap')}
-            className="buttercup-cta rounded-full px-6 h-[38px] flex items-center justify-center gap-2 font-display text-[14px] font-extrabold text-[#4B3C46] whitespace-nowrap cursor-pointer"
-          >
-            <span>📷 Snap &amp; Renew</span>
-          </button>
+          <div className="w-full flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={() => onOpenModal('farmhouse')}
+              aria-label="Pets & Farmhouse"
+              title="Pets"
+              className="cream-pill w-12 h-12 rounded-full flex items-center justify-center text-[#4B3C46] active:scale-90 transition-transform cursor-pointer"
+            >
+              <PawPrint className="w-5 h-5 stroke-[2.2]" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onOpenModal('snap')}
+              aria-label="Snap"
+              title="Snap"
+              className="buttercup-cta w-16 h-16 rounded-full flex items-center justify-center text-[#4B3C46] active:scale-95 transition-transform cursor-pointer shrink-0"
+            >
+              <Camera className="w-7 h-7 stroke-[2.3]" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onOpenModal('shop')}
+              aria-label="Shop"
+              title="Shop"
+              className="cream-pill w-12 h-12 rounded-full bg-[#FFF5F8] flex items-center justify-center text-[#4B3C46] active:scale-90 transition-transform cursor-pointer"
+            >
+              <ShoppingBag className="w-5 h-5 stroke-[2.2]" />
+            </button>
+          </div>
         }
       />
     </div>
