@@ -18,3 +18,5 @@ contracts/cache/
 *.zip
 artifacts/
 cache/
+
+service-account.json

@@ -49,6 +49,12 @@ import {
   issueSignedMintClaim,
   reconcileMintedPetOwnership,
 } from './web3Service.ts';
+import {
+  claimStudentStarterGrant,
+  getDeFiVaultStats,
+  getSponsorCampaigns,
+  isStudentGrantClaimed,
+} from './sponsorService.ts';
 import { getPetForWeb3 } from '../db/web3Repository.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -766,6 +772,52 @@ export function createApp() {
       return res.status(500).json({ error: msg });
     }
   });
+
+  // --- SponsorPool & DeFi Yield Vault Endpoints ---
+  app.get('/api/sponsors/campaigns', (_req, res) => {
+    return res.json({ campaigns: getSponsorCampaigns() });
+  });
+
+  app.get('/api/sponsors/status/:address', async (req, res) => {
+    const address = req.params.address;
+    if (!address) return res.json({ claimed: false });
+    const claimed = await isStudentGrantClaimed(address);
+    return res.json({ claimed });
+  });
+
+  app.get('/api/vault/stats', (_req, res) => {
+    return res.json({ vault: getDeFiVaultStats() });
+  });
+
+  app.post(
+    '/api/sponsors/claim-grant',
+    requireAuth,
+    async (req: AuthRequest, res) => {
+      try {
+        const { walletAddress } = req.body as { walletAddress?: string };
+        if (!walletAddress) {
+          return res.status(400).json({ error: 'walletAddress is required.' });
+        }
+        const user = await getOrCreateUser(
+          req.user!.uid,
+          req.user!.email || '',
+          req.user!.name
+        );
+        const result = await claimStudentStarterGrant({
+          userId: user.id,
+          walletAddress,
+        });
+        const updatedState = await getFullKeeperState(user.id);
+        return res.json({ result, state: updatedState });
+      } catch (error) {
+        const msg =
+          error instanceof Error
+            ? error.message
+            : 'Failed to claim student grant.';
+        return res.status(400).json({ error: msg });
+      }
+    }
+  );
 
   // EIP-712 Signed Mint Claim issuance (server checks score 80+ & Bond XP 100+)
   app.post(
