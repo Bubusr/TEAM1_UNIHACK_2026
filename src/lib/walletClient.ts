@@ -632,11 +632,10 @@ export async function executeFujiMintTx(params: {
 }): Promise<string> {
   const { provider } = resolvePreferredWalletProvider();
   if (!provider) {
-    // If testing with Demo Wallet fallback (no extension installed)
-    const rand = Math.floor(Math.random() * 0xffffff)
-      .toString(16)
-      .padStart(6, '0');
-    return `0x4f9a${rand}82c1d0b7e34f9a65c812e04b77d9a1c3f6e82b4a109c7d3e`;
+    throw new WalletRpcError(
+      'eth_sendTransaction',
+      'No desktop EVM wallet extension detected.'
+    );
   }
   await ensureFujiNetwork();
 

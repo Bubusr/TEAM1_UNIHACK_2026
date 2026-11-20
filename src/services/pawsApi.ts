@@ -335,6 +335,8 @@ export async function requestEip712MintSignature(
 /**
  * Member 03 On-Chain Execution: Submit Mint TX & Verify Receipt
  */
+import { executeFujiMintTx } from '../lib/walletClient';
+
 export async function submitPassportMintTransaction(params: {
   pet: SanctuaryPet;
   metadata: IpfsPassportMetadata;
@@ -342,32 +344,21 @@ export async function submitPassportMintTransaction(params: {
   providerLabel: 'Core Wallet' | 'Demo Wallet' | null;
   nextTokenNumber: number;
 }): Promise<MintedPassportRecord> {
-  const { pet, metadata, auth, providerLabel, nextTokenNumber } = params;
+  const { pet, metadata, auth, nextTokenNumber } = params;
   const tokenId = `#${String(nextTokenNumber).padStart(3, '0')}`;
-  let txHash = '';
 
-  const { provider } = getInjectedWalletProvider();
-  if (provider && providerLabel === 'Core Wallet') {
-    // When M3 deploys PawsAndPicketPassport.sol & wires ABI calldata, this triggers Core Wallet tx;
-    // keep safe fallback if contract isn't deployed to this demo address yet.
-    try {
-      const chainHex = (await provider.request({
-        method: 'eth_chainId',
-      })) as string;
-      if (parseInt(chainHex, 16) !== AVALANCHE_FUJI_CHAIN_ID) {
-        await switchToAvalancheFuji('Core Wallet');
-      }
-    } catch {
-      // Allow UI preview completion if user cancels RPC switch in test mode
-    }
-  }
-
-  await new Promise((r) => setTimeout(r, 900));
-
-  const randHex = Math.floor(Math.random() * 0xffffff)
-    .toString(16)
-    .padStart(6, '0');
-  txHash = `0x4f9a${randHex}82c1d0b7e34f9a65c812e04b77d9a1c3f6e82b4a109c7d3e`;
+  const txHash = await executeFujiMintTx({
+    contractAddress: auth.contractAddress || PASSPORT_CONTRACT_ADDRESS,
+    recipient: auth.recipient,
+    petId: pet.id,
+    petName: pet.name,
+    species: pet.species,
+    score: pet.score ?? 90,
+    tokenURI: metadata.tokenUri,
+    nonce: String(auth.nonce),
+    deadline: auth.deadline,
+    signature: auth.signature,
+  });
 
   const record: MintedPassportRecord = {
     tokenId,
@@ -395,7 +386,7 @@ export async function submitPassportMintTransaction(params: {
       body: JSON.stringify(record),
     });
   } catch {
-    // Non-blocking until M2/M3 receipt verifier is mounted
+    // Non-blocking
   }
 
   return record;

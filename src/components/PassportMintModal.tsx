@@ -18,12 +18,13 @@ import {
 } from '../types';
 import { CroppedPetCutout } from './CroppedPetCutout';
 import { CrystalMintIcon } from './HandDrawnAssets';
+import { apiConfirmMint, apiRequestMintClaim } from '../lib/api';
+import { executeFujiMintTx } from '../lib/walletClient';
 import {
+  getSnowtraceTxUrl,
   PASSPORT_BOND_XP_THRESHOLD,
   PASSPORT_CONTRACT_ADDRESS,
-  requestEip712MintSignature,
   shortenAddress,
-  submitPassportMintTransaction,
   uploadPassportIpfsMetadata,
 } from '../services/pawsApi';
 
@@ -45,9 +46,9 @@ interface PassportMintModalProps {
   onClose: () => void;
   onOpenWallet: () => void;
   onOpenQuest: () => void;
-  onRealMint?: (petUid: string) => Promise<boolean>;
   onPassportMinted: (record: MintedPassportRecord) => void;
   onOpenGallery: () => void;
+  onKeeperStateUpdated?: (state: any) => void;
 }
 
 export const PassportMintModal: React.FC<PassportMintModalProps> = ({
@@ -60,9 +61,9 @@ export const PassportMintModal: React.FC<PassportMintModalProps> = ({
   onClose,
   onOpenWallet,
   onOpenQuest,
-  onRealMint,
   onPassportMinted,
   onOpenGallery,
+  onKeeperStateUpdated,
 }) => {
   const [selectedPetId, setSelectedPetId] = useState<string>(
     initialPetId ?? pets[0]?.id ?? ''
@@ -111,36 +112,72 @@ export const PassportMintModal: React.FC<PassportMintModalProps> = ({
     if (!pet || !wallet.address) return;
     setErrorMsg(null);
     try {
-      if (onRealMint) {
-        setStage('submitting_tx');
-        const ok = await onRealMint(pet.id);
-        if (!ok) {
-          throw new Error('Minting transaction was cancelled or rejected by wallet.');
-        }
-        setStage('confirmed');
-        return;
-      }
-
       setStage('uploading_ipfs');
       const meta = await uploadPassportIpfsMetadata(pet);
       setIpfsMeta(meta);
 
       setStage('signing_eip712');
-      const auth = await requestEip712MintSignature(
-        pet.id,
-        wallet.address,
-        meta.tokenUri
+      const targetPetUid = pet.petUid || pet.id;
+      const { contractAddress, claim } = await apiRequestMintClaim(
+        targetPetUid,
+        { accepted: true, consentVersion: '2026-02-v1' }
       );
-      setEip712Auth(auth);
+      setEip712Auth({
+        petId: pet.id,
+        recipient: claim.recipient,
+        tokenUri:
+          claim.tokenURI || claim.metadataUri || meta.tokenUri,
+        nonce: Number(claim.nonce),
+        deadline: claim.deadline,
+        signature: claim.signature,
+        contractAddress,
+        chainId: 43113,
+      });
 
       setStage('submitting_tx');
-      const record = await submitPassportMintTransaction({
-        pet,
-        metadata: meta,
-        auth,
-        providerLabel: wallet.providerLabel,
-        nextTokenNumber,
+      const txHash = await executeFujiMintTx({
+        contractAddress,
+        recipient: claim.recipient,
+        petId: claim.petId,
+        petName: claim.petName,
+        species: claim.species,
+        score: claim.score,
+        tokenURI:
+          claim.tokenURI || claim.metadataUri || meta.tokenUri,
+        petIdHash: claim.petIdHash,
+        metadataUri: claim.metadataUri || meta.tokenUri,
+        nonce: claim.nonce,
+        deadline: claim.deadline,
+        signature: claim.signature,
       });
+
+      const { confirmation, state } = await apiConfirmMint(
+        targetPetUid,
+        txHash
+      );
+      if (onKeeperStateUpdated && state) {
+        onKeeperStateUpdated(state);
+      }
+
+      const record: MintedPassportRecord = {
+        tokenId: `#${String(confirmation.tokenId).padStart(3, '0')}`,
+        petId: pet.id,
+        petName: pet.name,
+        species: pet.species,
+        imageUrl: pet.photoUrl,
+        bondLevel: pet.bondLevel ?? 1,
+        bondXp: pet.bondXp ?? 0,
+        discoveryDate:
+          pet.discoveryDate ?? new Date().toISOString().slice(0, 10),
+        ownerAddress: claim.recipient,
+        ipfsCid: meta.cid,
+        ipfsUri: meta.tokenUri,
+        txHash,
+        snowtraceUrl: getSnowtraceTxUrl(txHash),
+        mintedAt: new Date().toISOString().slice(0, 10),
+        aiScore: pet.score,
+        pose: pet.pose,
+      };
 
       setConfirmedRecord(record);
       setStage('confirmed');
@@ -205,11 +242,10 @@ export const PassportMintModal: React.FC<PassportMintModalProps> = ({
                     setErrorMsg(null);
                     setConfirmedRecord(null);
                   }}
-                  className={`rounded-2xl px-2 py-1 border flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                    active
-                      ? 'bg-[#FFE07D] border-[#C99D66]'
-                      : 'bg-[#FFF9F2] border-[#EFE0D4]'
-                  }`}
+                  className={`rounded-2xl px-2 py-1 border flex items-center gap-1.5 shrink-0 cursor-pointer ${active
+                    ? 'bg-[#FFE07D] border-[#C99D66]'
+                    : 'bg-[#FFF9F2] border-[#EFE0D4]'
+                    }`}
                 >
                   <div className="w-6 h-6 rounded-lg overflow-hidden bg-[#E8F8EC]">
                     <CroppedPetCutout
@@ -475,8 +511,8 @@ export const PassportMintModal: React.FC<PassportMintModalProps> = ({
                     {!bondReady
                       ? `Need ${PASSPORT_BOND_XP_THRESHOLD - (pet.bondXp ?? 0)} More Bond XP`
                       : !walletReady
-                      ? 'Connect Core Wallet First'
-                      : `Mint ${pet.name} Passport (ERC-721)`}
+                        ? 'Connect Core Wallet First'
+                        : `Mint ${pet.name} Passport (ERC-721)`}
                   </span>
                 </>
               )}
