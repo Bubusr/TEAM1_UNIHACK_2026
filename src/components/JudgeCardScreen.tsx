@@ -350,30 +350,6 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
             </div>
           )}
 
-          {/* Primary Action: Add Pet to Garden */}
-          {!isUnjudged && (
-            <button
-              type="button"
-              onClick={onCropIntoSanctuary}
-              className={`w-full rounded-full py-2 px-3 font-display text-[12.5px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition active:scale-95 ${
-                report.cropped
-                  ? 'bg-[#E8F8EC] text-[#2D6A4F] border border-[#B7E4C7]'
-                  : 'buttercup-cta bg-[#FFE07D] hover:bg-[#FFD752] text-[#4B3C46]'
-              }`}
-            >
-              {report.cropped ? (
-                <>
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Đã nhận bé vào Nông trại ✓</span>
-                </>
-              ) : (
-                <>
-                  <span>✂️ Thêm bé vào Nông trại (Sanctuary)</span>
-                </>
-              )}
-            </button>
-          )}
-
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -419,17 +395,17 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
             type="button"
             onClick={onCropIntoSanctuary}
             disabled={isJudging || isUnjudged}
-            className="buttercup-cta rounded-full px-6 h-[38px] font-display text-[14px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+            className="buttercup-cta rounded-full px-6 h-[44px] font-display text-[14px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap active:scale-95 transition-transform"
           >
             {report.cropped ? (
               <>
                 <Check className="w-4 h-4 stroke-[3]" />
-                <span>Added to Garden</span>
+                <span>Đã vào Sanctuary ✓</span>
               </>
             ) : isUnjudged ? (
-              <span>🔒 Judging Required</span>
+              <span>🔒 Cần Chấm Ảnh</span>
             ) : (
-              <span>✂️ Add to Garden</span>
+              <span>✂️ Thêm vào Sanctuary</span>
             )}
           </button>
         }

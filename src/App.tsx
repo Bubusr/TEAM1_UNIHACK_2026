@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Home } from 'lucide-react';
 import {
   CropPlot,
   CropType,
@@ -481,7 +482,7 @@ async function prepareImageForJudge(file: File): Promise<{
 }
 
 export default function App() {
-  const [desktopMode, setDesktopMode] = useState<'both' | ScreenView>('both');
+  const [desktopMode, setDesktopMode] = useState<'both' | ScreenView>('sanctuary');
   const [mobileScreen, setMobileScreen] = useState<ScreenView>('sanctuary');
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
 
@@ -584,7 +585,7 @@ export default function App() {
   const [isMinting, setIsMinting] = useState(false);
   const [mintNotice, setMintNotice] = useState<string | null>(null);
 
-  const [appPhase, setAppPhase] = useState<'start' | 'playing'>('playing');
+  const [appPhase, setAppPhase] = useState<'start' | 'playing'>('start');
   const [skyTheme, setSkyTheme] = useState<TimeOfDayTheme>(() => getTimeOfDayTheme());
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showTextLabels, setShowTextLabels] = useState(false);
@@ -1183,6 +1184,7 @@ export default function App() {
 
   // Petting with daily coin cap & server-authoritative Bond XP + per-pet quest flag
   const handleCarePet = (petId: string): string => {
+    recordMissionProgress('pet', 1);
     const target = resolveTargetPet(pets, petId, selectedPetId);
     if (!target) return '';
     setSelectedPetId(target.id);
@@ -1210,6 +1212,7 @@ export default function App() {
     const target = resolveTargetPet(pets, petId, selectedPetId);
     if (!target) return '';
 
+    recordMissionProgress('feed', 1);
     setSelectedPetId(target.id);
     setFoodInventory((prev) => ({ ...prev, [food]: prev[food] - 1 }));
     setPets((prev) => applyLocalPetCareUpdate(prev, target.id, 'feed'));
@@ -1238,6 +1241,7 @@ export default function App() {
     const target = resolveTargetPet(pets, petId, selectedPetId);
     if (!target) return '';
 
+    recordMissionProgress('play', 1);
     setSelectedPetId(target.id);
     setPets((prev) => applyLocalPetCareUpdate(prev, target.id, 'play'));
 
@@ -1343,6 +1347,7 @@ export default function App() {
     const elapsed = plot.plantedAt ? Date.now() - plot.plantedAt : 0;
 
     if (elapsed >= effectiveMs) {
+      recordMissionProgress('harvest', 1);
       const harvestedCrop = plot.crop;
       if (hasServerSession) {
         syncKeeperCall(apiGameAction('tap_plot', { plotId, activeSeed }));
@@ -1364,6 +1369,7 @@ export default function App() {
 
     if (!plot.watered) {
       if (waterCharges <= 0) return 'Tap Well 💧';
+      recordMissionProgress('water', 1);
       if (hasServerSession) {
         syncKeeperCall(apiGameAction('tap_plot', { plotId, activeSeed }));
       }
@@ -1382,6 +1388,7 @@ export default function App() {
     if (!tree) return '';
 
     if (Date.now() >= tree.readyAt) {
+      recordMissionProgress('harvest', 1);
       if (hasServerSession) {
         syncKeeperCall(apiGameAction('tap_tree', { treeId }));
       }
@@ -1401,6 +1408,7 @@ export default function App() {
     }
 
     if (!tree.watered && waterCharges > 0) {
+      recordMissionProgress('water', 1);
       if (hasServerSession) {
         syncKeeperCall(apiGameAction('tap_tree', { treeId }));
       }
@@ -1584,6 +1592,7 @@ export default function App() {
     neighborId: string,
     plotId: string
   ): string => {
+    recordMissionProgress('water', 1);
     const neighbor = neighbors.find((n) => n.id === neighborId);
     const plot = neighbor?.farmPlots.find((p) => p.id === plotId);
     if (!neighbor || !plot) return '';
@@ -1621,6 +1630,7 @@ export default function App() {
     neighborId: string,
     treeId: string
   ): string => {
+    recordMissionProgress('water', 1);
     const neighbor = neighbors.find((n) => n.id === neighborId);
     const tree = neighbor?.farmTrees.find((t) => t.id === treeId);
     if (!neighbor || !tree) return '';
@@ -1725,6 +1735,7 @@ export default function App() {
   };
 
   const handleVisitNeighbor = (neighborId: string) => {
+    recordMissionProgress('visit', 1);
     setVisitingId(neighborId);
     setActiveModal(null);
     setMobileScreen('neighborGarden');
@@ -2410,20 +2421,20 @@ export default function App() {
   };
 
   const desktopTabs: { id: 'both' | ScreenView; label: string }[] = [
-    { id: 'both', label: `Both · All (${visitingNeighbor ? 6 : 5})` },
-    { id: 'sanctuary', label: 'Sanctuary' },
-    { id: 'farm', label: 'Crop Farm' },
-    { id: 'neighborGarden', label: 'Visit Garden' },
+    { id: 'sanctuary', label: '🏡 Sanctuary' },
+    { id: 'farm', label: '🌾 Farm' },
+    { id: 'neighborGarden', label: '🏘️ Visit' },
     ...(visitingNeighbor
       ? [
           {
             id: 'neighborFarm' as const,
-            label: `${visitingNeighbor.ownerName}’s Farm`,
+            label: `🚜 ${visitingNeighbor.ownerName}’s Farm`,
           },
         ]
       : []),
-    { id: 'judge', label: 'AI Judge' },
-    { id: 'gallery', label: `Passports (${passports.length})` },
+    { id: 'judge', label: '📸 AI Judge' },
+    { id: 'gallery', label: `🏛️ Passports (${passports.length})` },
+    { id: 'both', label: `🪟 View All (${visitingNeighbor ? 6 : 5})` },
   ];
 
   const walletState: {
@@ -2461,110 +2472,132 @@ export default function App() {
     <div className={`min-h-dvh w-full ${TIME_OF_DAY_PALETTES[skyTheme]?.studioBgClass || 'pastel-studio-bg'} flex flex-col items-center justify-center sm:p-4 lg:p-5 transition-colors duration-1000`}>
       {/* Minimal Pastel Top Bar */}
       <div className="w-full max-w-[1440px] px-3 pt-2.5 pb-2 sm:pt-0 sm:pb-3 flex items-center justify-between gap-2 flex-wrap">
-        <div className="cream-pill rounded-full px-3.5 py-1 flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            playTapSound();
+            setActiveModal(null);
+            setAppPhase('start');
+          }}
+          className="cream-pill rounded-full px-3.5 py-1 flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform"
+          title={appPhase === 'playing' ? 'Về Màn Hình Chính' : 'Paws & Picket'}
+        >
+          {appPhase === 'playing' && (
+            <Home className="w-3.5 h-3.5 text-[#8A747E]" />
+          )}
           <span className="font-display text-[14px] font-extrabold text-[#4B3C46] whitespace-nowrap">
             🐾 Paws &amp; Picket
           </span>
-        </div>
+        </button>
 
         {/* Desktop Switcher */}
-        <div className="hidden lg:flex items-center gap-1 cream-pill rounded-full p-1">
-          {desktopTabs.map((tab) => {
-            const active = desktopMode === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setActiveModal(null);
-                  setDesktopMode(tab.id);
-                }}
-                className={`rounded-full px-3 py-1 font-display text-[12.5px] font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
-                  active
-                    ? 'bg-[#FFE07D] text-[#4B3C46]'
-                    : 'text-[#8A747E] hover:text-[#4B3C46]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {appPhase === 'playing' && (
+          <div className="hidden lg:flex items-center gap-1 cream-pill rounded-full p-1">
+            {desktopTabs.map((tab) => {
+              const active = desktopMode === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveModal(null);
+                    setDesktopMode(tab.id);
+                    if (tab.id !== 'both') {
+                      setMobileScreen(tab.id);
+                    }
+                  }}
+                  className={`rounded-full px-3 py-1 font-display text-[12.5px] font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
+                    active
+                      ? 'bg-[#FFE07D] text-[#4B3C46]'
+                      : 'text-[#8A747E] hover:text-[#4B3C46]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Mobile / Tablet Switcher */}
-        <div className="flex lg:hidden items-center gap-1 cream-pill rounded-full p-1">
-          <button
-            type="button"
-            onClick={openSanctuaryScreen}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'sanctuary'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
-            }`}
-          >
-            🏡 Yard
-          </button>
-          <button
-            type="button"
-            onClick={openFarmScreen}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'farm'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
-            }`}
-          >
-            🌾 Farm
-          </button>
-          <button
-            type="button"
-            onClick={openNeighborGardenScreen}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'neighborGarden'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
-            }`}
-          >
-            🏘️ Visit
-          </button>
-          {visitingNeighbor && (
+        {appPhase === 'playing' && (
+          <div className="flex lg:hidden items-center gap-1 cream-pill rounded-full p-1">
             <button
               type="button"
-              onClick={openNeighborFarmScreen}
+              onClick={openSanctuaryScreen}
               className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-                mobileScreen === 'neighborFarm'
+                mobileScreen === 'sanctuary'
                   ? 'bg-[#FFE07D] text-[#4B3C46]'
                   : 'text-[#8A747E]'
               }`}
             >
-              🚜 {visitingNeighbor.ownerName}
+              🏡 Yard
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveModal(null);
-              setMobileScreen('judge');
-            }}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'judge'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
-            }`}
-          >
-            📸 Judge
-          </button>
-          <button
-            type="button"
-            onClick={openGalleryScreen}
-            className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
-              mobileScreen === 'gallery'
-                ? 'bg-[#FFE07D] text-[#4B3C46]'
-                : 'text-[#8A747E]'
-            }`}
-          >
-            🏛️ Passports
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={openFarmScreen}
+              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
+                mobileScreen === 'farm'
+                  ? 'bg-[#FFE07D] text-[#4B3C46]'
+                  : 'text-[#8A747E]'
+              }`}
+            >
+              🌾 Farm
+            </button>
+            <button
+              type="button"
+              onClick={openNeighborGardenScreen}
+              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
+                mobileScreen === 'neighborGarden'
+                  ? 'bg-[#FFE07D] text-[#4B3C46]'
+                  : 'text-[#8A747E]'
+              }`}
+            >
+              🏘️ Visit
+            </button>
+            {visitingNeighbor && (
+              <button
+                type="button"
+                onClick={openNeighborFarmScreen}
+                className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
+                  mobileScreen === 'neighborFarm'
+                    ? 'bg-[#FFE07D] text-[#4B3C46]'
+                    : 'text-[#8A747E]'
+                }`}
+              >
+                🚜 {visitingNeighbor.ownerName}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveModal(null);
+                setMobileScreen('judge');
+                if (desktopMode !== 'both') {
+                  setDesktopMode('judge');
+                }
+              }}
+              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
+                mobileScreen === 'judge'
+                  ? 'bg-[#FFE07D] text-[#4B3C46]'
+                  : 'text-[#8A747E]'
+              }`}
+            >
+              📸 Judge
+            </button>
+            <button
+              type="button"
+              onClick={openGalleryScreen}
+              className={`rounded-full px-2 py-1 font-display text-[11px] font-extrabold cursor-pointer whitespace-nowrap ${
+                mobileScreen === 'gallery'
+                  ? 'bg-[#FFE07D] text-[#4B3C46]'
+                  : 'text-[#8A747E]'
+              }`}
+            >
+              🏛️ Passports
+            </button>
+          </div>
+        )}
 
         {/* Top Right: Wallet + Settings */}
         <div className="flex items-center gap-1.5 shrink-0">

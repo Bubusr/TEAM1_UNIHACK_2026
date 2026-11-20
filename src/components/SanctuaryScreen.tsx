@@ -227,19 +227,31 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
   };
 
   const handleToyTap = (toy: GardenToy) => {
-    const firstPet = pets[0];
-    if (firstPet) {
+    // Select the pet that the user actively picked, or the pet closest to this toy
+    const activePet =
+      pets.find((p) => p.id === selectedPetId) ??
+      pets.slice().sort((a, b) => {
+        const posA = petPositions[a.id] ?? { x: a.x, y: a.y };
+        const posB = petPositions[b.id] ?? { x: b.x, y: b.y };
+        const distA = Math.hypot(posA.x - toy.x, posA.y - toy.y);
+        const distB = Math.hypot(posB.x - toy.x, posB.y - toy.y);
+        return distA - distB;
+      })[0] ??
+      pets[0];
+
+    if (activePet) {
+      if (onSelectPet) onSelectPet(activePet.id);
       setPetPositions((prev) => ({
         ...prev,
-        [firstPet.id]: {
-          x: Math.max(24, toy.x - 6),
-          y: Math.max(40, toy.y - 4),
-          flip: (prev[firstPet.id]?.x ?? 50) > toy.x,
+        [activePet.id]: {
+          x: Math.max(24, Math.min(80, toy.x - 6)),
+          y: Math.max(40, Math.min(78, toy.y - 4)),
+          flip: (prev[activePet.id]?.x ?? 50) > toy.x,
         },
       }));
     }
     spawnHeartBurst(toy.x, Math.max(22, toy.y - 6));
-    const msg = onPlayToy(toy);
+    const msg = onPlayToy(toy, activePet?.id);
     showToastAt(msg, toy.x, toy.y - 10);
   };
 
