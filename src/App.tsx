@@ -38,9 +38,13 @@ import {
 import {
   apiAddToGarden,
   apiCarePet,
+  apiCheckGrantStatus,
   apiClaimFirstBondQuest,
+  apiClaimStudentGrant,
   apiConfirmMint,
   apiGameAction,
+  apiGetSponsorCampaigns,
+  apiGetVaultStats,
   apiJudgePhoto,
   apiMergeGuestIntoKeeper,
   apiReconcilePet,
@@ -48,6 +52,8 @@ import {
   apiRequestWalletNonce,
   apiUnlinkWallet,
   apiVerifyWalletSignature,
+  type DeFiVaultData,
+  type SponsorCampaignItem,
   fetchKeeperState,
   fetchWeb3Status,
   getStoredGuestToken,
@@ -518,6 +524,9 @@ export default function App() {
   } | null>(null);
   const [isMinting, setIsMinting] = useState(false);
   const [mintNotice, setMintNotice] = useState<string | null>(null);
+  const [vaultData, setVaultData] = useState<DeFiVaultData | null>(null);
+  const [sponsors, setSponsors] = useState<SponsorCampaignItem[]>([]);
+  const [grantClaimed, setGrantClaimed] = useState(false);
 
   const applyKeeperServerState = useCallback((state: KeeperServerState) => {
     setCoins(state.user.coins);
@@ -600,8 +609,41 @@ export default function App() {
     fetchWeb3Status()
       .then((status) => setWeb3Status(status))
       .catch(() => {});
+    apiGetVaultStats()
+      .then((res) => setVaultData(res.vault))
+      .catch(() => {});
+    apiGetSponsorCampaigns()
+      .then((res) => setSponsors(res.campaigns))
+      .catch(() => {});
     refreshBrowserWallet();
 
+  }, [refreshBrowserWallet]);
+
+  useEffect(() => {
+    if (!linkedWallet?.address) {
+      setGrantClaimed(false);
+      return;
+    }
+    const norm = linkedWallet.address.toLowerCase();
+    if (typeof window !== 'undefined') {
+      const cached = window.localStorage.getItem(`paws_grant_${norm}`);
+      if (cached === 'true') {
+        setGrantClaimed(true);
+      }
+    }
+    apiCheckGrantStatus(norm)
+      .then((res) => {
+        if (res.claimed) {
+          setGrantClaimed(true);
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(`paws_grant_${norm}`, 'true');
+          }
+        }
+      })
+      .catch(() => {});
+  }, [linkedWallet?.address]);
+
+  useEffect(() => {
     const unsubWallet = subscribePreferredWalletEvents(() => {
       refreshBrowserWallet();
     });
@@ -1768,6 +1810,34 @@ export default function App() {
     }
   };
 
+  const handleClaimStudentGrant = async () => {
+    if (!linkedWallet?.address) return;
+    setProfileBusy('grant');
+    setProfileFeedback(null);
+    try {
+      const { result, state } = await apiClaimStudentGrant(linkedWallet.address);
+      setGrantClaimed(true);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          `paws_grant_${linkedWallet.address.toLowerCase()}`,
+          'true'
+        );
+      }
+      applyKeeperServerState(state);
+      setProfileFeedback({
+        type: 'ok',
+        text: `${result.message} (${result.sponsor}) ✓`,
+      });
+    } catch (err) {
+      setProfileFeedback({
+        type: 'err',
+        text: err instanceof Error ? err.message : 'Could not claim student grant.',
+      });
+    } finally {
+      setProfileBusy(null);
+    }
+  };
+
   const handleReconcilePet = async (petUid: string) => {
     setProfileBusy(`reconcile-${petUid}`);
     setProfileFeedback(null);
@@ -1863,6 +1933,10 @@ export default function App() {
         onUnlinkWallet={handleUnlinkWallet}
         onMintPassportFromProfile={handleRequestMintFromProfile}
         onReconcilePet={handleReconcilePet}
+        onClaimStudentGrant={handleClaimStudentGrant}
+        grantClaimed={grantClaimed}
+        vaultData={vaultData}
+        sponsors={sponsors}
         onSelectPet={setSelectedPetId}
         onBuyItem={handleBuyItem}
         onBuyToy={handleBuyToy}

@@ -86,6 +86,23 @@ interface CreamSheetsProps {
   onUnlinkWallet: () => void;
   onMintPassportFromProfile: (petUid: string) => void;
   onReconcilePet: (petUid: string) => void;
+  onClaimStudentGrant?: () => void;
+  grantClaimed?: boolean;
+  vaultData?: {
+    protocol: string;
+    totalPooledUsdc: number;
+    apyPercentage: number;
+    yieldTodayUsdc: number;
+    totalDistributedUsdc: number;
+  } | null;
+  sponsors?: Array<{
+    id: string;
+    brandName: string;
+    brandLogo: string;
+    campaignTitle: string;
+    rewardCoins: number;
+    perkDescription: string;
+  }>;
   // Game callbacks
   onSelectPet?: (petId: string) => void;
   onBuyItem: (item: ShopItem) => void;
@@ -145,6 +162,10 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
   onUnlinkWallet,
   onMintPassportFromProfile,
   onReconcilePet,
+  onClaimStudentGrant,
+  grantClaimed = false,
+  vaultData,
+  sponsors = [],
   onSelectPet,
   onBuyItem,
   onBuyToy,
@@ -373,7 +394,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                             {toy.name}
                           </div>
                           <div className="text-[11px] font-bold text-[#8A747E] tabular-nums">
-                            {toy.cost} 🪙
+                            {toy.cost} Coins
                           </div>
                         </div>
                       </div>
@@ -413,7 +434,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                               {item.name}
                             </div>
                             <div className="text-[11px] font-bold text-[#8A747E] tabular-nums">
-                              {item.cost} 🪙
+                              {item.cost} Coins
                             </div>
                           </div>
                         </div>
@@ -481,7 +502,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between bg-[#FFF8DC] border border-[#F0DFA5] rounded-xl px-3 py-1.5 text-[12px] font-extrabold text-[#4B3C46]">
                 <span>Your Coins</span>
-                <span className="tabular-nums">{coins.toLocaleString()} 🪙</span>
+                <span className="tabular-nums">{coins.toLocaleString()} Coins</span>
               </div>
 
               {visitingNeighbor.marketStock.map((listing) => {
@@ -498,7 +519,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                           {meta.name} x{listing.qty}
                         </div>
                         <div className="text-[11px] font-bold text-[#8A747E] tabular-nums">
-                          {listing.price} 🪙
+                          {listing.price} Coins
                         </div>
                       </div>
                     </div>
@@ -915,7 +936,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                       >
                         {firstBondQuest.claimed
                           ? 'Claimed ✓'
-                          : `+${FIRST_BOND_QUEST_REWARD.COINS} 🪙 · +${FIRST_BOND_QUEST_REWARD.EXP} EXP`}
+                          : `+${FIRST_BOND_QUEST_REWARD.COINS} Coins · +${FIRST_BOND_QUEST_REWARD.EXP} EXP`}
                       </span>
                     </div>
 
@@ -1032,7 +1053,7 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                                   {profileBusy === 'quest'
                                     ? 'Claiming Reward...'
                                     : canClaim
-                                    ? `Claim First Bond (+${firstBondQuest.rewardCoins} 🪙)`
+                                    ? `Claim First Bond (+${firstBondQuest.rewardCoins} Coins)`
                                     : 'Finish Steps & 100 Bond XP'}
                                 </button>
                               )}
@@ -1300,6 +1321,100 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* 🎓 SponsorPool: Student Onboarding Gas Grant */}
+                  <div className="bg-[#FFF8F0] border border-[#F3DFC9] rounded-2xl p-3 space-y-2 text-[11px] font-bold text-[#4B3C46]">
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-[13px] font-extrabold text-[#754E29] flex items-center gap-1.5">
+                        <span>🎓 Student Gas Grant</span>
+                      </span>
+                      <span className="bg-[#FFEAD0] text-[#7A4B1A] rounded-full px-2 py-0.5 text-[9.5px] font-extrabold">
+                        SponsorPool USDC
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-[#7A6458] leading-tight">
+                      Zero out-of-pocket barrier for students! Claim 0.001 AVAX gas + 100 Coins sponsored by UniHack Campus Fund &amp; The Coffee House.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={!linkedWallet || grantClaimed || Boolean(profileBusy)}
+                      onClick={onClaimStudentGrant}
+                      className="buttercup-cta w-full rounded-full py-1.5 px-3 text-[11.5px] font-extrabold text-[#4B3C46] disabled:opacity-45 cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
+                    >
+                      {grantClaimed ? (
+                        <span>Gas Grant Claimed ✓</span>
+                      ) : !linkedWallet ? (
+                        <span>Link Wallet to Claim Grant</span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <span>Claim 0.001 AVAX Gas + 100</span>
+                          <PawCoinIcon className="w-3.5 h-3.5 inline-block" />
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* 🏛️ DeFi Yield Vault: Benqi / Aave on Avalanche */}
+                  <div className="bg-[#F0FAF7] border border-[#CDEAE1] rounded-2xl p-3 space-y-2 text-[11px] font-bold text-[#355B50]">
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-[13px] font-extrabold text-[#285A4E] flex items-center gap-1.5">
+                        <span>🏛️ Sanctuary DeFi Vault</span>
+                      </span>
+                      <span className="bg-[#D8F3EB] text-[#226857] rounded-full px-2 py-0.5 text-[9.5px] font-extrabold">
+                        Benqi C-Chain
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-center text-[10.5px]">
+                      <div className="bg-[#FFFDF9] border border-[#D5EFE7] rounded-xl p-1.5">
+                        <div className="text-[#6D8A81] text-[9.5px]">Total TVL (USDC)</div>
+                        <div className="font-display font-extrabold text-[#1B4B3F] text-[13px]">
+                          ${vaultData ? vaultData.totalPooledUsdc.toLocaleString() : '15,240'}
+                        </div>
+                      </div>
+                      <div className="bg-[#FFFDF9] border border-[#D5EFE7] rounded-xl p-1.5">
+                        <div className="text-[#6D8A81] text-[9.5px]">Real Lending APY</div>
+                        <div className="font-display font-extrabold text-[#1B4B3F] text-[13px]">
+                          {vaultData ? vaultData.apyPercentage : 6.8}%
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-[#557B70] leading-snug">
+                      Unused sponsor capital is supplied to Benqi on Avalanche. Yield generated (${vaultData ? vaultData.yieldTodayUsdc : '2.84'}/day) funds daily sanctuary care rewards!
+                    </p>
+                  </div>
+
+                  {/* ☕ Campus Brand Quests */}
+                  {sponsors && sponsors.length > 0 && (
+                    <div className="bg-[#FFFDF7] border border-[#EFE3D5] rounded-2xl p-2.5 space-y-2">
+                      <div className="font-display text-[12px] font-extrabold text-[#5A4334]">
+                        ☕ Active Campus Brand Quests
+                      </div>
+                      <div className="space-y-1.5">
+                        {sponsors.map((sp) => (
+                          <div
+                            key={sp.id}
+                            className="bg-[#FFF8F0] border border-[#F3E6D7] rounded-xl p-2 flex items-center justify-between gap-2 text-[10.5px]"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-base">{sp.brandLogo}</span>
+                              <div className="min-w-0">
+                                <div className="font-extrabold text-[#4E392B] truncate">
+                                  {sp.brandName}
+                                </div>
+                                <div className="text-[9.5px] text-[#7A6458] truncate">
+                                  {sp.campaignTitle} · {sp.perkDescription}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="bg-[#FFE6C8] text-[#693E15] rounded-full px-2 py-0.5 font-extrabold whitespace-nowrap text-[9.5px] flex items-center gap-1">
+                              <span>+{sp.rewardCoins}</span>
+                              <PawCoinIcon className="w-3 h-3 inline-block" />
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

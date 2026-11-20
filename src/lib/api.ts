@@ -357,4 +357,74 @@ export async function apiReconcilePet(petUid: string) {
   );
 }
 
+export interface SponsorCampaignItem {
+  id: string;
+  brandName: string;
+  brandLogo: string;
+  category: 'cafe' | 'campus' | 'pet_brand';
+  campaignTitle: string;
+  description: string;
+  rewardCoins: number;
+  perkDescription: string;
+  budgetUsdc: number;
+  remainingUsdc: number;
+  active: boolean;
+}
+
+export interface DeFiVaultData {
+  protocol: string;
+  network: string;
+  totalPooledUsdc: number;
+  apyPercentage: number;
+  yieldTodayUsdc: number;
+  totalDistributedUsdc: number;
+  activeSponsorsCount: number;
+  lastUpdated: string;
+}
+
+export async function apiGetSponsorCampaigns() {
+  return apiFetch<{ campaigns: SponsorCampaignItem[] }>(
+    '/api/sponsors/campaigns',
+    { method: 'GET' },
+    'none'
+  );
+}
+
+export async function apiGetVaultStats() {
+  return apiFetch<{ vault: DeFiVaultData }>(
+    '/api/vault/stats',
+    { method: 'GET' },
+    'none'
+  );
+}
+
+export async function apiCheckGrantStatus(walletAddress: string) {
+  return apiFetch<{ claimed: boolean }>(
+    `/api/sponsors/status/${encodeURIComponent(walletAddress)}`,
+    { method: 'GET' },
+    'none'
+  );
+}
+
+export async function apiClaimStudentGrant(walletAddress: string) {
+  return apiFetch<{
+    result: {
+      success: boolean;
+      txHash: string | null;
+      coinsGranted: number;
+      avaxGranted: string;
+      sponsor: string;
+      message: string;
+    };
+    state: KeeperServerState;
+  }>(
+    '/api/sponsors/claim-grant',
+    {
+      method: 'POST',
+      body: JSON.stringify({ walletAddress }),
+    },
+    'firebase'
+  );
+}
+
 export type { CropType };
