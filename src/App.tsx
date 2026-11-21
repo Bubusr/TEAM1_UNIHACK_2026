@@ -1007,6 +1007,16 @@ export default function App() {
     });
   };
 
+  const handleToggleTimeOfDay = useCallback(() => {
+    playTapSound();
+    const order: TimeOfDayTheme[] = ['morning', 'afternoon', 'sunset', 'night'];
+    setSkyTheme((prev) => {
+      const safePrev = prev && TIME_OF_DAY_PALETTES[prev] ? prev : 'morning';
+      const idx = order.indexOf(safePrev);
+      return order[(idx + 1) % order.length];
+    });
+  }, []);
+
   const handleToggleShowTextLabels = () => {
     playTapSound();
     setShowTextLabels((prev) => !prev);
@@ -2507,8 +2517,8 @@ export default function App() {
       >
         <UiLabelsProvider value={showTextLabels}>
           <div className={`min-h-dvh w-full ${TIME_OF_DAY_PALETTES[skyTheme]?.studioBgClass || 'pastel-studio-bg'} flex flex-col items-center justify-center sm:p-4 lg:p-5 transition-colors duration-1000`}>
-            {/* Desktop Studio Header Bar (Hidden on mobile so full-screen app has a single clean in-frame top bar) */}
-            <header className="hidden sm:flex w-full max-w-[1160px] px-3 pb-3 items-center justify-between gap-4">
+            {/* Desktop Studio Header Bar (Visible on all screens for convenient demo recording) */}
+            <header className="flex w-full max-w-[1160px] px-3 pb-2.5 items-center justify-between gap-2 flex-wrap">
               {/* Zone 1: Wordmark / Return to Title */}
               <button
                 type="button"
@@ -2562,19 +2572,14 @@ export default function App() {
                 {/* Day/Night Quick Switcher for Demo Recording */}
                 <button
                   type="button"
-                  onClick={() => {
-                    playTapSound();
-                    const order: TimeOfDayTheme[] = ['dawn', 'day', 'dusk', 'night'];
-                    const next = order[(order.indexOf(skyTheme) + 1) % order.length];
-                    setSkyTheme(next);
-                  }}
-                  className="cream-pill rounded-full px-2.5 py-1 text-[11.5px] font-extrabold text-[#4B3C46] flex items-center gap-1 cursor-pointer active:scale-95 transition-transform"
-                  title="Toggle Day/Night Cycle"
+                  onClick={handleToggleTimeOfDay}
+                  className="cream-pill rounded-full px-3 py-1 text-[12px] font-extrabold text-[#4B3C46] bg-[#FFE07D] border border-[#E5C158] shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+                  title="Toggle Day/Night Cycle (Morning / Afternoon / Sunset / Night)"
                 >
-                  {skyTheme === 'dawn' && '🌅 Dawn'}
-                  {skyTheme === 'day' && '☀️ Day'}
-                  {skyTheme === 'dusk' && '🌇 Dusk'}
-                  {skyTheme === 'night' && '🌙 Night'}
+                  {skyTheme === 'morning' && '🌅 Sáng'}
+                  {skyTheme === 'afternoon' && '☀️ Chiều'}
+                  {skyTheme === 'sunset' && '🌇 Hoàng hôn'}
+                  {skyTheme === 'night' && '🌙 Đêm'}
                 </button>
 
                 {appPhase === 'playing' && (
@@ -2650,6 +2655,7 @@ export default function App() {
                     onOpenSettings={() => setSettingsModal({ open: true, tab: 'settings' })}
                     onToggleSound={handleToggleSound}
                     onOpenWallet={() => setWalletModalOpen(true)}
+                    onToggleTimeOfDay={handleToggleTimeOfDay}
                   />
                 </div>
               </div>
@@ -2694,6 +2700,7 @@ export default function App() {
                     onOpenModal={(m) => openModalIn('sanctuary', m)}
                     onQuickCoins={() => openModalIn('sanctuary', 'shop')}
                     onQuickEnergy={handleQuickEnergy}
+                    onToggleTimeOfDay={handleToggleTimeOfDay}
                   />
                   {renderCreamSheets('sanctuary')}
                 </section>

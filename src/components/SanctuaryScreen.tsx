@@ -79,6 +79,7 @@ interface SanctuaryScreenProps {
   onOpenModal: (modal: SanctuaryModalType) => void;
   onQuickCoins: () => void;
   onQuickEnergy: () => void;
+  onToggleTimeOfDay?: () => void;
 }
 
 export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
@@ -114,6 +115,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
   onOpenModal,
   onQuickCoins,
   onQuickEnergy,
+  onToggleTimeOfDay,
 }) => {
   const showLabels = useShowTextLabels();
   const { palette } = useSkyTheme();
@@ -450,6 +452,7 @@ export const SanctuaryScreen: React.FC<SanctuaryScreenProps> = ({
         onOpenCalendar={onOpenCalendar}
         hasCalendarBadge={hasCalendarBadge}
         onOpenSettings={onOpenSettings}
+        onToggleTimeOfDay={onToggleTimeOfDay}
         subRow={
           <div className="flex items-center justify-center gap-1.5">
             {showLabels && (

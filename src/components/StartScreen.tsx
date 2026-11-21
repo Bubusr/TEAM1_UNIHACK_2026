@@ -38,6 +38,7 @@ interface StartScreenProps {
   onOpenSettings: () => void;
   onToggleSound: () => void;
   onOpenWallet: () => void;
+  onToggleTimeOfDay?: () => void;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({
@@ -56,9 +57,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onOpenSettings,
   onToggleSound,
   onOpenWallet,
+  onToggleTimeOfDay,
 }) => {
   const showLabels = useShowTextLabels();
-  const { palette } = useSkyTheme();
+  const { skyTheme, palette } = useSkyTheme();
   const [petPopId, setPetPopId] = useState<string | null>(null);
   const hasPets = pets.length > 0;
   const petCount = pets.length;
@@ -247,19 +249,36 @@ export const StartScreen: React.FC<StartScreenProps> = ({
 
       {/* TOP UTILITY STRIP (Sound on left, Wallet + Top-Right Settings on right) */}
       <header className="relative z-20 px-4 pt-3.5 flex items-center justify-between gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={onToggleSound}
-          aria-label={soundEnabled ? 'Mute sound effects' : 'Enable sound effects'}
-          className="cream-pill rounded-full w-10 h-10 flex items-center justify-center text-[#4B3C46] active:scale-95 transition-transform cursor-pointer"
-          title={soundEnabled ? 'Sound On' : 'Sound Muted'}
-        >
-          {soundEnabled ? (
-            <Volume2 className="w-4.5 h-4.5 stroke-[2.3]" />
-          ) : (
-            <VolumeX className="w-4.5 h-4.5 stroke-[2.3] text-[#8A747E]" />
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onToggleSound}
+            aria-label={soundEnabled ? 'Mute sound effects' : 'Enable sound effects'}
+            className="cream-pill rounded-full w-10 h-10 flex items-center justify-center text-[#4B3C46] active:scale-95 transition-transform cursor-pointer"
+            title={soundEnabled ? 'Sound On' : 'Sound Muted'}
+          >
+            {soundEnabled ? (
+              <Volume2 className="w-4.5 h-4.5 stroke-[2.3]" />
+            ) : (
+              <VolumeX className="w-4.5 h-4.5 stroke-[2.3] text-[#8A747E]" />
+            )}
+          </button>
+
+          {onToggleTimeOfDay && (
+            <button
+              type="button"
+              onClick={onToggleTimeOfDay}
+              aria-label="Toggle Time of Day"
+              className="cream-pill rounded-full h-10 px-3 flex items-center justify-center gap-1.5 font-display text-[12px] font-extrabold text-[#4B3C46] bg-[#FFE07D] border border-[#E5C158] shadow-xs active:scale-95 transition-transform cursor-pointer"
+              title="Toggle Day/Night Cycle (Morning / Afternoon / Sunset / Night)"
+            >
+              {skyTheme === 'morning' && '🌅 Sáng'}
+              {skyTheme === 'afternoon' && '☀️ Chiều'}
+              {skyTheme === 'sunset' && '🌇 Hoàng hôn'}
+              {skyTheme === 'night' && '🌙 Đêm'}
+            </button>
           )}
-        </button>
+        </div>
 
         <div className="flex items-center gap-1.5">
           <button

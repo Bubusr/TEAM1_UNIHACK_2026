@@ -39,9 +39,11 @@ export function useSkyTheme(): {
   palette: TimeOfDayPalette;
 } {
   const skyTheme = useContext(SkyThemeContext);
+  const safeTheme: TimeOfDayTheme =
+    skyTheme && TIME_OF_DAY_PALETTES[skyTheme] ? skyTheme : 'morning';
   return {
-    skyTheme,
-    palette: TIME_OF_DAY_PALETTES[skyTheme],
+    skyTheme: safeTheme,
+    palette: TIME_OF_DAY_PALETTES[safeTheme],
   };
 }
 
@@ -68,6 +70,7 @@ interface TopHudProps {
   onOpenCalendar?: () => void;
   hasCalendarBadge?: boolean;
   onOpenSettings?: () => void;
+  onToggleTimeOfDay?: () => void;
 }
 
 export const SharedTopHud: React.FC<TopHudProps> = ({
@@ -84,7 +87,9 @@ export const SharedTopHud: React.FC<TopHudProps> = ({
   onOpenCalendar,
   hasCalendarBadge,
   onOpenSettings,
+  onToggleTimeOfDay,
 }) => {
+  const { skyTheme } = useSkyTheme();
   const { onOpenMissions, hasMissionsBadge } = useContext(
     DailyMissionsHudContext
   );
@@ -200,6 +205,21 @@ export const SharedTopHud: React.FC<TopHudProps> = ({
               className="cream-pill rounded-full w-8.5 h-8.5 flex items-center justify-center text-[#4B3C46] active:scale-90 transition-transform cursor-pointer shrink-0"
             >
               <Settings className="w-4 h-4 stroke-[2.4]" />
+            </button>
+          )}
+
+          {onToggleTimeOfDay && (
+            <button
+              type="button"
+              onClick={onToggleTimeOfDay}
+              aria-label="Toggle Time of Day"
+              title="Toggle Day/Night Cycle"
+              className="cream-pill rounded-full px-2 h-8.5 flex items-center justify-center gap-1 font-display text-[11px] font-extrabold text-[#4B3C46] bg-[#FFE07D] border border-[#E5C158] shadow-xs active:scale-90 transition-transform cursor-pointer shrink-0"
+            >
+              {skyTheme === 'morning' && '🌅 Sáng'}
+              {skyTheme === 'afternoon' && '☀️ Chiều'}
+              {skyTheme === 'sunset' && '🌇 Tối'}
+              {skyTheme === 'night' && '🌙 Đêm'}
             </button>
           )}
         </div>
