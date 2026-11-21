@@ -63,10 +63,10 @@ export const ACTIVE_SPONSOR_CAMPAIGNS: SponsorCampaign[] = [
   {
     id: 'sp-fpt-02',
     brandName: 'UniHack Campus Hub',
-    brandLogo: '🎓',
+    brandLogo: '🎁',
     category: 'campus',
-    campaignTitle: 'Student Starter Gas Grant',
-    description: 'Zero-barrier onboarding: 0.001 AVAX gas + 100 Coins for every student.',
+    campaignTitle: 'New Keeper Starter Gas Grant',
+    description: 'Zero-barrier onboarding: 0.001 AVAX gas + 100 Coins for every new keeper.',
     rewardCoins: 100,
     perkDescription: 'Free Pet Passport mint gas subsidy',
     budgetUsdc: 2500,
@@ -126,7 +126,7 @@ export async function claimStudentStarterGrant(params: {
   const normAddress = params.walletAddress.trim().toLowerCase();
 
   if (await isStudentGrantClaimed(normAddress)) {
-    throw new Error('This wallet has already claimed the Student Gas Grant.');
+    throw new Error('This wallet has already claimed the New Keeper Welcome Grant.');
   }
 
   const deployerKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
@@ -192,6 +192,10 @@ export async function claimStudentStarterGrant(params: {
     coinsGranted: 100,
     avaxGranted: `${avaxAmount} AVAX`,
     sponsor: 'UniHack Campus Hub & The Coffee House',
-    message: `Granted ${avaxAmount} AVAX gas + 100 Coins sponsored by Campus Fund!`,
+    message: `Granted ${avaxAmount} AVAX gas + 100 Coins sponsored by Campus Fund & The Coffee House!`,
   };
 }
+
+export const isWelcomeGrantClaimed = isStudentGrantClaimed;
+export const claimWelcomeStarterGrant = claimStudentStarterGrant;
+

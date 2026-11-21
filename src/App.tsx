@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Home, Settings } from 'lucide-react';
 import {
   CropPlot,
@@ -46,6 +46,7 @@ import { PetProfileModal } from './components/PetProfileModal';
 import { PassportMintModal } from './components/PassportMintModal';
 import { FirstBondQuestModal } from './components/FirstBondQuestModal';
 import { WalletConnectModal } from './components/WalletConnectModal';
+import { NewKeeperWelcomeModal } from './components/NewKeeperWelcomeModal';
 import { DailyMissionsHudProvider, SkyThemeProvider, UiLabelsProvider } from './components/SharedHud';
 import { getTimeOfDayTheme, TimeOfDayTheme, TIME_OF_DAY_PALETTES } from './utils/timeOfDay';
 import { playCameraSound, playCoinSound, playHappySound, playTapSound, playVictorySound, setAudioEnabled } from './utils/appAudio';
@@ -614,18 +615,25 @@ export default function App() {
   const [sponsors, setSponsors] = useState<SponsorCampaignItem[]>([]);
   const [vaultData, setVaultData] = useState<DeFiVaultData | null>(null);
   const [grantClaimed, setGrantClaimed] = useState(false);
+  const [welcomeGrantModal, setWelcomeGrantModal] = useState<{
+    open: boolean;
+    avaxGranted?: string;
+    coinsGranted?: number;
+    sponsor?: string;
+    txHash?: string | null;
+  }>({
+    open: false,
+    avaxGranted: '0.001 AVAX',
+    coinsGranted: 100,
+    sponsor: 'UniHack Campus Hub & The Coffee House',
+    txHash: null,
+  });
+  const claimingGrantRef = useRef(false);
 
   useEffect(() => {
-    apiGetSponsorCampaigns().then(res => setSponsors(res.campaigns)).catch(() => {});
-    apiGetVaultStats().then(res => setVaultData(res.vault)).catch(() => {});
+    apiGetSponsorCampaigns().then(res => setSponsors(res.campaigns)).catch(() => { });
+    apiGetVaultStats().then(res => setVaultData(res.vault)).catch(() => { });
   }, []);
-
-  useEffect(() => {
-    const addr = linkedWallet?.address || browserWallet.address;
-    if (addr) {
-      apiCheckGrantStatus(addr).then(res => setGrantClaimed(res.claimed)).catch(() => {});
-    }
-  }, [linkedWallet?.address, browserWallet.address]);
 
   useEffect(() => {
     setAudioEnabled(soundEnabled);
@@ -819,6 +827,63 @@ export default function App() {
       unsubWallet();
     };
   }, [applyKeeperServerState, refreshBrowserWallet]);
+
+  useEffect(() => {
+    const addr = linkedWallet?.address || (browserWallet.available ? browserWallet.address : null);
+    if (!addr) return;
+    const norm = addr.trim().toLowerCase();
+
+    // Check localStorage cache to avoid redundant network attempts
+    if (typeof window !== 'undefined') {
+      const cached = window.localStorage.getItem(`paws_welcome_grant_${norm}`);
+      if (cached === 'true') {
+        setGrantClaimed(true);
+        return;
+      }
+    }
+
+    if (claimingGrantRef.current) return;
+
+    apiCheckGrantStatus(norm)
+      .then(async (res) => {
+        if (res.claimed) {
+          setGrantClaimed(true);
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(`paws_welcome_grant_${norm}`, 'true');
+          }
+          return;
+        }
+
+        // New keeper detected! Auto-claim the welcome starter grant
+        claimingGrantRef.current = true;
+        try {
+          const claimRes = await apiClaimStudentGrant(norm);
+          if (claimRes.result?.success) {
+            setGrantClaimed(true);
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem(`paws_welcome_grant_${norm}`, 'true');
+            }
+            if (claimRes.state) {
+              applyKeeperServerState(claimRes.state);
+            } else {
+              setCoins((c) => c + (claimRes.result.coinsGranted || 100));
+            }
+            setWelcomeGrantModal({
+              open: true,
+              avaxGranted: claimRes.result.avaxGranted || '0.001 AVAX',
+              coinsGranted: claimRes.result.coinsGranted || 100,
+              sponsor: claimRes.result.sponsor || 'UniHack Campus Hub & The Coffee House',
+              txHash: claimRes.result.txHash,
+            });
+          }
+        } catch (err) {
+          console.warn('[WelcomeGrant] Auto-claim attempted:', err);
+        } finally {
+          claimingGrantRef.current = false;
+        }
+      })
+      .catch(() => { });
+  }, [linkedWallet?.address, browserWallet.address, browserWallet.available, applyKeeperServerState]);
 
   const visitingNeighbor =
     neighbors.find((n) => n.id === visitingId) ?? null;
@@ -2463,8 +2528,8 @@ export default function App() {
           try {
             await apiClaimStudentGrant(addr);
             setGrantClaimed(true);
-            setCoins((c) => c + 500);
-          } catch {}
+            setCoins((c) => c + 100);
+          } catch { }
         }}
         walletLabel={
           walletState.connected ? shortenAddress(walletState.address) : 'Connect Core'
@@ -3051,6 +3116,15 @@ export default function App() {
               onConnectAndVerifyWallet={handleConnectAndVerifyWallet}
               onSwitchToFuji={handleSwitchToFuji}
               onUnlinkWallet={handleUnlinkWallet}
+            />
+
+            <NewKeeperWelcomeModal
+              open={welcomeGrantModal.open}
+              onClose={() => setWelcomeGrantModal((prev) => ({ ...prev, open: false }))}
+              avaxGranted={welcomeGrantModal.avaxGranted}
+              coinsGranted={welcomeGrantModal.coinsGranted}
+              sponsor={welcomeGrantModal.sponsor}
+              txHash={welcomeGrantModal.txHash}
             />
           </div>
         </UiLabelsProvider>

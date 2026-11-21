@@ -793,17 +793,19 @@ export function createApp() {
 
   app.post(
     '/api/sponsors/claim-grant',
-    requireAuth,
+    requireGameActor,
     async (req: AuthRequest, res) => {
       try {
         const { walletAddress } = req.body as { walletAddress?: string };
         if (!walletAddress) {
           return res.status(400).json({ error: 'walletAddress is required.' });
         }
+        const actor = req.actor!;
         const user = await getOrCreateUser(
-          req.user!.uid,
-          req.user!.email || '',
-          req.user!.name
+          actor.uid,
+          actor.email,
+          actor.displayName,
+          { isGuest: actor.isGuest }
         );
         const result = await claimStudentStarterGrant({
           userId: user.id,
@@ -815,7 +817,7 @@ export function createApp() {
         const msg =
           error instanceof Error
             ? error.message
-            : 'Failed to claim student grant.';
+            : 'Failed to claim welcome grant.';
         return res.status(400).json({ error: msg });
       }
     }

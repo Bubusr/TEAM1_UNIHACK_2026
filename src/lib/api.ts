@@ -427,8 +427,10 @@ export async function apiClaimStudentGrant(walletAddress: string) {
       method: 'POST',
       body: JSON.stringify({ walletAddress }),
     },
-    'firebase'
+    'actor'
   );
 }
+
+export const apiClaimWelcomeGrant = apiClaimStudentGrant;
 
 export type { CropType };

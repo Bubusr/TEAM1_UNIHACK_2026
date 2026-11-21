@@ -19,4 +19,13 @@ contracts/cache/
 artifacts/
 cache/
 
+# Build and cache
+.next/
+contracts/artifacts_hh/
+contracts/cache_hh/
+contracts/out/
+prisma/
+*.db
+*.sqlite
+
 service-account.json
