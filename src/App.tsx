@@ -550,12 +550,15 @@ export default function App() {
 
   const [activeModal, setActiveModal] = useState<SanctuaryModalType>(null);
   const [modalTarget, setModalTarget] = useState<ScreenView>('sanctuary');
+  const [hasRescuedCorgi, setHasRescuedCorgi] = useState(false);
+  const hasRescuedCorgiRef = useRef(false);
   const [luredRescued, setLuredRescued] = useState(false);
   const [activeBait, setActiveBait] = useState<string | null>(null);
 
   const [activeReport, setActiveReport] = useState<JudgeReport>(SAMPLE_PUPPY_REPORT);
   const [album, setAlbum] = useState<JudgeReport[]>([SAMPLE_PUPPY_REPORT]);
   const [isJudging, setIsJudging] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
   const [judgeError, setJudgeError] = useState<string | null>(null);
 
   // Auth, Cloud SQL Sync (Guest + Keeper), Quest & Avalanche Fuji Web3 State
@@ -665,7 +668,7 @@ export default function App() {
     setStreakDays(state.user.streakDays);
     setFenceHours(state.user.fenceHours);
     setWaterCharges(state.user.waterCharges);
-    setLuredRescued(state.user.luredRescued);
+    setLuredRescued(hasRescuedCorgiRef.current);
     setActiveBait(state.user.activeBait);
     setLimits(state.user.limits);
     setSeedInventory(state.user.seedInventory);
@@ -688,20 +691,62 @@ export default function App() {
         owned: state.user.ownedToys.includes(t.id),
       }))
     );
-    setPets(
-      state.pets.map((p) => {
-        const cached =
-          (p.petUid && processedCache.get(p.petUid)) ||
-          (p.id && processedCache.get(p.id)) ||
-          processedCache.get(p.photoUrl) ||
-          processedCache.get(`auto:${p.photoUrl}`) ||
-          processedCache.get(`studio:${p.photoUrl}`);
-        if (cached) {
-          return { ...p, photoUrl: cached, cutoutMode: 'studio' };
+    setPets((prev) => {
+      // 1. Collect any in-flight local pets that were adopted via crop and aren't in server state yet
+      const localAdoptions = prev.filter(
+        (p) =>
+          (p.id.startsWith('cropped-') ||
+            p.id.startsWith('snap-') ||
+            p.id.startsWith('pet-crop-')) &&
+          !state.pets.some((sp) => sp.id === p.id || (p.petUid && sp.petUid === p.petUid))
+      );
+
+      const filtered = state.pets
+        .filter((p) => hasRescuedCorgiRef.current || (p.species !== 'corgi' && p.name !== 'Biscuit'))
+        .map((p) => {
+          const cached =
+            (p.petUid && processedCache.get(p.petUid)) ||
+            (p.id && processedCache.get(p.id)) ||
+            processedCache.get(p.photoUrl) ||
+            processedCache.get(`auto:${p.photoUrl}`) ||
+            processedCache.get(`studio:${p.photoUrl}`);
+          if (cached) {
+            return { ...p, photoUrl: cached, cutoutMode: 'studio' as const };
+          }
+          return p;
+        });
+
+      // Merge local adoptions so they are NEVER wiped out by server synchronization
+      const merged = [...filtered];
+      for (const pet of localAdoptions) {
+        if (!merged.some((m) => m.id === pet.id || (pet.petUid && m.petUid === pet.petUid))) {
+          merged.push(pet);
         }
-        return p;
-      })
-    );
+      }
+
+      if (hasRescuedCorgiRef.current) {
+        const hasBiscuit = merged.some((p) => p.name === 'Biscuit' || p.species === 'corgi');
+        if (!hasBiscuit) {
+          const biscuitPet = prev.find((p) => p.name === 'Biscuit' || p.species === 'corgi') || {
+            id: 'pet-biscuit-corgi',
+            name: 'Biscuit',
+            species: 'corgi' as const,
+            photoUrl: '/src/assets/images/lured_stray_corgi_1794627550798.png',
+            cutoutMode: 'studio' as const,
+            x: 72,
+            y: 62,
+            score: 90,
+            bondXp: 30,
+            careCount: 1,
+            questPetDone: false,
+            questFeedDone: false,
+            questPlayDone: false,
+          };
+          merged.push(biscuitPet);
+        }
+      }
+      return merged;
+    });
     setSelectedPetId((cur) => resolveSelectedPetId(state.pets, cur));
     setFirstBondQuest(state.firstBondQuest);
     setLinkedWallet(state.wallet);
@@ -1230,7 +1275,11 @@ export default function App() {
           : 'discover';
 
   const profileTargetPet =
-    pets.find((p) => p.id === profileModalState.petId) ?? pets[0] ?? null;
+    pets.find(
+      (p) =>
+        p.id === profileModalState.petId ||
+        (p.petUid && p.petUid === profileModalState.petId)
+    ) ?? pets[0] ?? null;
 
   // Visiting neighbors periodically purchase unsold items in your Roadside Market
   useEffect(() => {
@@ -1854,7 +1903,11 @@ export default function App() {
   };
 
   const handleUseSampleSnap = () => {
-    setActiveReport(SAMPLE_PUPPY_REPORT);
+    setActiveReport({
+      ...SAMPLE_PUPPY_REPORT,
+      cropped: false,
+      petUid: undefined,
+    });
     setJudgeError(null);
     setMintNotice(null);
     setActiveModal(null);
@@ -1863,98 +1916,140 @@ export default function App() {
   };
 
   const handleCropIntoSanctuary = async () => {
-    if (isJudging || judgeError || activeReport.unjudged) return;
-    if (!activeReport.cropped) {
-      // 1. Ensure transparent cutout is ready before adding to sanctuary garden
-      let cutoutUrl =
-        processedCache.get(activeReport.photoUrl) ||
-        processedCache.get(`auto:${activeReport.photoUrl}`) ||
-        processedCache.get(`studio:${activeReport.photoUrl}`);
+    if (isJudging || activeReport.unjudged || isCropping) return;
+    setJudgeError(null);
+    setIsCropping(true);
 
-      if (!cutoutUrl) {
-        try {
-          const res = await processCutoutImage(
-            activeReport.photoUrl,
-            'auto',
-            activeReport.box_2d
-          );
-          if (res && !res.isSilhouette) {
-            cutoutUrl = res.url;
+    try {
+      if (!activeReport.cropped) {
+        // 1. Ensure transparent cutout is ready before adding to sanctuary garden
+        let cutoutUrl =
+          processedCache.get(activeReport.photoUrl) ||
+          processedCache.get(`auto:${activeReport.photoUrl}`) ||
+          processedCache.get(`studio:${activeReport.photoUrl}`);
+
+        if (!cutoutUrl) {
+          try {
+            const res = await processCutoutImage(
+              activeReport.photoUrl,
+              'auto',
+              activeReport.box_2d
+            );
+            if (res && !res.isSilhouette) {
+              cutoutUrl = res.url;
+            }
+          } catch (cutoutErr) {
+            console.warn('[handleCropIntoSanctuary] Cutout generation failed, using photoUrl:', cutoutErr);
           }
-        } catch {
-          // fallback to silhouette/original
         }
-      }
 
-      if (cutoutUrl) {
-        processedCache.set(activeReport.photoUrl, cutoutUrl);
-        processedCache.set(`studio:${activeReport.photoUrl}`, cutoutUrl);
-        processedCache.set(`auto:${activeReport.photoUrl}`, cutoutUrl);
-        processedCache.set(cutoutUrl, cutoutUrl);
-      }
+        if (cutoutUrl) {
+          processedCache.set(activeReport.photoUrl, cutoutUrl);
+          processedCache.set(`studio:${activeReport.photoUrl}`, cutoutUrl);
+          processedCache.set(`auto:${activeReport.photoUrl}`, cutoutUrl);
+          processedCache.set(cutoutUrl, cutoutUrl);
+        }
 
-      if (hasServerSession && activeReport.submissionUid) {
-        try {
-          const { result, state } = await apiAddToGarden(
-            activeReport.submissionUid,
-            cutoutUrl
-          );
-          if (cutoutUrl && result.petUid) {
-            processedCache.set(result.petUid, cutoutUrl);
-            processedCache.set(`studio:${result.petUid}`, cutoutUrl);
-            processedCache.set(`auto:${result.petUid}`, cutoutUrl);
-            processedCache.set(cutoutUrl, cutoutUrl);
+        let newPetUid = `pet-crop-${Date.now()}`;
+
+        // 2. Sync to server if session and submissionUid are available
+        if (hasServerSession && activeReport.submissionUid) {
+          try {
+            // Never send giant multi-megabyte base64 data URLs to prevent HTTP 413 or Firestore 1MB document limit
+            const safeCutoutPayload =
+              cutoutUrl && cutoutUrl.length < 100000 ? cutoutUrl : undefined;
+            const { result, state } = await apiAddToGarden(
+              activeReport.submissionUid,
+              safeCutoutPayload
+            );
+            if (result?.petUid) {
+              newPetUid = result.petUid;
+            }
+            if (cutoutUrl) {
+              processedCache.set(newPetUid, cutoutUrl);
+              processedCache.set(`studio:${newPetUid}`, cutoutUrl);
+              processedCache.set(`auto:${newPetUid}`, cutoutUrl);
+            }
+            applyKeeperServerState(state);
+          } catch (syncErr) {
+            console.warn('[handleCropIntoSanctuary] Server sync fallback:', syncErr);
           }
-          applyKeeperServerState(state);
-          setSelectedPetId(result.petUid);
-          setActiveReport((r) => ({
-            ...r,
-            cropped: true,
-            petUid: result.petUid,
-          }));
-          openSanctuaryScreen();
-          return;
-        } catch (err) {
-          setJudgeError(
-            err instanceof Error ? err.message : 'Could not add pet to garden.'
-          );
-          return;
         }
+
+        // 3. Guarantee pet is added into local pets collection
+        setCoins((c) => c + (activeReport.coinsReward || 120));
+        awardExp(Math.round((activeReport.expReward || 40) / 2));
+        setFenceHours(24);
+        setEnergy((e) => Math.max(0, e - 5));
+
+        const finalPhoto = cutoutUrl || activeReport.photoUrl;
+        const nowIso = new Date().toISOString();
+        const dateFormatted = new Date().toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        const newPet: SanctuaryPet = {
+          id: newPetUid,
+          petUid: newPetUid,
+          name: activeReport.petName || 'Companion',
+          species: mapSpecies(activeReport.species || 'dog'),
+          photoUrl: finalPhoto,
+          cutoutMode: cutoutUrl ? 'studio' : 'auto',
+          x: 48,
+          y: 52,
+          score: activeReport.overallScore || 90,
+          bondXp: 15,
+          careCount: 0,
+          minted: false,
+          mintStatus: 'unminted',
+          box_2d: activeReport.box_2d,
+          discoveredAt: nowIso,
+          discoveryDate: dateFormatted,
+          questPetDone: false,
+          questFeedDone: false,
+          questPlayDone: false,
+          memories: [
+            {
+              id: `mem-disc-${Date.now()}`,
+              kind: 'discovery',
+              note: `Discovered via "${activeReport.theme || 'Garden'}" snapshot (${activeReport.overallScore || 90}/100).`,
+              createdAt: nowIso,
+            },
+          ],
+        };
+
+        if (cutoutUrl) {
+          processedCache.set(newPet.id, cutoutUrl);
+          processedCache.set(`studio:${newPet.id}`, cutoutUrl);
+          processedCache.set(`auto:${newPet.id}`, cutoutUrl);
+        }
+
+        setPets((prev) => {
+          if (prev.some((p) => p.id === newPet.id || (newPet.petUid && p.petUid === newPet.petUid))) {
+            return prev;
+          }
+          return [...prev, newPet];
+        });
+
+        setSelectedPetId(newPet.id);
+        setActiveReport((r) => ({
+          ...r,
+          cropped: true,
+          petUid: newPetUid,
+        }));
+        setAlbum((prev) =>
+          prev.map((item) =>
+            item.id === activeReport.id ? { ...item, cropped: true, petUid: newPetUid } : item
+          )
+        );
       }
 
-      setCoins((c) => c + activeReport.coinsReward);
-      awardExp(Math.round(activeReport.expReward / 2));
-      setFenceHours(24);
-      setEnergy((e) => Math.max(0, e - 5));
-
-      const finalPhoto = cutoutUrl || activeReport.photoUrl;
-      const newPet: SanctuaryPet = {
-        id: `cropped-${activeReport.id}`,
-        name: activeReport.petName,
-        species: mapSpecies(activeReport.species),
-        photoUrl: finalPhoto,
-        cutoutMode: cutoutUrl ? 'studio' : 'auto',
-        x: 48,
-        y: 52,
-        score: activeReport.overallScore,
-        bondXp: 15,
-        careCount: 0,
-        minted: false,
-        box_2d: activeReport.box_2d,
-      };
-
-      setPets((prev) =>
-        prev.some((p) => p.id === newPet.id) ? prev : [...prev, newPet]
-      );
-      setActiveReport((r) => ({ ...r, cropped: true }));
-      setAlbum((prev) =>
-        prev.map((item) =>
-          item.id === activeReport.id ? { ...item, cropped: true } : item
-        )
-      );
+      playVictorySound();
+      openSanctuaryScreen();
+    } finally {
+      setIsCropping(false);
     }
-
-    openSanctuaryScreen();
   };
 
   // Real Fuji Mint Flow (EIP-712 claim -> Fuji contract tx -> Receipt & Event verification)
@@ -2179,15 +2274,14 @@ export default function App() {
   };
 
   const handleRescueStray = () => {
-    if (luredRescued) return;
-    if (hasServerSession) {
-      syncKeeperCall(apiGameAction('rescue_stray'));
-    }
+    hasRescuedCorgiRef.current = true;
+    setHasRescuedCorgi(true);
     setLuredRescued(true);
     setPets((prev) => [
-      ...prev,
+      ...prev.filter((p) => p.species !== 'corgi' && p.name !== 'Biscuit'),
       {
         id: 'pet-biscuit-corgi',
+        petUid: 'pet-biscuit-corgi',
         name: 'Biscuit',
         species: 'corgi',
         photoUrl: '/src/assets/images/lured_stray_corgi_1794627550798.png',
@@ -2202,8 +2296,13 @@ export default function App() {
         questPlayDone: false,
       },
     ]);
+    setSelectedPetId('pet-biscuit-corgi');
     setCoins((c) => c + 100);
+    playVictorySound();
     setActiveModal(null);
+    if (hasServerSession) {
+      syncKeeperCall(apiGameAction('rescue_stray'));
+    }
   };
 
   // Profile Auth, Quest, Core Wallet & Fuji Passport Handlers
@@ -2895,12 +2994,18 @@ export default function App() {
                     onQuickCoins={() => openModalIn('judge', 'shop')}
                     onQuickEnergy={handleQuickEnergy}
                     onCropIntoSanctuary={handleCropIntoSanctuary}
+                    isCropping={isCropping}
                     onMintPet={handleMintPet}
                     onShareSnap={handleShareSnap}
                     onUploadPhoto={handleUploadPhoto}
                     onOpenDiscoverCamera={() => setIsCameraModalOpen(true)}
                     onResetSample={() => {
-                      setActiveReport(SAMPLE_PUPPY_REPORT);
+                      setActiveReport({
+                        ...SAMPLE_PUPPY_REPORT,
+                        cropped: false,
+                        petUid: undefined,
+                      });
+                      setPets(INITIAL_PETS);
                       setJudgeError(null);
                       setMintNotice(null);
                     }}

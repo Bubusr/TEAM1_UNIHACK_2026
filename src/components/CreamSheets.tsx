@@ -1015,7 +1015,11 @@ export const CreamSheets: React.FC<CreamSheetsProps> = ({
                       className="cream-btn rounded-full min-h-[44px] px-3 text-[12px] font-extrabold text-[#4B3C46] bg-[#EFF8FF] cursor-pointer inline-flex items-center justify-center gap-1.5 truncate"
                     >
                       <Wallet className="w-4 h-4 text-[#4F7EA6] shrink-0" />
-                      <span className="truncate">{walletLabel ?? 'Core Wallet'}</span>
+                      <span className="truncate">
+                        {walletLabel ??
+                          // Fallbacks: 'No Extension Detected' | 'Unsupported Wallet' | 'Unsupported EVM Provider'
+                          'Core Wallet'}
+                      </span>
                     </button>
                   )}
                 </div>

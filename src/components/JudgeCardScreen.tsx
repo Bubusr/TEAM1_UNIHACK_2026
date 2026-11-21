@@ -3,6 +3,7 @@ import {
   Camera,
   Check,
   ExternalLink,
+  Loader2,
   Scissors,
   Search,
   Share2,
@@ -41,6 +42,7 @@ interface JudgeCardScreenProps {
   onQuickCoins: () => void;
   onQuickEnergy: () => void;
   onCropIntoSanctuary: () => void;
+  isCropping?: boolean;
   onMintPet: () => void;
   onShareSnap: () => void;
   onUploadPhoto: (file: File) => void;
@@ -60,6 +62,7 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
   report,
   linkedPet,
   isJudging,
+  isCropping,
   judgeError,
   isAuthenticated,
   walletLinked,
@@ -108,10 +111,10 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
   const mintButtonLabel = isMinting
     ? 'Minting...'
     : isMinted
-    ? `Passport #${linkedPet?.tokenId ?? '✓'}`
-    : canAttemptMint
-    ? 'Mint Fuji'
-    : 'Passport';
+      ? `Passport #${linkedPet?.tokenId ?? '✓'}`
+      : canAttemptMint
+        ? 'Mint Fuji'
+        : 'Passport';
 
   return (
     <div className="relative w-full h-full pastel-scrapbook-bg flex flex-col justify-between overflow-hidden select-none">
@@ -213,9 +216,8 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
               src={report.photoUrl}
               alt={`${report.petName} snapshot`}
               referrerPolicy="no-referrer"
-              className={`w-full h-full object-cover transition-opacity duration-200 ${
-                isJudging ? 'opacity-55' : 'opacity-100'
-              }`}
+              className={`w-full h-full object-cover transition-opacity duration-200 ${isJudging ? 'opacity-55' : 'opacity-100'
+                }`}
             />
 
             <svg
@@ -266,11 +268,10 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
           </div>
 
           <div
-            className={`absolute -bottom-3.5 -right-3 rotate-[-8deg] w-[72px] h-[72px] rounded-full border-[2.5px] flex flex-col items-center justify-center text-center z-30 ${
-              isUnjudged
-                ? 'bg-[#F5EDE6] border-[#CBB5A4] shadow-[inset_0_0_0_3px_#FFFDF9,0_6px_14px_rgba(138,116,126,0.18)]'
-                : 'bg-[#FFE07D] border-[#C99D66] shadow-[inset_0_0_0_3px_#FFFDF9,0_6px_14px_rgba(201,157,102,0.28)]'
-            }`}
+            className={`absolute -bottom-3.5 -right-3 rotate-[-8deg] w-[72px] h-[72px] rounded-full border-[2.5px] flex flex-col items-center justify-center text-center z-30 ${isUnjudged
+              ? 'bg-[#F5EDE6] border-[#CBB5A4] shadow-[inset_0_0_0_3px_#FFFDF9,0_6px_14px_rgba(138,116,126,0.18)]'
+              : 'bg-[#FFE07D] border-[#C99D66] shadow-[inset_0_0_0_3px_#FFFDF9,0_6px_14px_rgba(201,157,102,0.28)]'
+              }`}
             aria-label={
               isUnjudged
                 ? 'Not judged yet'
@@ -292,8 +293,8 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
             {judgeError
               ? judgeError
               : geminiMissing
-              ? 'Configuration required for live AI evaluation — no score awarded'
-              : 'Photo evaluation unjudged — please try another snap'}
+                ? 'Configuration required for live AI evaluation — no score awarded'
+                : 'Photo evaluation unjudged — please try another snap'}
           </div>
         ) : showLabels ? (
           <div className="text-center text-[12px] font-extrabold text-[#6E5B65] tabular-nums whitespace-nowrap">
@@ -401,13 +402,12 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
               type="button"
               disabled={isMinting || isMinted}
               onClick={onMintPet}
-              className={`cream-btn rounded-full min-h-[44px] px-2.5 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap disabled:opacity-75 ${
-                isMinted
-                  ? 'bg-[#E8F8EC] border-[#B4DFBE]'
-                  : canAttemptMint
+              className={`cream-btn rounded-full min-h-[44px] px-2.5 font-display text-[12px] font-extrabold text-[#4B3C46] flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap disabled:opacity-75 ${isMinted
+                ? 'bg-[#E8F8EC] border-[#B4DFBE]'
+                : canAttemptMint
                   ? 'bg-[#FFE07D]'
                   : 'bg-[#F0F8FF]'
-              }`}
+                }`}
             >
               <CrystalMintIcon
                 className={`${showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'} shrink-0`}
@@ -426,15 +426,13 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
             >
               {sharedFeedback ? (
                 <Check
-                  className={`${
-                    showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
-                  } text-[#3F7B52] shrink-0 stroke-[2.8]`}
+                  className={`${showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
+                    } text-[#3F7B52] shrink-0 stroke-[2.8]`}
                 />
               ) : (
                 <Share2
-                  className={`${
-                    showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
-                  } text-[#8A747E] shrink-0`}
+                  className={`${showLabels ? 'w-4 h-4' : 'w-5.5 h-5.5'
+                    } text-[#8A747E] shrink-0`}
                 />
               )}
               {showLabels && (
@@ -460,16 +458,20 @@ export const JudgeCardScreen: React.FC<JudgeCardScreenProps> = ({
           <button
             type="button"
             onClick={onCropIntoSanctuary}
-            disabled={isJudging || isUnjudged}
+            disabled={isJudging || isUnjudged || isCropping}
             aria-label={
               report.cropped ? 'In Sanctuary' : 'Welcome to Garden'
             }
             title={report.cropped ? 'In Sanctuary' : 'Welcome to Garden'}
-            className={`buttercup-cta rounded-full font-display font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap active:scale-95 transition-transform ${
-              showLabels ? 'px-6 min-h-[48px] text-[14.5px]' : 'w-16 h-16'
-            }`}
+            className={`buttercup-cta rounded-full font-display font-extrabold text-[#4B3C46] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap active:scale-95 transition-transform ${showLabels ? 'px-6 min-h-[48px] text-[14.5px]' : 'w-16 h-16'
+              }`}
           >
-            {report.cropped ? (
+            {isCropping ? (
+              <>
+                <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                {showLabels && <span>Adding to Garden...</span>}
+              </>
+            ) : report.cropped ? (
               <>
                 <Check
                   className={

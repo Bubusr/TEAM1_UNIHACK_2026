@@ -81,8 +81,8 @@ export const PassportMintModal: React.FC<PassportMintModalProps> = ({
   useEffect(() => {
     if (!open) return;
     const targetId =
-      initialPetId && pets.some((p) => p.id === initialPetId)
-        ? initialPetId
+      initialPetId && pets.some((p) => p.id === initialPetId || p.petUid === initialPetId)
+        ? (pets.find((p) => p.id === initialPetId || p.petUid === initialPetId)?.id ?? initialPetId)
         : pets[0]?.id ?? '';
     setSelectedPetId(targetId);
     setStage('idle');
@@ -95,12 +95,17 @@ export const PassportMintModal: React.FC<PassportMintModalProps> = ({
 
   if (!open) return null;
 
-  const pet = pets.find((p) => p.id === selectedPetId) ?? pets[0] ?? null;
+  const pet =
+    pets.find((p) => p.id === selectedPetId || p.petUid === selectedPetId) ??
+    pets[0] ??
+    null;
   if (!pet) return null;
 
   const existingRecord =
     confirmedRecord ??
-    existingPassports.find((r) => r.petId === pet.id) ??
+    existingPassports.find(
+      (r) => r.petId === pet.id || (pet.petUid && r.petId === pet.petUid)
+    ) ??
     null;
 
   const petBondXp = pet.bondXp ?? 0;

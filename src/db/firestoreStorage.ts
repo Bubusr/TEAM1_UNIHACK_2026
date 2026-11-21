@@ -867,7 +867,6 @@ export async function firestorePerformGeneralGameAction(params: {
         break;
       }
       case 'rescue_stray': {
-        if (luredRescued) return { toast: 'Already rescued' };
         luredRescued = true;
         coins += 100;
         // Add rescue pet doc

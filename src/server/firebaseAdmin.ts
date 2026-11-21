@@ -172,13 +172,21 @@ class InMemoryFirestore {
     };
     return b;
   }
+  private txQueue: Promise<any> = Promise.resolve();
   async runTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
-    return await fn({
-      get: async (r: any) => await r.get(),
-      set: async (r: any, d: any, o?: any) => await r.set(d, o),
-      update: async (r: any, d: any) => await r.set(d, { merge: true }),
-      delete: async (r: any) => await r.delete(),
+    const next = this.txQueue.then(async () => {
+      return await fn({
+        get: async (r: any) => await r.get(),
+        set: async (r: any, d: any, o?: any) => await r.set(d, o),
+        update: async (r: any, d: any) => await r.set(d, { merge: true }),
+        delete: async (r: any) => await r.delete(),
+      });
     });
+    this.txQueue = next.then(
+      () => {},
+      () => {}
+    );
+    return next;
   }
 }
 

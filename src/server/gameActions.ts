@@ -1419,7 +1419,6 @@ export async function performGeneralGameAction(params: {
         break;
       }
       case 'rescue_stray': {
-        if (luredRescued) return { toast: 'Already rescued' };
         luredRescued = true;
         coins += 100;
         const [wallet] = await tx
