@@ -105,10 +105,12 @@ export function createApp() {
   });
 
   const rootDir = path.resolve(__dirname, '../../');
-  app.use(
-    '/src/assets/images',
-    express.static(path.resolve(rootDir, 'src/assets/images'))
-  );
+  app.use('/src/assets/images', (req, res, next) => {
+    if (req.query.import !== undefined || (req.url && req.url.includes('import'))) {
+      return next();
+    }
+    return express.static(path.resolve(rootDir, 'src/assets/images'))(req, res, next);
+  });
 
   const judgeLimiter = createRateLimiter({
     windowMs: 60 * 1000,
@@ -839,15 +841,15 @@ export function createApp() {
           req.body.publicConsent ??
           (req.body.consent !== undefined
             ? {
-                accepted: Boolean(req.body.consent?.accepted),
-                consentVersion: req.body.consent?.consentVersion || '1.0',
-              }
+              accepted: Boolean(req.body.consent?.accepted),
+              consentVersion: req.body.consent?.consentVersion || '1.0',
+            }
             : req.body.consentToPublicIpfs !== undefined
-            ? {
+              ? {
                 accepted: Boolean(req.body.consentToPublicIpfs),
                 consentVersion: req.body.consentVersion,
               }
-            : undefined);
+              : undefined);
 
         const claimData = await issueSignedMintClaim({
           userId: user.id,
